@@ -6,7 +6,7 @@ import {
   Eye, Settings, Plus, Edit, Trash2, Save, X, Image, Percent, Star, Package, Truck, CheckCircle, Clock, DollarSign, Shield, Lock, Search, Filter,
   Gem, Diamond, Watch, ShoppingBag, Box, Gift, Tag, Award, Sparkles, Crown, Heart, Star as StarIcon, Zap, Flame, Leaf,
   Music, Camera, Gamepad2, Book, Coffee, Beer, Wine, Pizza, Utensils, Car, Plane, Home, Building, Briefcase,
-  Palette, Paintbrush, Scissors, Wrench, Hammer, Gauge, Cog, User, Users, Smile, ThumbsUp, Bell, Mail, Phone, Settings
+  Palette, Paintbrush, Scissors, Wrench, Hammer, Gauge, Cog, User, Users, Smile, ThumbsUp, Bell, Mail, Phone
 } from 'lucide-react'
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 import ImageUpload from '@/components/ImageUpload'
@@ -370,13 +370,13 @@ export default function Admin() {
       additionalImages = productImages.filter((_, i) => i !== coverImageIndex)
     }
     
-    const productData = {
+    // Preparar dados do produto (remover additionalImages se não existe no banco)
+    const productData: any = {
       name: formData.get('name') as string,
       category: formData.get('category') as string,
       brand: (selectedBrand || formData.get('brand') as string || '').trim() || '',
       price: normalizePrice(formData.get('price') as string),
       image: coverImage,
-      additionalImages: additionalImages,
       description: formData.get('description') as string,
       featured: formData.get('featured') === 'on',
       on_sale: formData.get('on_sale') === 'on',
@@ -387,6 +387,10 @@ export default function Admin() {
       model: formData.get('model') as string || '',
       stock: stock,
     }
+    
+    // Armazenar imagens adicionais em JSON na descrição ou não salvar por enquanto
+    // TODO: Adicionar coluna additional_images na tabela products no Supabase
+    // Por enquanto, não salvamos additionalImages para evitar erro
 
     // Padronização: calcular preço promocional se necessário
     if (productData.on_sale) {
