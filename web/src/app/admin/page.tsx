@@ -1842,9 +1842,7 @@ export default function Admin() {
                                           console.error('❌ Erro ao marcar como entregue:', result.error)
                                           const errorMessage = result.error instanceof Error 
                                             ? result.error.message 
-                                            : typeof result.error === 'string' 
-                                              ? result.error 
-                                              : 'Erro desconhecido'
+                                            : (result.error as any)?.message || String(result.error) || 'Erro desconhecido'
                                           alert(`Erro ao marcar como entregue: ${errorMessage}\n\nTente novamente ou verifique o console para mais detalhes.`)
                                         } else {
                                           console.log('✅ Marcado como entregue com sucesso')
@@ -1889,7 +1887,10 @@ export default function Admin() {
                                         const result = await updateOrderStatus(order.id, 'picked_up', { picked_up_at: new Date().toISOString() })
                                         if (result.error) {
                                           console.error('❌ Erro ao marcar como retirado:', result.error)
-                                          alert('Erro ao marcar como retirado. Tente novamente.')
+                                          const errorMessage = result.error instanceof Error 
+                                            ? result.error.message 
+                                            : (result.error as any)?.message || String(result.error) || 'Erro desconhecido'
+                                          alert(`Erro ao marcar como retirado: ${errorMessage}\n\nTente novamente ou verifique o console para mais detalhes.`)
                                         } else {
                                           console.log('✅ Marcado como retirado com sucesso')
                                           
@@ -2980,9 +2981,7 @@ export default function Admin() {
                               console.error('❌ Erro ao marcar como entregue:', result.error)
                               const errorMessage = result.error instanceof Error 
                                 ? result.error.message 
-                                : typeof result.error === 'string' 
-                                  ? result.error 
-                                  : 'Erro desconhecido'
+                                : (result.error as any)?.message || String(result.error) || 'Erro desconhecido'
                               alert(`Erro ao marcar como entregue: ${errorMessage}\n\nTente novamente ou verifique o console para mais detalhes.`)
                             } else {
                               console.log('✅ Marcado como entregue com sucesso')
@@ -3028,7 +3027,10 @@ export default function Admin() {
                             const result = await updateOrderStatus(selectedOrder.id, 'picked_up', { picked_up_at: new Date().toISOString() })
                             if (result.error) {
                               console.error('❌ Erro ao marcar como retirado:', result.error)
-                              alert('Erro ao marcar como retirado. Tente novamente.')
+                              const errorMessage = result.error instanceof Error 
+                                ? result.error.message 
+                                : (result.error as any)?.message || String(result.error) || 'Erro desconhecido'
+                              alert(`Erro ao marcar como retirado: ${errorMessage}\n\nTente novamente ou verifique o console para mais detalhes.`)
                             } else {
                               console.log('✅ Marcado como retirado com sucesso')
                               
