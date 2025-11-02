@@ -1848,7 +1848,7 @@ export default function Admin() {
                                           console.log('✅ Marcado como entregue com sucesso')
                                           
                                           // Enviar mensagem automática pedindo opinião via WhatsApp
-                                          const customerPhone = order.customer_phone || order.customer?.phone
+                                          const customerPhone = order.customer_phone
                                           if (customerPhone) {
                                             const cleanPhone = customerPhone.replace(/\D/g, '')
                                             const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
@@ -1895,7 +1895,7 @@ export default function Admin() {
                                           console.log('✅ Marcado como retirado com sucesso')
                                           
                                           // Enviar mensagem automática pedindo opinião via WhatsApp
-                                          const customerPhone = order.customer_phone || order.customer?.phone
+                                          const customerPhone = order.customer_phone
                                           if (customerPhone) {
                                             const cleanPhone = customerPhone.replace(/\D/g, '')
                                             const formattedPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`
