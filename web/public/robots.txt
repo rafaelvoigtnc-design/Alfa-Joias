@@ -1,0 +1,25 @@
+# Alfa Jóias - Robots.txt
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /conta
+Disallow: /carrinho
+Disallow: /checkout
+Disallow: /pedidos
+Disallow: /pedido-confirmado
+
+# Crawl delay
+Crawl-delay: 1
+
+# Sitemap
+Sitemap: https://alfajoias.com.br/sitemap.xml
+
+
+
+
+
+
+
+

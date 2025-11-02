@@ -1,0 +1,33 @@
+{
+  "name": "Alfa Jóias - A Vitrine dos seus Olhos",
+  "short_name": "Alfa Jóias",
+  "description": "Joias, relógios, óculos e semi-joias das melhores marcas",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1f2937",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["shopping", "lifestyle"],
+  "lang": "pt-BR",
+  "dir": "ltr"
+}
+
+
+
+
+
+
+
+
