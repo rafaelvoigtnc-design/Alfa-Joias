@@ -1329,10 +1329,10 @@ export default function Admin() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                      📸 Imagem da Categoria "Serviços" na Página Inicial
+                      📸 Imagem da Categoria &quot;Serviços&quot; na Página Inicial
                     </h3>
                     <p className="text-sm text-blue-700">
-                      Esta imagem aparece no card "Serviços" na seção "Nossas Especialidades" da página inicial.
+                      Esta imagem aparece no card &quot;Serviços&quot; na seção &quot;Nossas Especialidades&quot; da página inicial.
                     </p>
                   </div>
                 </div>
@@ -1351,7 +1351,7 @@ export default function Admin() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-blue-900 mb-2">
-                      Nova Imagem da Categoria "Serviços"
+                      Nova Imagem da Categoria &quot;Serviços&quot;
                     </label>
                     <ImageUpload
                       onImageSelect={(imageUrl) => {
