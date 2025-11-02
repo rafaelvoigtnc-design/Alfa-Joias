@@ -2,12 +2,7 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(request: NextRequest) {
-  try {
-    return NextResponse.next()
-  } catch (error) {
-    console.error('Middleware error:', error)
-    return NextResponse.next()
-  }
+  return NextResponse.next()
 }
 
 export const config = {
@@ -19,7 +14,7 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.).*)',
   ],
 }
 
