@@ -1,7 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { Gem, Clock, Eye, Diamond } from 'lucide-react'
+import { 
+  Gem, Clock, Eye, Diamond, Package, Watch, ShoppingBag, Box, Gift, Tag, Award, Sparkles, Crown, Heart, Star,
+  Zap, Flame, Leaf, Music, Camera, Gamepad2, Book, Coffee, Beer, Wine, Pizza, Utensils, Car, Plane, Home,
+  Building, Briefcase, Palette, Paintbrush, Scissors, Wrench, Hammer, Gauge, Cog, User, Users, Smile,
+  ThumbsUp, Bell, Mail, Phone, Settings
+} from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 
 interface CategoryData {
@@ -13,12 +18,12 @@ interface CategoryData {
   href: string
 }
 
-// LISTA FIXA DE CATEGORIAS PERMITIDAS - APENAS ESTAS PODEM APARECER
-const ALLOWED_CATEGORIES = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins']
+// CATEGORIAS BASE (para fallback se não houver no banco)
+const BASE_CATEGORIES = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins']
 
 export default function Categories() {
   const [categories, setCategories] = useState<CategoryData[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   const getDefaultCategory = (name: string): CategoryData | null => {
     const defaults: { [key: string]: CategoryData } = {
@@ -71,64 +76,72 @@ export default function Categories() {
       setLoading(true)
       const { supabase } = await import('@/lib/supabase')
       
-      // BUSCAR APENAS AS CATEGORIAS PERMITIDAS - EXCLUIR SERVIÇOS DIRETO NA QUERY
+      // BUSCAR TODAS AS CATEGORIAS DO BANCO (sem filtros de nome - vamos filtrar depois)
+      // Isso garante que novas categorias sejam carregadas
       const { data, error } = await supabase
         .from('categories')
-        .select('*')
-        .in('name', ALLOWED_CATEGORIES) // APENAS categorias permitidas
-        .order('updated_at', { ascending: false, nullsFirst: false })
+        .select('id, name, description, image, icon, created_at, updated_at')
+        .order('created_at', { ascending: true })
         
       if (error) {
-        console.error('❌ Erro ao buscar categorias:', error)
+        console.error('❌ Erro ao buscar categorias do Supabase:', error)
+        console.error('Detalhes do erro:', JSON.stringify(error, null, 2))
+        setLoading(false)
+        return
       }
       
       if (data && data.length > 0 && !error) {
-        // PROCESSAR APENAS CATEGORIAS PERMITIDAS - ORDEM FIXA
-        const finalCategories: CategoryData[] = []
+        console.log('📦 RAW: Todas as categorias do banco:', data.length)
+        console.log('📦 DETALHES:', data.map((c: any) => ({ 
+          id: c.id, 
+          name: c.name, 
+          icon: c.icon, 
+          description: c.description?.substring(0, 30),
+          hasImage: !!c.image 
+        })))
         
-        // IGNORAR COMPLETAMENTE qualquer categoria que não esteja em ALLOWED_CATEGORIES
-        for (const allowedName of ALLOWED_CATEGORIES) {
-          // Buscar no banco APENAS se estiver na lista permitida
-          const dbCategory = data.find((cat: any) => {
-            const catName = (cat.name || '').trim()
-            // VERIFICAÇÃO DUPLA: deve estar na lista E não ser Serviços
-            return catName === allowedName && 
-                   ALLOWED_CATEGORIES.includes(catName) &&
-                   catName !== 'Serviços' &&
-                   catName.toLowerCase() !== 'serviços'
-          })
-          
-          if (dbCategory && ALLOWED_CATEGORIES.includes(dbCategory.name)) {
-            // Usar dados do banco
-            finalCategories.push({
-              id: dbCategory.id,
-              name: dbCategory.name,
-              description: dbCategory.description || '',
-              image: dbCategory.image || '',
-              iconName: dbCategory.icon || 'gem',
-              href: dbCategory.name === 'Afins' ? '/produtos?categoria=Afins' : `/produtos?categoria=${dbCategory.name}`
-            })
-          } else {
-            // Usar padrão se não existe no banco
-            const defaultCat = getDefaultCategory(allowedName)
-            if (defaultCat) {
-              finalCategories.push(defaultCat)
-            }
-          }
-        }
-        
-        // FILTRO FINAL ABSOLUTO - REMOVER QUALQUER COISA QUE NÃO ESTEJA NA LISTA
-        const safeCategories = finalCategories
-          .filter(cat => {
+        // PROCESSAR TODAS AS CATEGORIAS DO BANCO (exceto Serviços)
+        const dbCategories = data
+          .filter((cat: any) => {
             const name = (cat.name || '').trim()
-            return ALLOWED_CATEGORIES.includes(name) &&
-                   name !== 'Serviços' &&
-                   name.toLowerCase() !== 'serviços' &&
-                   !name.includes('Serviço')
+            // Excluir Serviços de qualquer forma
+            const isServicos = name === 'Serviços' || 
+                              name.toLowerCase() === 'serviços' ||
+                              name.toLowerCase() === 'servicos' ||
+                              name.toLowerCase().includes('serviço')
+            
+            if (isServicos) {
+              console.log('🚫 Removendo Serviços:', name)
+            }
+            
+            return !isServicos
+          })
+          .map((cat: any) => {
+            const category: CategoryData = {
+              id: cat.id || '',
+              name: (cat.name || '').trim(),
+              description: cat.description || '',
+              image: cat.image || '',
+              iconName: cat.icon || 'gem',
+              href: `/produtos?categoria=${encodeURIComponent(cat.name || '')}`
+            }
+            console.log('✅ Processando categoria:', category.name, '| ID:', category.id)
+            return category
           })
         
-        console.log('✅ Categorias FINAIS (SEM SERVIÇOS):', safeCategories.map(c => c.name))
-        setCategories(safeCategories)
+        console.log('✅ RESULTADO FINAL:', dbCategories.length, 'categorias processadas')
+        console.log('📋 NOMES:', dbCategories.map(c => c.name))
+        
+        setCategories(dbCategories)
+        setLoading(false)
+        return
+      } else if (data && data.length === 0) {
+        // Se banco está vazio, usar fallback
+        console.warn('⚠️ Banco de categorias está vazio, usando fallback')
+        const defaultCategories: CategoryData[] = BASE_CATEGORIES
+          .map(name => getDefaultCategory(name))
+          .filter((cat): cat is CategoryData => cat !== null)
+        setCategories(defaultCategories)
         setLoading(false)
         return
       }
@@ -136,8 +149,8 @@ export default function Categories() {
       console.error('Erro ao carregar categorias:', err)
     }
     
-    // Fallback: usar apenas as categorias padrão permitidas
-    const defaultCategories: CategoryData[] = ALLOWED_CATEGORIES
+    // Fallback: usar apenas as categorias padrão base
+    const defaultCategories: CategoryData[] = BASE_CATEGORIES
       .map(name => getDefaultCategory(name))
       .filter((cat): cat is CategoryData => cat !== null)
     
@@ -148,6 +161,18 @@ export default function Categories() {
 
   useEffect(() => {
     loadCategories()
+    
+    // Escutar eventos de atualização de categorias do admin
+    const handleCategoryUpdate = () => {
+      console.log('📢 Evento category-updated recebido, recarregando categorias...')
+      loadCategories()
+    }
+    
+    window.addEventListener('category-updated', handleCategoryUpdate)
+    
+    return () => {
+      window.removeEventListener('category-updated', handleCategoryUpdate)
+    }
   }, [])
 
   // PROTEÇÃO EXTRA: Remover "Serviços" do estado imediatamente se aparecer
@@ -170,29 +195,72 @@ export default function Categories() {
   }, [categories])
 
   const getIconComponent = (iconName: string) => {
-    switch (iconName) {
-      case 'gem':
-        return Gem
-      case 'clock':
-        return Clock
-      case 'eye':
-        return Eye
-      case 'diamond':
-        return Diamond
-      case 'package':
-        return Gem // Usar Gem como fallback para Afins
-      default:
-        return Gem
+    // Mapear todos os ícones disponíveis
+    const iconMap: { [key: string]: any } = {
+      // Joias e Acessórios
+      'gem': Gem,
+      'diamond': Diamond,
+      'crown': Crown,
+      'sparkles': Sparkles,
+      'award': Award,
+      // Relógios e Óculos
+      'clock': Clock,
+      'watch': Watch,
+      'eye': Eye,
+      // Produtos e Embalagem
+      'package': Package,
+      'box': Box,
+      'gift': Gift,
+      'shopping-bag': ShoppingBag,
+      // Categorias Gerais
+      'tag': Tag,
+      'star': Star,
+      'heart': Heart,
+      'zap': Zap,
+      'flame': Flame,
+      'leaf': Leaf,
+      // Bebidas e Comida
+      'coffee': Coffee,
+      'beer': Beer,
+      'wine': Wine,
+      'pizza': Pizza,
+      'utensils': Utensils,
+      // Entretenimento
+      'music': Music,
+      'camera': Camera,
+      'gamepad2': Gamepad2,
+      'book': Book,
+      // Locais e Viagem
+      'home': Home,
+      'building': Building,
+      'car': Car,
+      'plane': Plane,
+      'briefcase': Briefcase,
+      // Ferramentas
+      'wrench': Wrench,
+      'hammer': Hammer,
+      'scissors': Scissors,
+      'gauge': Gauge,
+      'cog': Cog,
+      'paintbrush': Paintbrush,
+      'palette': Palette,
+      'settings': Settings,
+      // Pessoas e Comunicação
+      'user': User,
+      'users': Users,
+      'smile': Smile,
+      'thumbs-up': ThumbsUp,
+      'bell': Bell,
+      'mail': Mail,
+      'phone': Phone,
     }
+    
+    return iconMap[iconName] || Gem // Fallback para Gem se ícone não encontrado
   }
 
-  // GARANTIR que apenas categorias permitidas sejam renderizadas
-  // PROTEÇÃO MÁXIMA: Filtrar também por nome exato e case-insensitive
+  // Filtrar apenas Serviços (permitir todas as outras categorias)
   const displayCategories = useMemo(() => {
     const filtered = categories.filter(cat => {
-      // Verificar se está na lista permitida
-      const inAllowedList = ALLOWED_CATEGORIES.includes(cat.name)
-      // Verificar se NÃO é Serviços (de qualquer forma)
       const name = (cat.name || '').trim().toLowerCase()
       const isServicos = name === 'serviços' || name === 'servicos' || name.includes('serviço')
       
@@ -201,7 +269,7 @@ export default function Categories() {
         return false
       }
       
-      return inAllowedList && !isServicos
+      return !isServicos
     })
     
     console.log('🎨 Categorias que serão renderizadas:', filtered.map(c => c.name))
@@ -242,14 +310,14 @@ export default function Categories() {
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 max-w-7xl mx-auto">
           {displayCategories
             .filter(category => {
-              // PROTEÇÃO FINAL: Verificar novamente antes de renderizar
+              // PROTEÇÃO FINAL: Verificar novamente antes de renderizar (apenas excluir Serviços)
               const name = (category.name || '').trim().toLowerCase()
               const isServicos = name === 'serviços' || name === 'servicos' || name.includes('serviço')
               if (isServicos) {
                 console.error('❌ BLOQUEADO NO RENDER: Serviços detectado!', category)
                 return false
               }
-              return ALLOWED_CATEGORIES.includes(category.name)
+              return !isServicos
             })
             .map((category) => {
             const IconComponent = getIconComponent(category.iconName)

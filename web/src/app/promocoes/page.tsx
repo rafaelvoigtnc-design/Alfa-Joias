@@ -38,8 +38,37 @@ export default function Promocoes() {
   const [dbError, setDbError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [showReload, setShowReload] = useState(false)
+  const [categoriesFromDb, setCategoriesFromDb] = useState<string[]>([])
 
-  const categories = ['Todas', 'Joias', 'Relógios', 'Óculos', 'Semi-Joias']
+  // Carregar categorias dinamicamente do banco
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase')
+        const { data, error } = await supabase
+          .from('categories')
+          .select('name')
+          .order('name', { ascending: true })
+        
+        if (!error && data) {
+          // Filtrar apenas categorias permitidas (excluir Serviços)
+          const allowedCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins']
+          const validCategories = data
+            .map(cat => cat.name)
+            .filter(name => allowedCategories.includes(name))
+          
+          setCategoriesFromDb(validCategories)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar categorias:', err)
+      }
+    }
+    
+    loadCategories()
+  }, [])
+
+  // Usar categorias do banco ou fallback padrão
+  const categories = ['Todas', ...(categoriesFromDb.length > 0 ? categoriesFromDb : ['Joias', 'Relógios', 'Óculos', 'Semi-Joias'])]
   const brands = ['Todas']
   const genders = ['Todos', 'Masculino', 'Feminino', 'Unissex']
   const models = ['Todos', 'Clássico', 'Moderno', 'Vintage', 'Esportivo']

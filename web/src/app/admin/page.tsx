@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Eye, Settings, Plus, Edit, Trash2, Save, X, Image, Percent, Star, Package, Truck, CheckCircle, Clock, DollarSign, Shield, Lock, Search, Filter } from 'lucide-react'
+import { 
+  Eye, Settings, Plus, Edit, Trash2, Save, X, Image, Percent, Star, Package, Truck, CheckCircle, Clock, DollarSign, Shield, Lock, Search, Filter,
+  Gem, Diamond, Watch, ShoppingBag, Box, Gift, Tag, Award, Sparkles, Crown, Heart, Star as StarIcon, Zap, Flame, Leaf,
+  Music, Camera, Gamepad2, Book, Coffee, Beer, Wine, Pizza, Utensils, Car, Plane, Home, Building, Briefcase,
+  Palette, Paintbrush, Scissors, Wrench, Hammer, Gauge, Cog, User, Users, Smile, ThumbsUp, Bell, Mail, Phone, Settings
+} from 'lucide-react'
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 import ImageUpload from '@/components/ImageUpload'
 import BrandSelector from '@/components/BrandSelector'
@@ -77,9 +82,6 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState<'products' | 'services' | 'banners' | 'brands' | 'categories' | 'orders'>('products')
   const [editingCategory, setEditingCategory] = useState<any>(null)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
-  const [servicosCategoryImage, setServicosCategoryImage] = useState<string>('')
-  const [servicosCategoryId, setServicosCategoryId] = useState<string | null>(null)
-  const [updatingServicosImage, setUpdatingServicosImage] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const { services, addService, updateService, deleteService } = useSupabaseServices()
   const { banners, addBanner, updateBanner, deleteBanner } = useBanners()
@@ -294,13 +296,6 @@ export default function Admin() {
       if (supabaseCategories && supabaseCategories.length > 0) {
         setCategories(supabaseCategories)
         console.log('✅ Categorias carregadas do BANCO:', supabaseCategories.length, 'categorias')
-        
-        // Buscar categoria "Serviços" para exibir imagem na aba de serviços
-        const servicosCat = supabaseCategories.find((cat: any) => cat.name === 'Serviços')
-        if (servicosCat) {
-          setServicosCategoryImage(servicosCat.image || '')
-          setServicosCategoryId(servicosCat.id)
-        }
       } else {
         console.log('⚠️ Nenhuma categoria no banco de dados')
         setCategories([])
@@ -575,142 +570,19 @@ export default function Admin() {
         console.log('✅ Categoria adicionada no BANCO:', categoryData)
       }
       
+      // Disparar evento para atualizar categorias na página inicial
+      window.dispatchEvent(new CustomEvent('category-updated', { 
+        detail: { action: editingCategory ? 'updated' : 'created', category: categoryData } 
+      }))
+      
       setEditingCategory(null)
       setShowCategoryForm(false)
+      
+      // Recarregar categorias do hook
+      await refetchCategories()
     } catch (error) {
       console.error('❌ Erro ao salvar categoria no banco:', error)
       alert(`❌ ERRO AO SALVAR NO BANCO DE DADOS\n\n${error instanceof Error ? error.message : 'Erro desconhecido'}\n\n💡 Verifique:\n• Configuração do Supabase\n• Conexão com a internet\n• Permissões no banco`)
-    }
-  }
-
-  const handleUpdateServicosCategoryImage = async (imageUrl: string) => {
-    if (!imageUrl || imageUrl.trim() === '') {
-      alert('Por favor, selecione uma imagem primeiro')
-      return
-    }
-
-    console.log('🔄 Iniciando atualização da imagem de Serviços:', imageUrl.substring(0, 100))
-    setUpdatingServicosImage(true)
-    try {
-      let categoryId = servicosCategoryId
-      
-      if (categoryId) {
-        console.log('📝 Atualizando categoria existente:', categoryId)
-        console.log('🖼️ Imagem sendo salva (primeiros 100 chars):', imageUrl.substring(0, 100))
-        // Atualizar categoria existente - usar supabase diretamente para garantir
-        const { data: directUpdate, error: updateError } = await supabase
-          .from('categories')
-          .update({ 
-            image: imageUrl,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', categoryId)
-          .select()
-          .single()
-        
-        if (updateError) {
-          console.error('❌ Erro ao atualizar diretamente:', updateError)
-          throw updateError
-        }
-        
-        console.log('✅ Categoria atualizada diretamente no banco:', {
-          id: directUpdate?.id,
-          name: directUpdate?.name,
-          hasImage: !!directUpdate?.image,
-          imageLength: directUpdate?.image?.length || 0
-        })
-        
-        // Também usar o hook para manter sincronização
-        const updated = await updateCategory(categoryId, { 
-          image: imageUrl,
-          updated_at: new Date().toISOString()
-        })
-        
-        if (updated || directUpdate) {
-          setServicosCategoryImage(imageUrl)
-        }
-      } else {
-        console.log('➕ Criando nova categoria Serviços')
-        // Criar categoria "Serviços" se não existir
-        const newCategory = await addCategory({
-          name: 'Serviços',
-          description: 'Manutenção, reparos e serviços especializados',
-          image: imageUrl,
-          icon: 'wrench'
-        })
-        console.log('✅ Nova categoria criada:', newCategory)
-        if (newCategory) {
-          setServicosCategoryImage(imageUrl)
-          setServicosCategoryId(newCategory.id)
-          categoryId = newCategory.id
-        }
-      }
-      
-      // Aguardar um pouco antes de recarregar
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Recarregar categorias para garantir sincronização
-      await refetchCategories()
-      
-      // Aguardar mais um pouco para garantir que o banco processou
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Atualizar estado local após recarregar - BUSCAR NOVAMENTE DO BANCO
-      const { data: updatedCategory, error: fetchError } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('name', 'Serviços')
-        .single()
-      
-      console.log('🔍 Categoria após atualização (busca direta do banco):', {
-        found: !!updatedCategory,
-        hasImage: !!updatedCategory?.image,
-        imageLength: updatedCategory?.image?.length || 0,
-        imagePreview: updatedCategory?.image?.substring(0, 100) || 'N/A',
-        error: fetchError?.message
-      })
-      
-      if (updatedCategory && !fetchError) {
-        console.log('✅ Imagem confirmada no banco:', updatedCategory.image?.substring(0, 100))
-        setServicosCategoryImage(updatedCategory.image || imageUrl)
-        setServicosCategoryId(updatedCategory.id)
-      } else if (categoryId) {
-        console.log('⚠️ Não foi possível buscar do banco, usando estado local:', imageUrl.substring(0, 100))
-        setServicosCategoryImage(imageUrl)
-      }
-      
-      // Forçar atualização na página inicial - estratégia única para evitar múltiplas chamadas
-      if (typeof window !== 'undefined') {
-        const timestamp = Date.now().toString()
-        const randomSuffix = Math.random().toString(36).substring(7)
-        
-        // Salvar timestamp no localStorage (isso será detectado pela verificação periódica)
-        localStorage.setItem('servicos-category-updated', timestamp + '-' + randomSuffix)
-        localStorage.setItem('servicos-image-last-update', timestamp)
-        localStorage.setItem('servicos-image-updated', 'true')
-        
-        console.log('📢 Sinalizando atualização via localStorage...', { timestamp, randomSuffix })
-        
-        // Disparar evento customizado apenas uma vez
-        const customEvent = new CustomEvent('category-updated', {
-          detail: { 
-            timestamp, 
-            imageUrl: imageUrl.substring(0, 50) + '...',
-            forceReload: true,
-            randomSuffix
-          }
-        })
-        window.dispatchEvent(customEvent)
-        
-        console.log('✅ Evento disparado para atualizar página inicial')
-      }
-      
-      alert('✅ Imagem salva com sucesso!\n\nA página inicial deve atualizar automaticamente em 2-3 segundos.\n\nSe não atualizar, recarregue a página inicial (F5) ou feche e abra novamente.')
-    } catch (error: any) {
-      console.error('❌ Erro ao atualizar imagem:', error)
-      alert(`❌ Erro ao salvar imagem: ${error?.message || 'Erro desconhecido'}\n\nVerifique o console para mais detalhes.`)
-    } finally {
-      setUpdatingServicosImage(false)
     }
   }
 
@@ -774,7 +646,7 @@ export default function Admin() {
   }
 
   // Categorias de produtos disponíveis
-  const productCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Carteiras', 'Cintos', 'Bebidas', 'Acessórios', 'Outros']
+  const productCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Carteiras', 'Cintos', 'Bebidas', 'Acessórios', 'Outros', 'Afins']
   
   // Função para categorias iniciais
   const initialCategoriesData = () => [
@@ -849,6 +721,14 @@ export default function Admin() {
       image: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&h=600&fit=crop',
       icon: 'package',
       href: '/produtos?categoria=Outros'
+    },
+    {
+      id: '10',
+      name: 'Afins',
+      description: 'Produtos variados e categorias relacionadas',
+      image: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=800&h=600&fit=crop',
+      icon: 'package',
+      href: '/produtos?categoria=Afins'
     }
   ]
 
@@ -1324,70 +1204,6 @@ export default function Admin() {
           {/* Services Tab */}
           {activeTab === 'services' && (
             <div className="p-6">
-              {/* Seção para editar imagem da categoria "Serviços" */}
-              <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6 mb-8">
-                <div className="flex items-start justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-semibold text-blue-900 mb-2">
-                      📸 Imagem da Categoria &quot;Serviços&quot; na Página Inicial
-                    </h3>
-                    <p className="text-sm text-blue-700">
-                      Esta imagem aparece no card &quot;Serviços&quot; na seção &quot;Nossas Especialidades&quot; da página inicial.
-                    </p>
-                  </div>
-                </div>
-                
-                {servicosCategoryImage && (
-                  <div className="mb-4">
-                    <p className="text-sm font-medium text-blue-900 mb-2">Imagem atual:</p>
-                    <img 
-                      src={servicosCategoryImage} 
-                      alt="Imagem atual da categoria Serviços" 
-                      className="max-w-xs h-32 object-cover rounded-lg border-2 border-blue-300"
-                    />
-                  </div>
-                )}
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-blue-900 mb-2">
-                      Nova Imagem da Categoria &quot;Serviços&quot;
-                    </label>
-                    <ImageUpload
-                      onImageSelect={(imageUrl) => {
-                        setServicosCategoryImage(imageUrl)
-                      }}
-                      currentImage={servicosCategoryImage}
-                      placeholder="Selecione uma nova imagem para a categoria Serviços"
-                    />
-                  </div>
-                  
-                  <button
-                    onClick={async () => {
-                      if (!servicosCategoryImage) {
-                        alert('Por favor, selecione uma imagem primeiro')
-                        return
-                      }
-                      await handleUpdateServicosCategoryImage(servicosCategoryImage)
-                    }}
-                    disabled={updatingServicosImage || !servicosCategoryImage}
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {updatingServicosImage ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                        Atualizando...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Salvar Imagem da Categoria
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-900">Serviços</h2>
                 <button
@@ -1560,8 +1376,8 @@ export default function Admin() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Filtrar "Serviços" - não mostrar na lista de categorias editáveis */}
-                {categories.filter(category => category.name !== 'Serviços').map((category) => (
+                {/* Mostrar todas as categorias editáveis, incluindo Serviços e Afins */}
+                {categories.map((category) => (
                   <div key={category.id} className="border border-gray-200 rounded-lg p-4">
                     <img src={category.image} alt={category.name} className="w-full h-48 object-cover rounded-lg mb-4" />
                     <h3 className="font-semibold text-gray-900 mb-2">{category.name}</h3>
@@ -2640,19 +2456,80 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Ícone</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Ícone</label>
                 <select
                   name="icon"
                   defaultValue={editingCategory?.icon || 'gem'}
                   required
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm"
                 >
-                  <option value="gem">💎 Gem (Joias)</option>
-                  <option value="clock">⌚ Clock (Relógios)</option>
-                  <option value="eye">👓 Eye (Óculos)</option>
-                  <option value="diamond">💍 Diamond (Semi-Joias)</option>
-                  <option value="wrench">🔧 Wrench (Serviços)</option>
+                  <optgroup label="Joias e Acessórios">
+                    <option value="gem">💎 Gem (Joias)</option>
+                    <option value="diamond">💍 Diamond (Diamante)</option>
+                    <option value="crown">👑 Crown (Coroa)</option>
+                    <option value="sparkles">✨ Sparkles (Brilho)</option>
+                    <option value="award">🏆 Award (Prêmio)</option>
+                  </optgroup>
+                  <optgroup label="Relógios e Óculos">
+                    <option value="clock">⌚ Clock (Relógio)</option>
+                    <option value="watch">⌚ Watch (Relógio)</option>
+                    <option value="eye">👓 Eye (Óculos)</option>
+                  </optgroup>
+                  <optgroup label="Produtos e Embalagem">
+                    <option value="package">📦 Package (Pacote)</option>
+                    <option value="box">📦 Box (Caixa)</option>
+                    <option value="gift">🎁 Gift (Presente)</option>
+                    <option value="shopping-bag">🛍️ Shopping Bag (Sacola)</option>
+                  </optgroup>
+                  <optgroup label="Categorias Gerais">
+                    <option value="tag">🏷️ Tag (Etiqueta)</option>
+                    <option value="star">⭐ Star (Estrela)</option>
+                    <option value="heart">❤️ Heart (Coração)</option>
+                    <option value="zap">⚡ Zap (Raio)</option>
+                    <option value="flame">🔥 Flame (Chama)</option>
+                    <option value="leaf">🍃 Leaf (Folha)</option>
+                  </optgroup>
+                  <optgroup label="Bebidas e Comida">
+                    <option value="coffee">☕ Coffee (Café)</option>
+                    <option value="beer">🍺 Beer (Cerveja)</option>
+                    <option value="wine">🍷 Wine (Vinho)</option>
+                    <option value="pizza">🍕 Pizza</option>
+                    <option value="utensils">🍴 Utensils (Talheres)</option>
+                  </optgroup>
+                  <optgroup label="Entretenimento">
+                    <option value="music">🎵 Music (Música)</option>
+                    <option value="camera">📷 Camera (Câmera)</option>
+                    <option value="gamepad2">🎮 Gamepad (Jogo)</option>
+                    <option value="book">📚 Book (Livro)</option>
+                  </optgroup>
+                  <optgroup label="Locais e Viagem">
+                    <option value="home">🏠 Home (Casa)</option>
+                    <option value="building">🏢 Building (Prédio)</option>
+                    <option value="car">🚗 Car (Carro)</option>
+                    <option value="plane">✈️ Plane (Avião)</option>
+                    <option value="briefcase">💼 Briefcase (Mala)</option>
+                  </optgroup>
+                  <optgroup label="Ferramentas">
+                    <option value="wrench">🔧 Wrench (Chave)</option>
+                    <option value="hammer">🔨 Hammer (Martelo)</option>
+                    <option value="scissors">✂️ Scissors (Tesoura)</option>
+                    <option value="gauge">⏱️ Gauge (Medidor)</option>
+                    <option value="cog">⚙️ Cog (Engrenagem)</option>
+                    <option value="paintbrush">🖌️ Paintbrush (Pincel)</option>
+                    <option value="palette">🎨 Palette (Paleta)</option>
+                    <option value="settings">⚙️ Settings (Configurações)</option>
+                  </optgroup>
+                  <optgroup label="Pessoas e Comunicação">
+                    <option value="user">👤 User (Usuário)</option>
+                    <option value="users">👥 Users (Usuários)</option>
+                    <option value="smile">😊 Smile (Sorriso)</option>
+                    <option value="thumbs-up">👍 Thumbs Up (Joinha)</option>
+                    <option value="bell">🔔 Bell (Sino)</option>
+                    <option value="mail">✉️ Mail (Email)</option>
+                    <option value="phone">📞 Phone (Telefone)</option>
+                  </optgroup>
                 </select>
+                <p className="mt-1 text-xs text-gray-500">Selecione um ícone para representar a categoria</p>
               </div>
 
               {/* Configurações de Filtro - Para categorias normais */}

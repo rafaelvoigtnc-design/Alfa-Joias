@@ -38,8 +38,37 @@ function ProdutosContent() {
   const [dbError, setDbError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [showReload, setShowReload] = useState(false)
+  const [categoriesFromDb, setCategoriesFromDb] = useState<string[]>([])
   
-  const categories = ['Todas', 'Joias', 'Relógios', 'Óculos', 'Semi-Joias']
+  // Carregar categorias dinamicamente do banco
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const { supabase } = await import('@/lib/supabase')
+        const { data, error } = await supabase
+          .from('categories')
+          .select('name')
+          .order('name', { ascending: true })
+        
+        if (!error && data) {
+          // Filtrar apenas categorias permitidas (excluir Serviços)
+          const allowedCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins']
+          const validCategories = data
+            .map((cat: any) => cat.name)
+            .filter((name: string) => allowedCategories.includes(name))
+          
+          setCategoriesFromDb(validCategories)
+        }
+      } catch (err) {
+        console.error('Erro ao carregar categorias:', err)
+      }
+    }
+    
+    loadCategories()
+  }, [])
+  
+  // Usar categorias do banco ou fallback padrão
+  const categories = ['Todas', ...(categoriesFromDb.length > 0 ? categoriesFromDb : ['Joias', 'Relógios', 'Óculos', 'Semi-Joias'])]
   const brands = ['Todas']
   const genders = ['Todos', 'Masculino', 'Feminino', 'Unissex']
   const models = ['Todos', 'Clássico', 'Moderno', 'Vintage', 'Esportivo']
@@ -57,7 +86,7 @@ function ProdutosContent() {
     // Verificar se há categoria na URL
     const categoriaFromUrl = searchParams.get('categoria')
     if (categoriaFromUrl) {
-      // Mapear categorias da URL para o formato correto
+      // Mapear categorias da URL para o formato correto (incluindo novas categorias)
       const categoryMap: { [key: string]: string } = {
         'joias': 'Joias',
         'joias finas': 'Joias',
@@ -69,10 +98,25 @@ function ProdutosContent() {
         'ótica': 'Óculos',
         'semijoias': 'Semi-Joias',
         'semi-joias': 'Semi-Joias',
-        'semi joias': 'Semi-Joias'
+        'semi joias': 'Semi-Joias',
+        'afins': 'Afins',
+        'outros': 'Afins'
       }
+      
+      // Também verificar se a categoria da URL está na lista de categorias válidas do banco
       const normalizedCategory = categoriaFromUrl.toLowerCase().trim()
-      const mappedCategory = categoryMap[normalizedCategory] || categoriaFromUrl
+      let mappedCategory = categoryMap[normalizedCategory] || categoriaFromUrl
+      
+      // Se não está no mapa, verificar se está na lista de categorias válidas (com normalização)
+      if (!categoryMap[normalizedCategory] && categoriesFromDb.length > 0) {
+        const foundCategory = categoriesFromDb.find(cat => 
+          cat.toLowerCase().trim() === categoriaFromUrl.trim() ||
+          normalizeText(cat) === normalizeText(categoriaFromUrl)
+        )
+        if (foundCategory) {
+          mappedCategory = foundCategory
+        }
+      }
       
       console.log('🔍 Filtro de categoria aplicado:', {
         urlParam: categoriaFromUrl,
@@ -90,7 +134,7 @@ function ProdutosContent() {
       // Se não há categoria na URL, resetar para "Todas"
       setSelectedCategory('Todas')
     }
-  }, [searchParams])
+  }, [searchParams, categoriesFromDb])
 
   useEffect(() => {
     const loadProducts = async () => {
