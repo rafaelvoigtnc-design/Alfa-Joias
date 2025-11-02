@@ -71,9 +71,11 @@ export default function Categories() {
       setLoading(true)
       const { supabase } = await import('@/lib/supabase')
       
+      // BUSCAR APENAS AS CATEGORIAS PERMITIDAS - EXCLUIR SERVIÇOS DIRETO NA QUERY
       const { data, error } = await supabase
         .from('categories')
         .select('*')
+        .in('name', ALLOWED_CATEGORIES) // APENAS categorias permitidas
         .order('updated_at', { ascending: false, nullsFirst: false })
         
       if (error) {
@@ -81,16 +83,23 @@ export default function Categories() {
       }
       
       if (data && data.length > 0 && !error) {
-        // ABORDAGEM SIMPLES: Usar apenas as categorias que estão na lista ALLOWED_CATEGORIES
-        // IGNORAR completamente qualquer coisa que não esteja na lista
+        // PROCESSAR APENAS CATEGORIAS PERMITIDAS - ORDEM FIXA
         const finalCategories: CategoryData[] = []
         
-        // Processar apenas as categorias permitidas, na ordem correta
+        // IGNORAR COMPLETAMENTE qualquer categoria que não esteja em ALLOWED_CATEGORIES
         for (const allowedName of ALLOWED_CATEGORIES) {
-          const dbCategory = data.find((cat: any) => cat.name === allowedName && ALLOWED_CATEGORIES.includes(cat.name))
+          // Buscar no banco APENAS se estiver na lista permitida
+          const dbCategory = data.find((cat: any) => {
+            const catName = (cat.name || '').trim()
+            // VERIFICAÇÃO DUPLA: deve estar na lista E não ser Serviços
+            return catName === allowedName && 
+                   ALLOWED_CATEGORIES.includes(catName) &&
+                   catName !== 'Serviços' &&
+                   catName.toLowerCase() !== 'serviços'
+          })
           
           if (dbCategory && ALLOWED_CATEGORIES.includes(dbCategory.name)) {
-            // Categoria existe no banco e está permitida
+            // Usar dados do banco
             finalCategories.push({
               id: dbCategory.id,
               name: dbCategory.name,
@@ -100,7 +109,7 @@ export default function Categories() {
               href: dbCategory.name === 'Afins' ? '/produtos?categoria=Afins' : `/produtos?categoria=${dbCategory.name}`
             })
           } else {
-            // Categoria não existe no banco, usar padrão
+            // Usar padrão se não existe no banco
             const defaultCat = getDefaultCategory(allowedName)
             if (defaultCat) {
               finalCategories.push(defaultCat)
@@ -108,10 +117,17 @@ export default function Categories() {
           }
         }
         
-        // GARANTIR que apenas categorias permitidas estão no array final
-        const safeCategories = finalCategories.filter(cat => ALLOWED_CATEGORIES.includes(cat.name))
+        // FILTRO FINAL ABSOLUTO - REMOVER QUALQUER COISA QUE NÃO ESTEJA NA LISTA
+        const safeCategories = finalCategories
+          .filter(cat => {
+            const name = (cat.name || '').trim()
+            return ALLOWED_CATEGORIES.includes(name) &&
+                   name !== 'Serviços' &&
+                   name.toLowerCase() !== 'serviços' &&
+                   !name.includes('Serviço')
+          })
         
-        console.log('✅ Categorias carregadas:', safeCategories.map(c => c.name))
+        console.log('✅ Categorias FINAIS (SEM SERVIÇOS):', safeCategories.map(c => c.name))
         setCategories(safeCategories)
         setLoading(false)
         return
