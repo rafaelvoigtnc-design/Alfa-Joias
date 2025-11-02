@@ -625,17 +625,6 @@ export default function Login() {
               </svg>
               {loading ? 'Carregando...' : 'Continuar com Google'}
             </button>
-            
-            {/* Aviso sobre configuração */}
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-              <p className="text-xs text-yellow-800">
-                <strong>⚠️ Login com Google não funciona?</strong><br/>
-                O Google OAuth precisa ser configurado no Supabase. 
-                <a href="/CONFIGURAR-GOOGLE-OAUTH.md" className="text-yellow-600 underline" target="_blank" rel="noopener noreferrer">
-                  Veja o guia de configuração
-                </a>
-              </p>
-            </div>
           </form>
         </div>
 
