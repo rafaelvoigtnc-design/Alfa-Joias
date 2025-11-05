@@ -1,7 +1,22 @@
 'use client'
 
-// Configuração para Cloudflare Pages - forçar renderização estática
-export const dynamic = 'force-static'
+// Gerar páginas estáticas para produtos existentes no build time
+export async function generateStaticParams() {
+  try {
+    const { supabase } = await import('@/lib/supabase')
+    const { data: products } = await supabase
+      .from('products')
+      .select('id')
+      .limit(1000) // Limitar para não sobrecarregar o build
+    
+    return products?.map((product) => ({
+      id: product.id,
+    })) || []
+  } catch (error) {
+    console.error('Erro ao gerar páginas estáticas:', error)
+    return []
+  }
+}
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
