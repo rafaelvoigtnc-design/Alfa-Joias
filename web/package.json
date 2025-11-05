@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build",
+    "build": "NEXT_WEBPACK_USE_NAMED_CHUNK_IDS=true next build",
     "start": "next start",
     "lint": "next lint",
     "setup": "node setup-supabase.js",

@@ -45,14 +45,22 @@ const nextConfig = {
     pagesBufferLength: 2,
   },
   // Configuração para Cloudflare Pages - desabilitar cache do webpack completamente
-  webpack: (config, { isServer, dev }) => {
-    // Desabilitar cache do webpack completamente (tanto client quanto server)
-    // Isso reduz drasticamente o tamanho dos arquivos gerados
+  webpack: (config, { isServer, dev, webpack }) => {
+    // Desabilitar completamente o cache do webpack (tanto client quanto server)
+    // Isso evita gerar arquivos .pack grandes que excedem o limite do Cloudflare
     config.cache = false
-    // Desabilitar persistent cache
-    if (config.cache && typeof config.cache === 'object') {
+    
+    // Remover configurações de cache persistent
+    if (config.optimization) {
+      config.optimization.moduleIds = 'deterministic'
+      config.optimization.chunkIds = 'deterministic'
+    }
+    
+    // Desabilitar cache filesystem
+    if (config.cache && typeof config.cache === 'object' && config.cache.type) {
       config.cache = false
     }
+    
     return config
   },
   // Headers de segurança e cache
