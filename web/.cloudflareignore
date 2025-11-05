@@ -5,4 +5,6 @@
 .next/static/chunks/*.js.gz
 .next/trace
 node_modules/.cache/**
+*.pack
+**/cache/**
 
