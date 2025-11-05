@@ -46,11 +46,8 @@ function deleteLargeFiles(dir, maxSize = 25 * 1024 * 1024) {
 console.log('🧹 Limpando arquivos grandes de cache do Next.js...')
 deleteLargeFiles(nextDir)
 
-// Limpar também a pasta .vercel se existir
-if (fs.existsSync(vercelDir)) {
-  console.log(`🗑️ Removendo pasta .vercel: ${vercelDir}`)
-  fs.rmSync(vercelDir, { recursive: true, force: true })
-}
+// NÃO remover .vercel pois contém o diretório de saída necessário para o Cloudflare Pages
+// O Cloudflare Pages precisa de .vercel/output/static
 
 console.log('✅ Limpeza concluída!')
 
