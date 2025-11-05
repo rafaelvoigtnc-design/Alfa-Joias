@@ -113,10 +113,13 @@ export default function Promocoes() {
           const { supabase } = await import('@/lib/supabase')
           console.log('🔄 Buscando promoções do banco de dados...')
           
+          // Otimizar query: apenas produtos em promoção com campos necessários
           const { data, error } = await supabase
             .from('products')
-            .select('*')
+            .select('id, name, category, brand, price, image, description, on_sale, original_price, sale_price, discount_percentage, stock, gender, model, created_at')
+            .eq('on_sale', true) // Filtrar apenas promoções no banco
             .order('created_at', { ascending: false })
+            .limit(500) // Limitar para melhor performance
           
           clearTimeout(reloadTimeout)
           
@@ -140,11 +143,10 @@ export default function Promocoes() {
             return
           }
           
-          // Filtrar apenas produtos em promoção
-          const productsOnSale = data.filter((p: any) => p.on_sale || p.onSale)
+          // Já filtrado no banco, mas verificar dupla segurança
+          const productsOnSale = data.filter((p: any) => p.on_sale === true || p.onSale === true)
           
-          console.log('✅ Total de produtos no banco:', data.length)
-          console.log('🔥 Produtos em PROMOÇÃO:', productsOnSale.length)
+          console.log('✅ Produtos em PROMOÇÃO carregados:', productsOnSale.length)
           
           setProducts(productsOnSale)
           setFilteredProducts(productsOnSale)

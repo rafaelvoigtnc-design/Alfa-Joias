@@ -7,10 +7,12 @@ export const runtime = 'edge'
 
 export async function GET() {
   try {
+    // Otimizar query: selecionar apenas campos necessários para listagem
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id, name, category, brand, price, image, description, on_sale, original_price, sale_price, discount_percentage, featured, stock, gender, model, created_at')
       .order('created_at', { ascending: false })
+      .limit(500) // Limitar para melhor performance
 
     if (error) {
       console.error('❌ Erro ao buscar produtos:', error.message)
@@ -32,8 +34,8 @@ export async function GET() {
     }
 
     const response = NextResponse.json({ success: true, products: data || [] })
-    // Cache por 60 segundos para melhorar performance
-    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+    // Cache otimizado: 5 minutos para dados estáticos, 1 minuto stale-while-revalidate
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60')
     return response
   } catch (err) {
     console.error('❌ Erro na API de produtos:', err)

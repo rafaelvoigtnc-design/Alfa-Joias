@@ -13,7 +13,11 @@ export function useSupabaseProducts() {
       setError(null)
       console.log('🔄 Buscando produtos do banco de dados...')
       
-      const response = await fetch('/api/products', { cache: 'no-store' })
+      // Usar cache para melhor performance (5 minutos)
+      const response = await fetch('/api/products', { 
+        cache: 'default',
+        next: { revalidate: 300 } // Revalidar a cada 5 minutos
+      })
       if (!response.ok) {
         const text = await response.text()
         let errorData: any = {}

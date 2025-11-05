@@ -164,17 +164,17 @@ function ProdutosContent() {
           setShowReload(true)
         }, 30000)
         
-        // Timeout para evitar carregamento infinito (10s para erro)
+        // Timeout reduzido para melhor UX (5s para erro)
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 10000)
+          setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 5000)
         )
         
-        // Otimizar query: selecionar apenas campos necessários e limitar inicialmente
+        // Otimizar query: selecionar apenas campos necessários e limitar
         const queryPromise = supabase
           .from('products')
-          .select('id, name, category, brand, price, image, description, on_sale, original_price, sale_price, gender, model, created_at')
+          .select('id, name, category, brand, price, image, description, on_sale, original_price, sale_price, discount_percentage, stock, gender, model, created_at')
           .order('created_at', { ascending: false })
-          .limit(1000) // Limitar para evitar sobrecarga
+          .limit(500) // Reduzir limite para melhor performance
         
         const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
         const { data, error } = result
