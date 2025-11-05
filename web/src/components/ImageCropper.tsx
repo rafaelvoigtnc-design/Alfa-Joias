@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Crop, ZoomIn, ZoomOut, Move, RotateCw, X } from 'lucide-react'
+import { Crop, ZoomIn, ZoomOut, Move, RotateCw, X, RotateCcw } from 'lucide-react'
 
 interface ImageCropperProps {
   imageUrl: string
@@ -14,16 +14,19 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
+  const [initialScale, setInitialScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [rotation, setRotation] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const imageRef = useRef<HTMLImageElement | null>(null)
 
   useEffect(() => {
     if (imageUrl && canvasRef.current) {
       const img = new Image()
       img.crossOrigin = 'anonymous'
       img.onload = () => {
+        imageRef.current = img
         const canvas = canvasRef.current
         if (!canvas) return
         
@@ -55,11 +58,14 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
           canvas.width = displayWidth
           canvas.height = displayHeight
           
-          // Ajustar escala inicial para preencher o espaço
+          // Ajustar escala inicial para preencher o espaço (sem exagerar)
           const scaleX = containerWidth / img.width
           const scaleY = containerHeight / img.height
-          const initialScale = Math.max(scaleX, scaleY) * 1.1 // 10% a mais para garantir preenchimento
-          setScale(initialScale)
+          const calculatedScale = Math.max(scaleX, scaleY) * 1.05 // 5% a mais, mais conservador
+          setInitialScale(calculatedScale)
+          setScale(calculatedScale)
+          setPosition({ x: 0, y: 0 })
+          setRotation(0)
         }
         
         drawImage()
@@ -102,11 +108,20 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   }
 
   const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.1, 0.5))
+    setScale(prev => Math.max(prev - 0.1, 0.3))
+  }
+
+  const handleResetZoom = () => {
+    setScale(initialScale)
+    setPosition({ x: 0, y: 0 })
   }
 
   const handleRotate = () => {
     setRotation(prev => (prev + 90) % 360)
+  }
+
+  const handleResetRotation = () => {
+    setRotation(0)
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -171,14 +186,29 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     img.src = imageUrl
   }
 
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    // Só fechar se clicar diretamente no backdrop, não nos filhos
+    if (e.target === e.currentTarget) {
+      // Não fechar automaticamente - requer clicar no X ou Cancelar
+      return
+    }
+  }
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center p-4 border-b">
           <h3 className="text-lg font-semibold text-gray-900">Editar Imagem</h3>
           <button
             onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+            type="button"
           >
             <X className="h-6 w-6" />
           </button>
@@ -203,6 +233,7 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
             <button
               onClick={handleZoomOut}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              type="button"
             >
               <ZoomOut className="h-4 w-4" />
               <span className="text-sm">Diminuir</span>
@@ -210,16 +241,34 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
             <button
               onClick={handleZoomIn}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              type="button"
             >
               <ZoomIn className="h-4 w-4" />
               <span className="text-sm">Aumentar</span>
             </button>
             <button
+              onClick={handleResetZoom}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-300 rounded-md hover:bg-blue-50 transition-colors text-blue-600"
+              type="button"
+            >
+              <ZoomOut className="h-4 w-4" />
+              <span className="text-sm">Resetar Zoom</span>
+            </button>
+            <button
               onClick={handleRotate}
               className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              type="button"
             >
               <RotateCw className="h-4 w-4" />
-              <span className="text-sm">Girar</span>
+              <span className="text-sm">Girar 90°</span>
+            </button>
+            <button
+              onClick={handleResetRotation}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-300 rounded-md hover:bg-blue-50 transition-colors text-blue-600"
+              type="button"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span className="text-sm">Resetar Rotação</span>
             </button>
             <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md">
               <Move className="h-4 w-4 text-gray-500" />
@@ -230,13 +279,15 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
           <div className="flex justify-end gap-3">
             <button
               onClick={onCancel}
-              className="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+              type="button"
             >
               Cancelar
             </button>
             <button
               onClick={handleCrop}
-              className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-2"
+              className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-2 transition-colors"
+              type="button"
             >
               <Crop className="h-4 w-4" />
               Aplicar e Salvar
