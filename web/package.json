@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
-    "build:cloudflare": "next build && node scripts/clean-cache.js",
+    "build:cloudflare": "npx @cloudflare/next-on-pages && node scripts/clean-cache.js",
     "start": "next start",
     "lint": "next lint",
     "setup": "node setup-supabase.js",

@@ -5,6 +5,7 @@ const fs = require('fs')
 const path = require('path')
 
 const nextDir = path.join(__dirname, '..', '.next')
+const vercelDir = path.join(__dirname, '..', '.vercel')
 
 function deleteLargeFiles(dir, maxSize = 25 * 1024 * 1024) {
   // 25MB em bytes
@@ -44,5 +45,12 @@ function deleteLargeFiles(dir, maxSize = 25 * 1024 * 1024) {
 
 console.log('🧹 Limpando arquivos grandes de cache do Next.js...')
 deleteLargeFiles(nextDir)
+
+// Limpar também a pasta .vercel se existir
+if (fs.existsSync(vercelDir)) {
+  console.log(`🗑️ Removendo pasta .vercel: ${vercelDir}`)
+  fs.rmSync(vercelDir, { recursive: true, force: true })
+}
+
 console.log('✅ Limpeza concluída!')
 

@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Configuração de codificação UTF-8
+  // Configuração para Cloudflare Pages
+  // Usando @cloudflare/next-on-pages para suporte completo
   experimental: {
     serverComponentsExternalPackages: []
   },
