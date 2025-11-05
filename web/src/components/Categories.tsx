@@ -19,7 +19,8 @@ interface CategoryData {
 }
 
 // CATEGORIAS BASE (para fallback se não houver no banco)
-const BASE_CATEGORIES = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins', 'Serviços']
+// Ordem: Óculos, Relógios, Joias, Semi-Joias, Afins, Serviços
+const BASE_CATEGORIES = ['Óculos', 'Relógios', 'Joias', 'Semi-Joias', 'Afins', 'Serviços']
 
 export default function Categories() {
   const [categories, setCategories] = useState<CategoryData[]>([])
@@ -111,12 +112,20 @@ export default function Categories() {
               ? '/servicos'
               : `/produtos?categoria=${encodeURIComponent(cat.name || '')}`
           }))
-          // Ordenar: Joias antes de Semi-Joias
+          // Ordenar: Óculos, Relógios, Joias, Semi-Joias, Afins, Serviços
           .sort((a, b) => {
-            if (a.name === 'Joias') return -1
-            if (b.name === 'Joias') return 1
-            if (a.name === 'Semi-Joias' && b.name !== 'Joias') return 1
-            if (b.name === 'Semi-Joias' && a.name !== 'Joias') return -1
+            const order = ['Óculos', 'Relógios', 'Joias', 'Semi-Joias', 'Afins', 'Serviços']
+            const indexA = order.indexOf(a.name)
+            const indexB = order.indexOf(b.name)
+            
+            // Se ambas estão na lista de ordem, usar a ordem definida
+            if (indexA !== -1 && indexB !== -1) {
+              return indexA - indexB
+            }
+            // Se apenas uma está na lista, ela vem primeiro
+            if (indexA !== -1) return -1
+            if (indexB !== -1) return 1
+            // Se nenhuma está na lista, ordem alfabética
             return a.name.localeCompare(b.name)
           })
         
