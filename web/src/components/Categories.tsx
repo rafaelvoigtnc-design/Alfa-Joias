@@ -107,8 +107,18 @@ export default function Categories() {
             description: cat.description || '',
             image: cat.image || '',
             iconName: cat.icon || 'gem',
-            href: `/produtos?categoria=${encodeURIComponent(cat.name || '')}`
+            href: cat.name?.toLowerCase().includes('serviço') || cat.name?.toLowerCase() === 'serviços'
+              ? '/servicos'
+              : `/produtos?categoria=${encodeURIComponent(cat.name || '')}`
           }))
+          // Ordenar: Joias antes de Semi-Joias
+          .sort((a, b) => {
+            if (a.name === 'Joias') return -1
+            if (b.name === 'Joias') return 1
+            if (a.name === 'Semi-Joias' && b.name !== 'Joias') return 1
+            if (b.name === 'Semi-Joias' && a.name !== 'Joias') return -1
+            return a.name.localeCompare(b.name)
+          })
         
         setCategories(dbCategories)
         setLoading(false)
@@ -275,7 +285,7 @@ export default function Categories() {
                 href={href}
                 className="group block bg-white border border-gray-200 md:hover:border-gray-800 transition-all duration-300 overflow-hidden md:hover:shadow-lg md:hover:-translate-y-1 active:scale-[0.98] touch-manipulation w-full"
               >
-                <div className="relative h-16 sm:h-20 md:h-24 lg:h-28 overflow-hidden bg-gray-200">
+                <div className="relative h-24 sm:h-28 md:h-32 lg:h-36 overflow-hidden bg-gray-200">
                   {category.image ? (
                     <img
                       src={category.image}
@@ -296,18 +306,18 @@ export default function Categories() {
                   )}
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-300" />
 
-                  <div className="absolute top-1 right-1">
-                    <div className="bg-white/90 backdrop-blur-sm text-gray-800 p-0.5 sm:p-1 rounded-full shadow-sm group-hover:bg-gray-800 group-hover:text-white transition-all duration-300">
-                      <IconComponent className="h-2 w-2 sm:h-2.5 sm:w-2.5" />
+                  <div className="absolute top-2 right-2">
+                    <div className="bg-white/90 backdrop-blur-sm text-gray-800 p-1 sm:p-1.5 rounded-full shadow-sm group-hover:bg-gray-800 group-hover:text-white transition-all duration-300">
+                      <IconComponent className="h-3 w-3 sm:h-4 sm:w-4" />
                     </div>
                   </div>
                 </div>
 
-                <div className="p-1.5 sm:p-2">
-                  <h3 className="text-[9px] sm:text-[10px] md:text-xs font-medium text-gray-900 mb-0.5 group-hover:text-gray-800 transition-colors leading-tight line-clamp-1">
+                <div className="p-2 sm:p-2.5 md:p-3">
+                  <h3 className="text-xs sm:text-sm md:text-base font-medium text-gray-900 mb-1 group-hover:text-gray-800 transition-colors leading-tight">
                     {category.name}
                   </h3>
-                  <p className="text-gray-600 text-[8px] sm:text-[9px] leading-tight line-clamp-2 hidden sm:block">
+                  <p className="text-gray-600 text-[10px] sm:text-xs md:text-sm leading-tight line-clamp-2">
                     {category.description}
                   </p>
                 </div>

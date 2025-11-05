@@ -51,9 +51,23 @@ export default function Promocoes() {
           .order('name', { ascending: true })
         
         if (!error && data) {
-          // Usar TODAS as categorias do banco automaticamente (sistema dinâmico)
-          // Qualquer categoria nova criada no admin aparecerá automaticamente aqui
-          const validCategories = data.map((cat: any) => cat.name).filter(Boolean)
+          // Usar todas as categorias do banco, EXCETO "Serviços" (tem página própria)
+          const validCategories = data
+            .map((cat: any) => cat.name)
+            .filter(Boolean)
+            .filter((name: string) => {
+              const lower = name.toLowerCase().trim()
+              return lower !== 'serviços' && lower !== 'servicos' && !lower.includes('serviço')
+            })
+          
+          // Ordenar: Joias antes de Semi-Joias
+          validCategories.sort((a: string, b: string) => {
+            if (a === 'Joias') return -1
+            if (b === 'Joias') return 1
+            if (a === 'Semi-Joias' && b !== 'Joias') return 1
+            if (b === 'Semi-Joias' && a !== 'Joias') return -1
+            return a.localeCompare(b)
+          })
           
           setCategoriesFromDb(validCategories)
         }

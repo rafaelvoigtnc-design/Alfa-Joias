@@ -1008,11 +1008,18 @@ export default function Admin() {
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
                             {/* Adicionar categorias dinâmicas do banco que não estão na lista fixa */}
-                            {/* Isso garante que novas categorias criadas apareçam automaticamente */}
+                            {/* EXCLUIR "Serviços" pois tem página própria */}
                             {Array.from(new Set([
                               ...products.map(p => p.category),
                               ...(supabaseCategories || []).map((c: any) => c.name)
-                            ].filter(cat => cat && !productCategories.includes(cat)))).map(cat => (
+                            ].filter(cat => {
+                              if (!cat) return false
+                              const lower = cat.toLowerCase().trim()
+                              return !productCategories.includes(cat) && 
+                                     lower !== 'serviços' && 
+                                     lower !== 'servicos' && 
+                                     !lower.includes('serviço')
+                            }))).map(cat => (
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
                           </select>

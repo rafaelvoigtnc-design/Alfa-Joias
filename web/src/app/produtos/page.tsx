@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect, useMemo, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Phone, Eye, Clock, Gem, Search, Filter, X, ChevronDown, Diamond } from 'lucide-react'
@@ -51,9 +51,23 @@ function ProdutosContent() {
           .order('name', { ascending: true })
         
         if (!error && data) {
-          // Usar TODAS as categorias do banco automaticamente (sistema dinâmico)
-          // Qualquer categoria nova criada no admin aparecerá automaticamente aqui
-          const validCategories = data.map((cat: any) => cat.name).filter(Boolean)
+          // Usar todas as categorias do banco, EXCETO "Serviços" (tem página própria)
+          const validCategories = data
+            .map((cat: any) => cat.name)
+            .filter(Boolean)
+            .filter((name: string) => {
+              const lower = name.toLowerCase().trim()
+              return lower !== 'serviços' && lower !== 'servicos' && !lower.includes('serviço')
+            })
+          
+          // Ordenar: Joias antes de Semi-Joias
+          validCategories.sort((a: string, b: string) => {
+            if (a === 'Joias') return -1
+            if (b === 'Joias') return 1
+            if (a === 'Semi-Joias' && b !== 'Joias') return 1
+            if (b === 'Semi-Joias' && a !== 'Joias') return -1
+            return a.localeCompare(b)
+          })
           
           setCategoriesFromDb(validCategories)
         }
@@ -155,10 +169,12 @@ function ProdutosContent() {
           setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 10000)
         )
         
+        // Otimizar query: selecionar apenas campos necessários e limitar inicialmente
         const queryPromise = supabase
           .from('products')
-          .select('*')
+          .select('id, name, category, brand, price, image, description, on_sale, original_price, sale_price, gender, model, created_at')
           .order('created_at', { ascending: false })
+          .limit(1000) // Limitar para evitar sobrecarga
         
         const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
         const { data, error } = result
@@ -185,9 +201,6 @@ function ProdutosContent() {
           return
         }
         
-        console.log('✅ Produtos carregados do BANCO:', data.length, 'produtos')
-        console.log('📋 Lista:', data.map((p: any) => ({ id: p.id, nome: p.name, categoria: p.category })))
-        
         setProducts(data)
         setFilteredProducts(data)
         setLoading(false)
@@ -213,18 +226,8 @@ function ProdutosContent() {
     loadProducts()
   }, [])
 
-  useEffect(() => {
-    console.log('🔄 Aplicando filtros...', {
-      totalProdutos: products.length,
-      categoria: selectedCategory,
-      marca: selectedBrand,
-      genero: selectedGender,
-      modelo: selectedModel,
-      busca: searchTerm,
-      precoMin: minPrice,
-      precoMax: maxPrice
-    })
-    
+  // Memoizar filtros para melhor performance
+  const filteredProductsMemo = useMemo(() => {
     let filtered = products
 
     if (selectedCategory !== 'Todas') {
@@ -251,12 +254,6 @@ function ProdutosContent() {
         return mappedCategories.includes(productCategory)
       })
       
-      console.log('📊 Filtro de categoria aplicado:', {
-        categoria: selectedCategory,
-        total: products.length,
-        filtrados: filtered.length,
-        produtos: filtered.map(p => ({ nome: p.name, categoria: p.category }))
-      })
     }
 
     if (selectedBrand !== 'Todas') {
@@ -285,11 +282,6 @@ function ProdutosContent() {
                normalizedCategory.includes(normalizedSearch)
       })
       
-      console.log('🔎 Busca realizada:', {
-        termo: searchTerm,
-        normalizado: normalizedSearch,
-        encontrados: filtered.length
-      })
     }
 
     // Filtro por preço
@@ -327,13 +319,12 @@ function ProdutosContent() {
       return 0
     })
 
-    console.log('✅ Filtros finalizados:', {
-      produtosFiltrados: filtered.length,
-      produtos: filtered.map(p => p.name)
-    })
-    
-    setFilteredProducts(filtered)
+    return filtered
   }, [products, selectedCategory, selectedBrand, selectedGender, selectedModel, searchTerm, minPrice, maxPrice])
+  
+  useEffect(() => {
+    setFilteredProducts(filteredProductsMemo)
+  }, [filteredProductsMemo])
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
