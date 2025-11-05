@@ -136,10 +136,10 @@ export default function Brands() {
                     key={index}
                     onClick={() => setCurrentIndex(index)}
                     style={{
-                      width: '2px',
-                      height: '2px',
-                      minWidth: '2px',
-                      minHeight: '2px',
+                      width: '4px',
+                      height: '4px',
+                      minWidth: '4px',
+                      minHeight: '4px',
                       padding: '0',
                       margin: '0'
                     }}
