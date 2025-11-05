@@ -1,0 +1,8 @@
+# Ignorar arquivos grandes de cache do Next.js
+.next/cache/**
+.next/server/**
+.next/static/chunks/*.js.map
+.next/static/chunks/*.js.gz
+.next/trace
+node_modules/.cache/**
+

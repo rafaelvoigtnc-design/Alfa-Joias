@@ -44,6 +44,14 @@ const nextConfig = {
     maxInactiveAge: 25 * 1000,
     pagesBufferLength: 2,
   },
+  // Configuração para Cloudflare Pages - desabilitar cache do webpack durante build
+  webpack: (config, { isServer, dev }) => {
+    if (!isServer && !dev) {
+      // Desabilitar geração de cache para Cloudflare Pages
+      config.cache = false
+    }
+    return config
+  },
   // Headers de segurança e cache
   async headers() {
     return [
