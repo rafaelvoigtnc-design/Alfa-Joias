@@ -201,7 +201,7 @@ export default function HeroCarousel() {
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`w-[2px] h-[2px] sm:w-1 sm:h-1 md:w-1.5 md:h-1.5 rounded-full transition-all duration-300 active:scale-75 ${
+                className={`w-[1px] h-[1px] sm:w-1 sm:h-1 md:w-1.5 md:h-1.5 rounded-full transition-all duration-300 active:scale-75 ${
                   index === currentSlide ? 'bg-gray-600' : 'bg-gray-300'
                 }`}
               />
