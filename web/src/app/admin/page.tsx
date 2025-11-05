@@ -1008,7 +1008,11 @@ export default function Admin() {
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
                             {/* Adicionar categorias dinâmicas do banco que não estão na lista fixa */}
-                            {Array.from(new Set(products.map(p => p.category).filter(cat => cat && !productCategories.includes(cat)))).map(cat => (
+                            {/* Isso garante que novas categorias criadas apareçam automaticamente */}
+                            {Array.from(new Set([
+                              ...products.map(p => p.category),
+                              ...(supabaseCategories || []).map((c: any) => c.name)
+                            ].filter(cat => cat && !productCategories.includes(cat)))).map(cat => (
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
                           </select>

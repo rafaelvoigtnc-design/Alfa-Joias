@@ -51,8 +51,9 @@ export default function Promocoes() {
           .order('name', { ascending: true })
         
         if (!error && data) {
-          // Usar todas as categorias do banco (incluindo Serviços e Afins)
-          const validCategories = data.map((cat: any) => cat.name)
+          // Usar TODAS as categorias do banco automaticamente (sistema dinâmico)
+          // Qualquer categoria nova criada no admin aparecerá automaticamente aqui
+          const validCategories = data.map((cat: any) => cat.name).filter(Boolean)
           
           setCategoriesFromDb(validCategories)
         }
