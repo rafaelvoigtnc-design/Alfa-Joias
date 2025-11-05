@@ -45,6 +45,7 @@ export default function FeaturedProducts() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-800"></div>
             </div>
             <p className="text-gray-500 text-lg font-light">Carregando produtos...</p>
+            <p className="text-gray-400 text-sm mt-2">Aguarde alguns segundos...</p>
           </div>
         ) : error ? (
           <div className="text-center py-16">

@@ -85,16 +85,30 @@ export default function Categories() {
       setLoading(true)
       const { supabase } = await import('@/lib/supabase')
       
+      // Timeout de 5 segundos para evitar carregamento infinito
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout ao carregar categorias')), 5000)
+      )
+      
       // BUSCAR TODAS AS CATEGORIAS DO BANCO (sem filtros de nome - vamos filtrar depois)
       // Isso garante que novas categorias sejam carregadas
-      const { data, error } = await supabase
+      const queryPromise = supabase
         .from('categories')
         .select('id, name, description, image, icon, created_at, updated_at')
         .order('created_at', { ascending: true })
-        
+        .limit(20) // Limitar para melhor performance
+      
+      const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
+      const { data, error } = result
+      
       if (error) {
         console.error('❌ Erro ao buscar categorias do Supabase:', error)
         console.error('Detalhes do erro:', JSON.stringify(error, null, 2))
+        // Usar fallback em caso de erro
+        const defaultCategories: CategoryData[] = BASE_CATEGORIES
+          .map(name => getDefaultCategory(name))
+          .filter((cat): cat is CategoryData => cat !== null)
+        setCategories(defaultCategories)
         setLoading(false)
         return
       }
@@ -143,10 +157,17 @@ export default function Categories() {
         return
       }
     } catch (err) {
-      console.error('Erro ao carregar categorias:', err)
+      console.error('❌ Erro ao carregar categorias:', err)
+      // Sempre usar fallback em caso de erro ou timeout
+      const defaultCategories: CategoryData[] = BASE_CATEGORIES
+        .map(name => getDefaultCategory(name))
+        .filter((cat): cat is CategoryData => cat !== null)
+      setCategories(defaultCategories)
+      setLoading(false)
+      return
     }
     
-    // Fallback: usar apenas as categorias padrão base
+    // Fallback: usar apenas as categorias padrão base (se chegou aqui, algo deu errado)
     const defaultCategories: CategoryData[] = BASE_CATEGORIES
       .map(name => getDefaultCategory(name))
       .filter((cat): cat is CategoryData => cat !== null)

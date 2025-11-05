@@ -13,11 +13,18 @@ export function useSupabaseProducts() {
       setError(null)
       console.log('🔄 Buscando produtos do banco de dados...')
       
+      // Timeout de 5 segundos para evitar carregamento infinito
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      
       // Usar cache para melhor performance (5 minutos)
       const response = await fetch('/api/products', { 
         cache: 'default',
-        next: { revalidate: 300 } // Revalidar a cada 5 minutos
+        next: { revalidate: 300 }, // Revalidar a cada 5 minutos
+        signal: controller.signal
       })
+      
+      clearTimeout(timeoutId)
       if (!response.ok) {
         const text = await response.text()
         let errorData: any = {}
@@ -64,7 +71,15 @@ export function useSupabaseProducts() {
       
     } catch (err) {
       console.error('❌ Erro ao carregar produtos do banco, usando fallback:', err)
-      setError(err instanceof Error ? err.message : 'Erro ao carregar produtos do banco de dados')
+      
+      // Verificar se foi timeout
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Tempo de carregamento excedido. Verifique sua conexão.')
+      } else {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar produtos do banco de dados')
+      }
+      
+      // Usar fallback mesmo em caso de erro
       setProducts(initialProducts as unknown as Product[])
       setLoading(false)
     }
