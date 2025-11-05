@@ -197,9 +197,13 @@ export default function ProductPage() {
           <div>
             <div className="aspect-square bg-white rounded-xl overflow-hidden mb-4">
               <img
-                src={product.additionalImages?.[selectedImage] || product.image}
+                src={product.additionalImages?.[selectedImage] || product.image || '/placeholder.jpg'}
                 alt={product.name}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Fallback para imagem padrão se a imagem falhar
+                  e.currentTarget.src = 'https://via.placeholder.com/600x600?text=Sem+Imagem'
+                }}
               />
             </div>
             
