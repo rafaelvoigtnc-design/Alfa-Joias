@@ -1,8 +1,0 @@
-# Configuração do Cloudflare Pages
-pages_build_output_dir = ".next"
-
-# Ignorar arquivos grandes de cache
-[build]
-command = "npm run build"
-cwd = "web"
-
