@@ -15,15 +15,26 @@ export function useBrands() {
       setError(null)
       
       console.log('🔄 Buscando marcas do Supabase...')
-      const { data, error } = await supabase
+      
+      // Timeout de 5 segundos para evitar carregamento infinito
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout ao carregar marcas')), 5000)
+      )
+      
+      const queryPromise = supabase
         .from('brands')
         .select('*')
         .order('created_at', { ascending: false })
+        .limit(50) // Limitar para melhor performance
+
+      const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
+      const { data, error } = result
 
       if (error) {
         console.error('❌ Erro do Supabase:', error.message)
         setError(`Erro ao conectar com o banco de dados: ${error.message}`)
         setBrands(initialBrands as unknown as Brand[])
+        setLoading(false)
         return
       }
       
@@ -42,6 +53,7 @@ export function useBrands() {
     } catch (err) {
       console.error('❌ Erro ao carregar marcas:', err)
       setError(err instanceof Error ? err.message : 'Erro ao carregar marcas do banco de dados')
+      // Sempre usar fallback em caso de erro
       setBrands(initialBrands as unknown as Brand[])
     } finally {
       setLoading(false)

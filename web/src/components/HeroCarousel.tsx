@@ -11,16 +11,32 @@ export default function HeroCarousel() {
   useEffect(() => {
     const loadBanners = async () => {
       try {
+        setLoading(true)
         const { supabase } = await import('@/lib/supabase')
         console.log('🔄 Buscando banners do banco...')
         
-        const { data, error } = await supabase
+        // Timeout de 5 segundos para evitar carregamento infinito
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout ao carregar banners')), 5000)
+        )
+        
+        const queryPromise = supabase
           .from('banners')
           .select('*')
           .eq('active', true)
           .order('created_at', { ascending: false })
+          .limit(10) // Limitar para melhor performance
         
-        if (data && data.length > 0 && !error) {
+        const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
+        const { data, error } = result
+        
+        if (error) {
+          console.error('❌ Erro ao buscar banners:', error)
+          // Usar fallback em caso de erro
+          throw new Error('Erro ao buscar banners')
+        }
+        
+        if (data && data.length > 0) {
           console.log('✅ Banners carregados do BANCO:', data.length)
           setBanners(data.map((b: any) => ({
             id: b.id,
@@ -37,10 +53,10 @@ export default function HeroCarousel() {
         
         console.warn('⚠️ Banco de banners vazio, usando banners padrão')
       } catch (err) {
-        console.log('⚠️ Erro ao buscar banners, usando padrão')
+        console.log('⚠️ Erro ao buscar banners, usando padrão:', err)
       }
       
-      // Fallback: banners padrão
+      // Fallback: banners padrão (sempre usar se houver erro ou banco vazio)
       const defaultBanners = [
         {
           id: '1',
