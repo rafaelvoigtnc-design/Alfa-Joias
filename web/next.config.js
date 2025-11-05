@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Build estático para Cloudflare Pages (resolve problema de arquivos grandes)
+  // NOTA: Isso desabilita API routes e server-side rendering dinâmico
+  // Mas funciona bem já que usamos Supabase no cliente
+  output: 'export',
   // Configuração de codificação UTF-8
   experimental: {
     serverComponentsExternalPackages: []
