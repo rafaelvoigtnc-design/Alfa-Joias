@@ -650,7 +650,7 @@ export default function Admin() {
   }
 
   // Categorias de produtos disponíveis
-  const productCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Carteiras', 'Cintos', 'Bebidas', 'Acessórios', 'Outros', 'Afins']
+  const productCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Carteiras', 'Cintos', 'Bebidas', 'Acessórios', 'Outros', 'Afins', 'Serviços']
   
   // Função para categorias iniciais
   const initialCategoriesData = () => [
@@ -1004,7 +1004,11 @@ export default function Admin() {
                             className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           >
                             <option value="Todas">Todas</option>
-                            {Array.from(new Set(products.map(p => p.category))).map(cat => (
+                            {productCategories.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                            {/* Adicionar categorias dinâmicas do banco que não estão na lista fixa */}
+                            {Array.from(new Set(products.map(p => p.category).filter(cat => cat && !productCategories.includes(cat)))).map(cat => (
                               <option key={cat} value={cat}>{cat}</option>
                             ))}
                           </select>

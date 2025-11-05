@@ -1,14 +1,17 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import HeroCarousel from '@/components/HeroCarousel'
-import Categories from '@/components/Categories'
-import FeaturedProducts from '@/components/FeaturedProducts'
-import Promotions from '@/components/Promotions'
-import Services from '@/components/Services'
-import About from '@/components/About'
-import Contact from '@/components/Contact'
-import Brands from '@/components/Brands'
-import Newsletter from '@/components/Newsletter'
+
+// Lazy load components para melhorar performance inicial
+const Categories = dynamic(() => import('@/components/Categories'), { ssr: true })
+const FeaturedProducts = dynamic(() => import('@/components/FeaturedProducts'), { ssr: true })
+const Promotions = dynamic(() => import('@/components/Promotions'), { ssr: false })
+const Services = dynamic(() => import('@/components/Services'), { ssr: false })
+const Brands = dynamic(() => import('@/components/Brands'), { ssr: false })
+const Newsletter = dynamic(() => import('@/components/Newsletter'), { ssr: false })
+const About = dynamic(() => import('@/components/About'), { ssr: false })
+const Contact = dynamic(() => import('@/components/Contact'), { ssr: false })
 
 export default function Home() {
   return (

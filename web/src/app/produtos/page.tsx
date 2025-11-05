@@ -51,11 +51,8 @@ function ProdutosContent() {
           .order('name', { ascending: true })
         
         if (!error && data) {
-          // Filtrar apenas categorias permitidas (excluir Serviços)
-          const allowedCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins']
-          const validCategories = data
-            .map((cat: any) => cat.name)
-            .filter((name: string) => allowedCategories.includes(name))
+          // Usar todas as categorias do banco (incluindo Serviços e Afins)
+          const validCategories = data.map((cat: any) => cat.name)
           
           setCategoriesFromDb(validCategories)
         }
@@ -67,8 +64,8 @@ function ProdutosContent() {
     loadCategories()
   }, [])
   
-  // Usar categorias do banco ou fallback padrão
-  const categories = ['Todas', ...(categoriesFromDb.length > 0 ? categoriesFromDb : ['Joias', 'Relógios', 'Óculos', 'Semi-Joias'])]
+  // Usar categorias do banco ou fallback padrão (incluindo Afins)
+  const categories = ['Todas', ...(categoriesFromDb.length > 0 ? categoriesFromDb : ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins'])]
   const brands = ['Todas']
   const genders = ['Todos', 'Masculino', 'Feminino', 'Unissex']
   const models = ['Todos', 'Clássico', 'Moderno', 'Vintage', 'Esportivo']

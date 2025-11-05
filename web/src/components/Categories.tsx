@@ -19,7 +19,7 @@ interface CategoryData {
 }
 
 // CATEGORIAS BASE (para fallback se não houver no banco)
-const BASE_CATEGORIES = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins']
+const BASE_CATEGORIES = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins', 'Serviços']
 
 export default function Categories() {
   const [categories, setCategories] = useState<CategoryData[]>([])
@@ -66,6 +66,14 @@ export default function Categories() {
         iconName: 'package',
         image: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=800&h=600&fit=crop',
         href: '/produtos?categoria=Afins'
+      },
+      'Serviços': {
+        id: '6',
+        name: 'Serviços',
+        description: 'Manutenção, reparos e serviços especializados',
+        iconName: 'wrench',
+        image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=600&fit=crop',
+        href: '/servicos'
       }
     }
     return defaults[name] || null
@@ -91,46 +99,16 @@ export default function Categories() {
       }
       
       if (data && data.length > 0 && !error) {
-        console.log('📦 RAW: Todas as categorias do banco:', data.length)
-        console.log('📦 DETALHES:', data.map((c: any) => ({ 
-          id: c.id, 
-          name: c.name, 
-          icon: c.icon, 
-          description: c.description?.substring(0, 30),
-          hasImage: !!c.image 
-        })))
-        
-        // PROCESSAR TODAS AS CATEGORIAS DO BANCO (exceto Serviços)
+        // PROCESSAR TODAS AS CATEGORIAS DO BANCO (incluindo Serviços)
         const dbCategories = data
-          .filter((cat: any) => {
-            const name = (cat.name || '').trim()
-            // Excluir Serviços de qualquer forma
-            const isServicos = name === 'Serviços' || 
-                              name.toLowerCase() === 'serviços' ||
-                              name.toLowerCase() === 'servicos' ||
-                              name.toLowerCase().includes('serviço')
-            
-            if (isServicos) {
-              console.log('🚫 Removendo Serviços:', name)
-            }
-            
-            return !isServicos
-          })
-          .map((cat: any) => {
-            const category: CategoryData = {
-              id: cat.id || '',
-              name: (cat.name || '').trim(),
-              description: cat.description || '',
-              image: cat.image || '',
-              iconName: cat.icon || 'gem',
-              href: `/produtos?categoria=${encodeURIComponent(cat.name || '')}`
-            }
-            console.log('✅ Processando categoria:', category.name, '| ID:', category.id)
-            return category
-          })
-        
-        console.log('✅ RESULTADO FINAL:', dbCategories.length, 'categorias processadas')
-        console.log('📋 NOMES:', dbCategories.map(c => c.name))
+          .map((cat: any) => ({
+            id: cat.id || '',
+            name: (cat.name || '').trim(),
+            description: cat.description || '',
+            image: cat.image || '',
+            iconName: cat.icon || 'gem',
+            href: `/produtos?categoria=${encodeURIComponent(cat.name || '')}`
+          }))
         
         setCategories(dbCategories)
         setLoading(false)
@@ -154,7 +132,6 @@ export default function Categories() {
       .map(name => getDefaultCategory(name))
       .filter((cat): cat is CategoryData => cat !== null)
     
-    console.log('✅ Usando categorias padrão:', defaultCategories.map(c => c.name))
     setCategories(defaultCategories)
     setLoading(false)
   }
@@ -164,7 +141,6 @@ export default function Categories() {
     
     // Escutar eventos de atualização de categorias do admin
     const handleCategoryUpdate = () => {
-      console.log('📢 Evento category-updated recebido, recarregando categorias...')
       loadCategories()
     }
     
@@ -175,24 +151,6 @@ export default function Categories() {
     }
   }, [])
 
-  // PROTEÇÃO EXTRA: Remover "Serviços" do estado imediatamente se aparecer
-  useEffect(() => {
-    if (categories.length > 0) {
-      const hasServicos = categories.some(cat => {
-        const name = (cat.name || '').trim().toLowerCase()
-        return name === 'serviços' || name === 'servicos' || name.includes('serviço')
-      })
-      
-      if (hasServicos) {
-        console.error('❌ ALERTA CRÍTICO: Serviços detectado no estado! Removendo AGORA...')
-        const cleaned = categories.filter(cat => {
-          const name = (cat.name || '').trim().toLowerCase()
-          return name !== 'serviços' && name !== 'servicos' && !name.includes('serviço')
-        })
-        setCategories(cleaned)
-      }
-    }
-  }, [categories])
 
   const getIconComponent = (iconName: string) => {
     // Mapear todos os ícones disponíveis
@@ -258,22 +216,9 @@ export default function Categories() {
     return iconMap[iconName] || Gem // Fallback para Gem se ícone não encontrado
   }
 
-  // Filtrar apenas Serviços (permitir todas as outras categorias)
+  // Usar todas as categorias (incluindo Serviços)
   const displayCategories = useMemo(() => {
-    const filtered = categories.filter(cat => {
-      const name = (cat.name || '').trim().toLowerCase()
-      const isServicos = name === 'serviços' || name === 'servicos' || name.includes('serviço')
-      
-      if (isServicos) {
-        console.error('❌ BLOQUEADO: Tentativa de renderizar Serviços!', cat)
-        return false
-      }
-      
-      return !isServicos
-    })
-    
-    console.log('🎨 Categorias que serão renderizadas:', filtered.map(c => c.name))
-    return filtered
+    return categories
   }, [categories])
 
   if (loading) {
@@ -308,18 +253,7 @@ export default function Categories() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-6 max-w-7xl mx-auto">
-          {displayCategories
-            .filter(category => {
-              // PROTEÇÃO FINAL: Verificar novamente antes de renderizar (apenas excluir Serviços)
-              const name = (category.name || '').trim().toLowerCase()
-              const isServicos = name === 'serviços' || name === 'servicos' || name.includes('serviço')
-              if (isServicos) {
-                console.error('❌ BLOQUEADO NO RENDER: Serviços detectado!', category)
-                return false
-              }
-              return !isServicos
-            })
-            .map((category) => {
+          {displayCategories.map((category) => {
             const IconComponent = getIconComponent(category.iconName)
             const href = category.href || '/produtos'
             return (
