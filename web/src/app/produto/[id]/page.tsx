@@ -1,8 +1,7 @@
 'use client'
 
-// Edge Runtime para Cloudflare Pages
-export const runtime = 'edge'
-export const dynamic = 'force-dynamic'
+// Configuração para Cloudflare Pages - forçar renderização estática
+export const dynamic = 'force-static'
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
