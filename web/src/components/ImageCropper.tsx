@@ -196,14 +196,14 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
 
   return (
     <div 
-      className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-y-auto"
       onClick={handleBackdropClick}
     >
       <div 
-        className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col"
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl my-8 flex flex-col max-h-[calc(100vh-4rem)]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center p-4 border-b">
+        <div className="flex justify-between items-center p-4 border-b flex-shrink-0">
           <h3 className="text-lg font-semibold text-gray-900">Editar Imagem</h3>
           <button
             onClick={onCancel}
@@ -220,6 +220,7 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          style={{ maxHeight: 'calc(100vh - 400px)' }}
         >
           <canvas
             ref={canvasRef}
@@ -228,7 +229,7 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
           />
         </div>
 
-        <div className="p-4 border-t bg-gray-50">
+        <div className="p-4 border-t bg-gray-50 flex-shrink-0 overflow-y-auto max-h-[300px]">
           <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
             <button
               onClick={handleZoomOut}
@@ -276,7 +277,7 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
             </div>
           </div>
 
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3 flex-wrap">
             <button
               onClick={onCancel}
               className="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
@@ -286,11 +287,11 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
             </button>
             <button
               onClick={handleCrop}
-              className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 flex items-center gap-2 transition-colors"
+              className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 flex items-center gap-2 transition-colors"
               type="button"
             >
               <Crop className="h-4 w-4" />
-              Aplicar e Salvar
+              Salvar Imagem
             </button>
           </div>
         </div>
