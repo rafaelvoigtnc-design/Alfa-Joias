@@ -62,50 +62,71 @@ export default function ProductPage() {
       try {
         setLoading(true)
         setShowReload(false)
-        const productId = params.id as string
-        console.log('🔄 Buscando produto individual:', productId)
+        const productId = params?.id as string
+        
+        if (!productId) {
+          console.error('❌ Product ID não encontrado nos params:', params)
+          setProduct(null)
+          setLoading(false)
+          return
+        }
+        
+        console.log('🔄 Buscando produto individual - ID:', productId)
+        console.log('🔍 Params completos:', params)
         
         // Timeout de 30 segundos para mostrar opção de reload
         reloadTimeout = setTimeout(() => {
           setShowReload(true)
         }, 30000)
         
-        // Otimizar query: selecionar apenas campos necessários
+        // Usar select('*') primeiro para garantir que funciona, depois podemos otimizar
         const { data, error } = await supabase
           .from('products')
-          .select('id, name, category, brand, price, image, description, detailed_description, additional_images, features, specifications, on_sale, original_price, sale_price, discount_percentage, stock, gender, model, created_at')
+          .select('*')
           .eq('id', productId)
-          .single()
+          .maybeSingle() // Usar maybeSingle() em vez de single() para não dar erro se não encontrar
         
         if (reloadTimeout) clearTimeout(reloadTimeout)
         
         if (error) {
-          console.error('❌ Erro ao buscar produto:', error.message)
+          console.error('❌ Erro ao buscar produto:', error)
+          console.error('❌ Detalhes do erro:', JSON.stringify(error, null, 2))
           setProduct(null)
           setLoading(false)
           return
         }
         
         if (!data) {
-          console.warn('⚠️ Produto não encontrado')
+          console.warn('⚠️ Produto não encontrado para ID:', productId)
+          console.warn('⚠️ Tentando buscar todos os produtos para debug...')
+          
+          // Debug: buscar todos os produtos para ver os IDs disponíveis
+          const { data: allProducts } = await supabase
+            .from('products')
+            .select('id, name')
+            .limit(5)
+          console.log('📋 Primeiros 5 produtos no banco:', allProducts)
+          
           setProduct(null)
           setLoading(false)
           return
         }
         
-        // Mapear campos do banco para interface
+        console.log('✅ Dados brutos do produto:', data)
+        
+        // Mapear campos do banco para interface (com fallbacks seguros)
         const mappedProduct: Product = {
-          id: data.id,
-          name: data.name || '',
+          id: data.id || '',
+          name: data.name || 'Produto sem nome',
           category: data.category || '',
           brand: data.brand || '',
           price: data.price || '0',
           image: data.image || '',
           description: data.description || '',
           detailedDescription: data.detailed_description || data.description || '',
-          additionalImages: data.additional_images || [],
-          features: data.features || [],
-          specifications: data.specifications || {},
+          additionalImages: Array.isArray(data.additional_images) ? data.additional_images : [],
+          features: Array.isArray(data.features) ? data.features : [],
+          specifications: data.specifications && typeof data.specifications === 'object' ? data.specifications : {},
           on_sale: data.on_sale || false,
           original_price: data.original_price || '',
           sale_price: data.sale_price || '',
@@ -113,7 +134,7 @@ export default function ProductPage() {
           stock: data.stock
         }
         
-        console.log('✅ Produto encontrado:', mappedProduct.name)
+        console.log('✅ Produto mapeado com sucesso:', mappedProduct.name)
         setProduct(mappedProduct)
       } catch (err) {
         console.error('❌ Erro ao carregar produto:', err)
