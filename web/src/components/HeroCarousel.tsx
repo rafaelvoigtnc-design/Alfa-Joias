@@ -196,12 +196,20 @@ export default function HeroCarousel() {
 
         {/* Dots */}
         {activeBanners.length > 1 && (
-          <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-0.5 sm:space-x-1">
+          <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-[2px] sm:space-x-1">
             {activeBanners.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`w-[1px] h-[1px] sm:w-1 sm:h-1 md:w-1.5 md:h-1.5 rounded-full transition-all duration-300 active:scale-75 ${
+                style={{
+                  width: '2px',
+                  height: '2px',
+                  minWidth: '2px',
+                  minHeight: '2px',
+                  padding: '0',
+                  margin: '0'
+                }}
+                className={`rounded-full transition-all duration-300 sm:w-1 sm:h-1 md:w-1.5 md:h-1.5 ${
                   index === currentSlide ? 'bg-gray-600' : 'bg-gray-300'
                 }`}
               />
