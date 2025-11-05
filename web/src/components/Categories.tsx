@@ -315,12 +315,12 @@ export default function Categories() {
                 href={href}
                 className="group block bg-white border border-gray-200 md:hover:border-gray-800 transition-all duration-300 overflow-hidden md:hover:shadow-lg md:hover:-translate-y-1 active:scale-[0.98] touch-manipulation w-full"
               >
-                <div className="relative h-24 sm:h-28 md:h-32 lg:h-36 overflow-hidden bg-gray-200 flex items-center justify-center">
+                <div className="relative h-24 sm:h-28 md:h-32 lg:h-36 overflow-hidden flex items-center justify-center">
                   {category.image ? (
                     <img
                       src={category.image}
                       alt={category.name}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       loading="lazy"
                       onError={(e) => {
                         const defaultCat = getDefaultCategory(category.name)
@@ -330,7 +330,7 @@ export default function Categories() {
                       }}
                     />
                   ) : (
-                    <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
                       <span className="text-gray-500 text-xs">Sem imagem</span>
                     </div>
                   )}

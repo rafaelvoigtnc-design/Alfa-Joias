@@ -130,20 +130,20 @@ export default function Brands() {
             
             {/* Indicadores de posição */}
             {totalSlides > 1 && (
-              <div className="flex justify-center mt-4 space-x-1 sm:space-x-1.5">
+              <div className="flex justify-center mt-4 space-x-2 sm:space-x-2.5">
                 {Array.from({ length: totalSlides }).map((_, index) => (
                   <button
                     key={index}
                     onClick={() => setCurrentIndex(index)}
                     style={{
-                      width: '6px',
-                      height: '6px',
-                      minWidth: '6px',
-                      minHeight: '6px',
+                      width: '12px',
+                      height: '12px',
+                      minWidth: '12px',
+                      minHeight: '12px',
                       padding: '0',
                       margin: '0'
                     }}
-                    className={`rounded-full transition-all duration-300 sm:w-1.5 sm:h-1.5 md:w-2 md:h-2 ${
+                    className={`rounded-full transition-all duration-300 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 ${
                       index === currentIndex % totalSlides ? 'bg-gray-600' : 'bg-gray-300'
                     }`}
                   />

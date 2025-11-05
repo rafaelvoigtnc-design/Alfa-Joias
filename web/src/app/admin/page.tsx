@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 import ImageUpload from '@/components/ImageUpload'
+import CategoryImageEditor from '@/components/CategoryImageEditor'
 import BrandSelector from '@/components/BrandSelector'
 import { useOrders } from '@/hooks/useOrders'
 import { useSupabaseServices } from '@/hooks/useSupabaseServices'
@@ -2458,12 +2459,13 @@ export default function Admin() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Imagem da Categoria</label>
-                <ImageUpload
+                <p className="text-xs text-gray-500 mb-2">Selecione uma imagem e ajuste para preencher sem bordas</p>
+                <CategoryImageEditor
+                  imageUrl={editingCategory?.image || ''}
                   onImageSelect={(imageUrl) => {
                     const input = document.querySelector('input[name="image"]') as HTMLInputElement
                     if (input) input.value = imageUrl
                   }}
-                  currentImage={editingCategory?.image}
                   placeholder="Selecione uma imagem para a categoria"
                 />
                 <input
