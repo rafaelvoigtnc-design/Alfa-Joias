@@ -1,10 +1,5 @@
 'use client'
 
-// Configuração para Cloudflare Pages - permitir rota dinâmica sem Edge Runtime
-// Como é client-side, o Cloudflare deve tratar como estático
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
@@ -75,9 +70,10 @@ export default function ProductPage() {
           setShowReload(true)
         }, 30000)
         
+        // Otimizar query: selecionar apenas campos necessários
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select('id, name, category, brand, price, image, description, detailed_description, additional_images, features, specifications, on_sale, original_price, sale_price, discount_percentage, stock, gender, model, created_at')
           .eq('id', productId)
           .single()
         
@@ -86,24 +82,46 @@ export default function ProductPage() {
         if (error) {
           console.error('❌ Erro ao buscar produto:', error.message)
           setProduct(null)
-        } else if (data) {
-          console.log('✅ Produto encontrado:', data.name)
-          console.log('💰 Dados de preço do banco:', {
-            price: data.price,
-            priceType: typeof data.price,
-            original_price: data.original_price,
-            sale_price: data.sale_price,
-            on_sale: data.on_sale
-          })
-          setProduct(data)
-        } else {
+          setLoading(false)
+          return
+        }
+        
+        if (!data) {
           console.warn('⚠️ Produto não encontrado')
           setProduct(null)
+          setLoading(false)
+          return
         }
+        
+        // Mapear campos do banco para interface
+        const mappedProduct: Product = {
+          id: data.id,
+          name: data.name || '',
+          category: data.category || '',
+          brand: data.brand || '',
+          price: data.price || '0',
+          image: data.image || '',
+          description: data.description || '',
+          detailedDescription: data.detailed_description || data.description || '',
+          additionalImages: data.additional_images || [],
+          features: data.features || [],
+          specifications: data.specifications || {},
+          on_sale: data.on_sale || false,
+          original_price: data.original_price || '',
+          sale_price: data.sale_price || '',
+          discount_percentage: data.discount_percentage || 0,
+          stock: data.stock
+        }
+        
+        console.log('✅ Produto encontrado:', mappedProduct.name)
+        setProduct(mappedProduct)
       } catch (err) {
         console.error('❌ Erro ao carregar produto:', err)
         if (reloadTimeout) clearTimeout(reloadTimeout)
         setProduct(null)
+        setLoading(false)
+        // Não deixar o erro quebrar a página
+        return
       } finally {
         setLoading(false)
       }
