@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+// Edge Runtime para Cloudflare Pages
+export const runtime = 'edge'
+
 function normalizeStatus(raw: any): 'pending' | 'confirmed' | 'preparing' | 'delivered' | 'ready_for_pickup' {
   const s = String(raw || '').toLowerCase().trim()
   if (['pending', 'pedido_feito', 'aguardando', 'feito'].includes(s)) return 'pending'

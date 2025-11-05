@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { isConnectionError } from '@/lib/errorHandler'
 
+// Edge Runtime para Cloudflare Pages
+export const runtime = 'edge'
+
 export async function GET() {
   try {
     const { data, error } = await supabase
