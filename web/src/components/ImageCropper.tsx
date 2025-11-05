@@ -13,105 +13,179 @@ interface ImageCropperProps {
 export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio = 1 }: ImageCropperProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const imageRef = useRef<HTMLImageElement | null>(null)
+  
   const [scale, setScale] = useState(1)
-  const [initialScale, setInitialScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [rotation, setRotation] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const imageRef = useRef<HTMLImageElement | null>(null)
+  const [cropSize, setCropSize] = useState(400) // Tamanho da área de crop (quadrada)
 
+  // Carregar imagem e calcular escala inicial
   useEffect(() => {
-    if (imageUrl && canvasRef.current) {
+    if (imageUrl && containerRef.current) {
       const img = new Image()
       img.crossOrigin = 'anonymous'
       img.onload = () => {
         imageRef.current = img
-        const canvas = canvasRef.current
-        if (!canvas) return
         
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
-
-        // Ajustar tamanho do canvas para o container
+        // Calcular tamanho do container
         const container = containerRef.current
-        if (container) {
-          const containerWidth = container.clientWidth - 40
-          const containerHeight = container.clientHeight - 40
-          
-          // Calcular dimensões mantendo proporção
-          let displayWidth = img.width
-          let displayHeight = img.height
-          
-          if (displayWidth > containerWidth) {
-            const ratio = containerWidth / displayWidth
-            displayWidth = containerWidth
-            displayHeight = displayHeight * ratio
-          }
-          
-          if (displayHeight > containerHeight) {
-            const ratio = containerHeight / displayHeight
-            displayHeight = containerHeight
-            displayWidth = displayWidth * ratio
-          }
-
-          canvas.width = displayWidth
-          canvas.height = displayHeight
-          
-          // Ajustar escala inicial para preencher o espaço (sem exagerar)
-          const scaleX = containerWidth / img.width
-          const scaleY = containerHeight / img.height
-          const calculatedScale = Math.max(scaleX, scaleY) * 1.05 // 5% a mais, mais conservador
-          setInitialScale(calculatedScale)
-          setScale(calculatedScale)
-          setPosition({ x: 0, y: 0 })
-          setRotation(0)
-        }
+        if (!container) return
+        
+        const containerWidth = container.clientWidth - 40
+        const containerHeight = container.clientHeight - 40
+        
+        // Tamanho da área de crop (quadrada, 80% da menor dimensão)
+        const maxCropSize = Math.min(containerWidth, containerHeight) * 0.8
+        const cropSizeValue = Math.min(maxCropSize, 600)
+        setCropSize(cropSizeValue)
+        
+        // Calcular escala inicial para preencher a área de crop
+        const scaleX = cropSizeValue / img.width
+        const scaleY = cropSizeValue / img.height
+        const initialScale = Math.max(scaleX, scaleY) * 1.1 // 10% a mais para garantir preenchimento
+        
+        setScale(initialScale)
+        setPosition({ x: 0, y: 0 })
+        setRotation(0)
         
         drawImage()
       }
       img.src = imageUrl
     }
-  }, [imageUrl])
+  }, [imageUrl, cropSize])
 
   useEffect(() => {
     drawImage()
-  }, [scale, position, rotation])
+  }, [scale, position, rotation, cropSize])
 
   const drawImage = () => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || !imageRef.current) return
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      
-      // Aplicar transformações
-      ctx.save()
-      ctx.translate(canvas.width / 2, canvas.height / 2)
-      ctx.rotate((rotation * Math.PI) / 180)
-      ctx.scale(scale, scale)
-      ctx.translate(-img.width / 2 + position.x / scale, -img.height / 2 + position.y / scale)
-      
-      ctx.drawImage(img, 0, 0)
-      ctx.restore()
-    }
-    img.src = imageUrl
+    const img = imageRef.current
+    const container = containerRef.current
+    if (!container) return
+
+    // Definir tamanho do canvas
+    const containerWidth = container.clientWidth - 40
+    const containerHeight = container.clientHeight - 40
+    canvas.width = containerWidth
+    canvas.height = containerHeight
+
+    // Limpar canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+    // Desenhar fundo escuro
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    // Calcular posição da área de crop (centralizada)
+    const cropX = (canvas.width - cropSize) / 2
+    const cropY = (canvas.height - cropSize) / 2
+
+    // Criar clipping path para a área de crop (quadrada)
+    ctx.save()
+    ctx.beginPath()
+    ctx.rect(cropX, cropY, cropSize, cropSize)
+    ctx.clip()
+
+    // Calcular transformações para a imagem
+    const centerX = cropX + cropSize / 2
+    const centerY = cropY + cropSize / 2
+
+    // Aplicar transformações
+    ctx.translate(centerX, centerY)
+    ctx.rotate((rotation * Math.PI) / 180)
+    ctx.scale(scale, scale)
+    
+    // Limitar posição para que a imagem nunca saia dos limites
+    const imgWidth = img.width
+    const imgHeight = img.height
+    
+    // Calcular limites máximos de posição
+    const maxX = (imgWidth * scale) / 2 - cropSize / 2
+    const maxY = (imgHeight * scale) / 2 - cropSize / 2
+    
+    const constrainedX = Math.max(-maxX, Math.min(maxX, position.x))
+    const constrainedY = Math.max(-maxY, Math.min(maxY, position.y))
+    
+    ctx.translate(-imgWidth / 2 + constrainedX / scale, -imgHeight / 2 + constrainedY / scale)
+    
+    // Desenhar imagem
+    ctx.drawImage(img, 0, 0)
+    ctx.restore()
+
+    // Desenhar borda da área de crop
+    ctx.strokeStyle = '#ffffff'
+    ctx.lineWidth = 2
+    ctx.setLineDash([])
+    ctx.strokeRect(cropX, cropY, cropSize, cropSize)
+
+    // Desenhar guias de grade
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
+    ctx.lineWidth = 1
+    const third = cropSize / 3
+    ctx.beginPath()
+    // Linhas verticais
+    ctx.moveTo(cropX + third, cropY)
+    ctx.lineTo(cropX + third, cropY + cropSize)
+    ctx.moveTo(cropX + third * 2, cropY)
+    ctx.lineTo(cropX + third * 2, cropY + cropSize)
+    // Linhas horizontais
+    ctx.moveTo(cropX, cropY + third)
+    ctx.lineTo(cropX + cropSize, cropY + third)
+    ctx.moveTo(cropX, cropY + third * 2)
+    ctx.lineTo(cropX + cropSize, cropY + third * 2)
+    ctx.stroke()
   }
 
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.1, 3))
+    setScale(prev => {
+      const newScale = Math.min(prev + 0.1, 5)
+      constrainPosition(newScale, position)
+      return newScale
+    })
   }
 
   const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.1, 0.3))
+    setScale(prev => {
+      const newScale = Math.max(prev - 0.1, 0.3)
+      constrainPosition(newScale, position)
+      return newScale
+    })
+  }
+
+  const constrainPosition = (currentScale: number, currentPosition: { x: number; y: number }) => {
+    if (!imageRef.current) return currentPosition
+
+    const img = imageRef.current
+    const imgWidth = img.width
+    const imgHeight = img.height
+    
+    // Calcular limites máximos de posição
+    const maxX = (imgWidth * currentScale) / 2 - cropSize / 2
+    const maxY = (imgHeight * currentScale) / 2 - cropSize / 2
+    
+    return {
+      x: Math.max(-maxX, Math.min(maxX, currentPosition.x)),
+      y: Math.max(-maxY, Math.min(maxY, currentPosition.y))
+    }
   }
 
   const handleResetZoom = () => {
+    if (!imageRef.current) return
+    
+    const img = imageRef.current
+    const scaleX = cropSize / img.width
+    const scaleY = cropSize / img.height
+    const initialScale = Math.max(scaleX, scaleY) * 1.1
+    
     setScale(initialScale)
     setPosition({ x: 0, y: 0 })
   }
@@ -125,16 +199,33 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    setIsDragging(true)
-    setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    
+    // Verificar se o clique está dentro da área de crop
+    const cropX = (canvas.width - cropSize) / 2
+    const cropY = (canvas.height - cropSize) / 2
+    
+    if (x >= cropX && x <= cropX + cropSize && y >= cropY && y <= cropY + cropSize) {
+      setIsDragging(true)
+      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+    }
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (isDragging) {
-      setPosition({
+    if (isDragging && imageRef.current) {
+      const newPosition = {
         x: e.clientX - dragStart.x,
         y: e.clientY - dragStart.y
-      })
+      }
+      
+      // Aplicar restrições de posição
+      const constrained = constrainPosition(scale, newPosition)
+      setPosition(constrained)
     }
   }
 
@@ -144,52 +235,45 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
 
   const handleCrop = () => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || !imageRef.current) return
 
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => {
-      // Criar canvas temporário para o crop
-      const tempCanvas = document.createElement('canvas')
-      const tempCtx = tempCanvas.getContext('2d')
-      if (!tempCtx) return
+    const img = imageRef.current
+    
+    // Criar canvas temporário para o crop final
+    const tempCanvas = document.createElement('canvas')
+    const tempCtx = tempCanvas.getContext('2d')
+    if (!tempCtx) return
 
-      // Tamanho final da imagem (proporção desejada)
-      const finalWidth = 800
-      const finalHeight = finalWidth / aspectRatio
+    // Tamanho final (quadrado)
+    tempCanvas.width = cropSize
+    tempCanvas.height = cropSize
 
-      tempCanvas.width = finalWidth
-      tempCanvas.height = finalHeight
+    // Calcular posição final com restrições
+    const imgWidth = img.width
+    const imgHeight = img.height
+    const maxX = (imgWidth * scale) / 2 - cropSize / 2
+    const maxY = (imgHeight * scale) / 2 - cropSize / 2
+    const constrainedX = Math.max(-maxX, Math.min(maxX, position.x))
+    const constrainedY = Math.max(-maxY, Math.min(maxY, position.y))
 
-      // Calcular posição e escala para preencher sem bordas
-      const scaleX = finalWidth / img.width
-      const scaleY = finalHeight / img.height
-      const scaleToUse = Math.max(scaleX, scaleY) * scale
+    // Aplicar transformações
+    tempCtx.save()
+    tempCtx.translate(cropSize / 2, cropSize / 2)
+    tempCtx.rotate((rotation * Math.PI) / 180)
+    tempCtx.scale(scale, scale)
+    tempCtx.translate(-imgWidth / 2 + constrainedX / scale, -imgHeight / 2 + constrainedY / scale)
+    
+    tempCtx.drawImage(img, 0, 0)
+    tempCtx.restore()
 
-      const centerX = finalWidth / 2
-      const centerY = finalHeight / 2
-
-      // Aplicar transformações
-      tempCtx.save()
-      tempCtx.translate(centerX, centerY)
-      tempCtx.rotate((rotation * Math.PI) / 180)
-      tempCtx.scale(scaleToUse, scaleToUse)
-      tempCtx.translate(-img.width / 2 + position.x / scale, -img.height / 2 + position.y / scale)
-      
-      tempCtx.drawImage(img, 0, 0)
-      tempCtx.restore()
-
-      // Converter para base64
-      const croppedImageUrl = tempCanvas.toDataURL('image/jpeg', 0.9)
-      onCrop(croppedImageUrl)
-    }
-    img.src = imageUrl
+    // Converter para base64
+    const croppedImageUrl = tempCanvas.toDataURL('image/jpeg', 0.9)
+    onCrop(croppedImageUrl)
   }
 
   const handleBackdropClick = (e: React.MouseEvent) => {
-    // Só fechar se clicar diretamente no backdrop, não nos filhos
+    // Não fechar automaticamente
     if (e.target === e.currentTarget) {
-      // Não fechar automaticamente - requer clicar no X ou Cancelar
       return
     }
   }
@@ -230,6 +314,12 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
         </div>
 
         <div className="p-4 border-t bg-gray-50 flex-shrink-0 overflow-y-auto max-h-[300px]">
+          <div className="mb-3 text-center">
+            <p className="text-sm text-gray-600">
+              A imagem deve preencher a área quadrada. Arraste para mover, ajuste o zoom e gire se necessário.
+            </p>
+          </div>
+          
           <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
             <button
               onClick={handleZoomOut}
@@ -299,4 +389,3 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     </div>
   )
 }
-
