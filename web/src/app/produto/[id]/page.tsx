@@ -1,22 +1,9 @@
 'use client'
 
-// Gerar páginas estáticas para produtos existentes no build time
-export async function generateStaticParams() {
-  try {
-    const { supabase } = await import('@/lib/supabase')
-    const { data: products } = await supabase
-      .from('products')
-      .select('id')
-      .limit(1000) // Limitar para não sobrecarregar o build
-    
-    return products?.map((product) => ({
-      id: product.id,
-    })) || []
-  } catch (error) {
-    console.error('Erro ao gerar páginas estáticas:', error)
-    return []
-  }
-}
+// Configuração para Cloudflare Pages - permitir rota dinâmica sem Edge Runtime
+// Como é client-side, o Cloudflare deve tratar como estático
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
