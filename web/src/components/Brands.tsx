@@ -135,7 +135,7 @@ export default function Brands() {
                   <button
                     key={index}
                     onClick={() => setCurrentIndex(index)}
-                    className={`w-0.5 h-0.5 sm:w-1 sm:h-1 md:w-1.5 md:h-1.5 rounded-full transition-all duration-300 active:scale-75 ${
+                    className={`w-[2px] h-[2px] sm:w-1 sm:h-1 md:w-1.5 md:h-1.5 rounded-full transition-all duration-300 active:scale-75 ${
                       index === currentIndex % totalSlides ? 'bg-gray-600' : 'bg-gray-300'
                     }`}
                   />
