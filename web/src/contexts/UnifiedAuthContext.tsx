@@ -508,15 +508,37 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const dataToSave = {
-        id: user.id,
-        ...updates,
-        updated_at: new Date().toISOString(),
+      // Buscar colunas existentes para evitar erros de colunas ausentes
+      const { data: existingUser, error: fetchError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      // Se não existir, continuar com conjunto básico de colunas permitidas
+      const allowedColumns = fetchError && !existingUser
+        ? ['id', 'email', 'name', 'phone', 'updated_at']
+        : Array.from(new Set([...(existingUser ? Object.keys(existingUser) : []), 'id', 'updated_at']))
+
+      // Filtrar apenas campos existentes na tabela
+      const filteredUpdates = Object.entries(updates || {})
+        .filter(([key]) => allowedColumns.includes(key))
+        .reduce((acc, [key, value]) => {
+          acc[key] = value
+          return acc
+        }, {} as Record<string, any>)
+
+      // Se nenhum campo válido, não tentar atualizar tabela (evita erro)
+      if (Object.keys(filteredUpdates).length === 0) {
+        return { data: existingUser || null, error: null }
       }
+
+      filteredUpdates.id = user.id
+      filteredUpdates.updated_at = filteredUpdates.updated_at || new Date().toISOString()
 
       const { data, error } = await supabase
         .from('users')
-        .upsert(dataToSave, { onConflict: 'id' })
+        .upsert(filteredUpdates, { onConflict: 'id' })
         .select()
         .single()
 

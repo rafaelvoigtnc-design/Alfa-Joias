@@ -24,13 +24,13 @@ export default function Account() {
     name: user?.user_metadata?.full_name || user?.email || '',
     email: user?.email || '',
     phone: user?.user_metadata?.phone || '',
-    address_street: '',
-    address_number: '',
-    address_complement: '',
-    address_neighborhood: '',
-    address_city: '',
-    address_state: '',
-    address_zipcode: ''
+    address_street: user?.user_metadata?.address_street || '',
+    address_number: user?.user_metadata?.address_number || '',
+    address_complement: user?.user_metadata?.address_complement || '',
+    address_neighborhood: user?.user_metadata?.address_neighborhood || '',
+    address_city: user?.user_metadata?.address_city || '',
+    address_state: user?.user_metadata?.address_state || '',
+    address_zipcode: user?.user_metadata?.address_zipcode || ''
   })
   const [userDataLoading, setUserDataLoading] = useState(true)
   const [forceShowPage, setForceShowPage] = useState(false)
@@ -69,16 +69,16 @@ export default function Account() {
 
           if (!error && data) {
             setFormData({
-              name: data.name || user?.user_metadata?.full_name || user?.email || '',
+              name: data?.name || user?.user_metadata?.full_name || user?.email || '',
               email: user.email || '',
-              phone: data.phone || user?.user_metadata?.phone || '',
-              address_street: data.address_street || '',
-              address_number: data.address_number || '',
-              address_complement: data.address_complement || '',
-              address_neighborhood: data.address_neighborhood || '',
-              address_city: data.address_city || '',
-              address_state: data.address_state || '',
-              address_zipcode: data.address_zipcode || ''
+              phone: data?.phone || user?.user_metadata?.phone || '',
+              address_street: data?.address_street || user?.user_metadata?.address_street || '',
+              address_number: data?.address_number || user?.user_metadata?.address_number || '',
+              address_complement: data?.address_complement || user?.user_metadata?.address_complement || '',
+              address_neighborhood: data?.address_neighborhood || user?.user_metadata?.address_neighborhood || '',
+              address_city: data?.address_city || user?.user_metadata?.address_city || '',
+              address_state: data?.address_state || user?.user_metadata?.address_state || '',
+              address_zipcode: data?.address_zipcode || user?.user_metadata?.address_zipcode || ''
             })
           }
         } catch (err) {
@@ -118,7 +118,14 @@ export default function Account() {
         await supabase.auth.updateUser({
           data: {
             full_name: formData.name,
-            phone: formData.phone
+            phone: formData.phone,
+            address_street: formData.address_street,
+            address_number: formData.address_number,
+            address_complement: formData.address_complement,
+            address_neighborhood: formData.address_neighborhood,
+            address_city: formData.address_city,
+            address_state: formData.address_state,
+            address_zipcode: formData.address_zipcode
           }
         })
       }
@@ -138,16 +145,16 @@ export default function Account() {
         .then(({ data, error }) => {
           if (!error && data) {
             setFormData({
-              name: data.name || user?.user_metadata?.full_name || user?.email || '',
+              name: data?.name || user?.user_metadata?.full_name || user?.email || '',
               email: user.email || '',
-              phone: data.phone || user?.user_metadata?.phone || '',
-              address_street: data.address_street || '',
-              address_number: data.address_number || '',
-              address_complement: data.address_complement || '',
-              address_neighborhood: data.address_neighborhood || '',
-              address_city: data.address_city || '',
-              address_state: data.address_state || '',
-              address_zipcode: data.address_zipcode || ''
+              phone: data?.phone || user?.user_metadata?.phone || '',
+              address_street: data?.address_street || user?.user_metadata?.address_street || '',
+              address_number: data?.address_number || user?.user_metadata?.address_number || '',
+              address_complement: data?.address_complement || user?.user_metadata?.address_complement || '',
+              address_neighborhood: data?.address_neighborhood || user?.user_metadata?.address_neighborhood || '',
+              address_city: data?.address_city || user?.user_metadata?.address_city || '',
+              address_state: data?.address_state || user?.user_metadata?.address_state || '',
+              address_zipcode: data?.address_zipcode || user?.user_metadata?.address_zipcode || ''
             })
           }
         })
