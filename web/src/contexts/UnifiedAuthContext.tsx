@@ -30,6 +30,7 @@ interface UnifiedAuthContextType {
   updatePassword: (newPassword: string) => Promise<any>
   isAdmin: boolean
   isLoggedIn: boolean
+  adminLoading: boolean
   
   // Cart
   cart: CartItem[]
@@ -47,6 +48,7 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [adminLoading, setAdminLoading] = useState(true)
   
   // Cart state
   const [cart, setCart] = useState<CartItem[]>([])
@@ -209,7 +211,8 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
   const checkAdminStatus = async (userId: string) => {
     try {
       console.log('🔍 Verificando status de admin para:', userId)
-      
+      setAdminLoading(true)
+
       // Verificar com timeout para evitar travamentos
       const result = await Promise.race([
         supabase
@@ -217,13 +220,13 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
           .select('is_admin')
           .eq('id', userId)
           .single(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 5000) // Aumentado para 5s
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout')), 5000)
         )
       ]) as any
-      
+
       const { data, error } = result
-      
+
       if (error) {
         console.warn('⚠️ Erro ao verificar admin status:', error)
         // Tentar novamente após um segundo (sem timeout)
@@ -234,23 +237,25 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
               .select('is_admin')
               .eq('id', userId)
               .single()
-            
+
             if (!retryError && retryData) {
-              setIsAdmin(retryData.is_admin || false)
+              setIsAdmin(Boolean(retryData.is_admin))
               console.log('✅ Admin status (retry):', retryData.is_admin)
             }
           } catch (e) {
             console.error('❌ Falha na tentativa de verificar admin')
+          } finally {
+            setAdminLoading(false)
           }
         }, 1000)
-        setIsAdmin(false)
       } else {
-        setIsAdmin(data?.is_admin || false)
+        setIsAdmin(Boolean(data?.is_admin))
         console.log('✅ Admin status:', data?.is_admin)
       }
     } catch (error) {
       console.error('❌ Timeout ao verificar admin status')
-      setIsAdmin(false)
+    } finally {
+      setAdminLoading(false)
     }
   }
 
@@ -283,21 +288,20 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
       async (event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
-        
+
         if (session?.user) {
-          // Executar verificações em paralelo
           const promises = [checkAdminStatus(session.user.id)]
-          
-          // Se for login (SIGNED_IN), garantir que usuário está no banco
+
           if (event === 'SIGNED_IN') {
             promises.push(ensureUserInDatabase(session.user))
           }
-          
+
           await Promise.all(promises)
         } else {
           setIsAdmin(false)
+          setAdminLoading(false)
         }
-        
+
         setLoading(false)
       }
     )
@@ -647,6 +651,7 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
     resetPassword,
     updatePassword,
     isAdmin,
+    adminLoading,
     isLoggedIn: !!user,
     
     // Cart

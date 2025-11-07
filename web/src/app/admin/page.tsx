@@ -79,7 +79,7 @@ interface Brand {
 
 export default function Admin() {
   const router = useRouter()
-  const { user, loading: authLoading, isAdmin } = useUnifiedAuth()
+  const { user, loading: authLoading, isAdmin, adminLoading } = useUnifiedAuth()
   const [activeTab, setActiveTab] = useState<'products' | 'services' | 'banners' | 'brands' | 'categories' | 'orders'>('products')
   const [editingCategory, setEditingCategory] = useState<any>(null)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
@@ -146,7 +146,7 @@ export default function Admin() {
 
   // Verificar acesso de admin
   useEffect(() => {
-    if (!authLoading) {
+    if (!authLoading && !adminLoading) {
       if (!user) {
         console.log('❌ Usuário não logado, redirecionando para login...')
         router.push('/login')
@@ -155,7 +155,7 @@ export default function Admin() {
         router.push('/conta')
       }
     }
-  }, [user, isAdmin, authLoading, router])
+  }, [user, isAdmin, authLoading, adminLoading, router])
   
   // Hook para pedidos
   const { orders, loading: ordersLoading, updateOrderStatus, addTrackingNumber, refetch: refetchOrders } = useOrders()
