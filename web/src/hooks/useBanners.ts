@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase, Banner } from '@/lib/supabase'
-import { initialBanners } from '@/data/initial-data'
 
 export function useBanners() {
   const [banners, setBanners] = useState<Banner[]>([])
@@ -13,19 +12,20 @@ export function useBanners() {
       const { data, error } = await supabase
         .from('banners')
         .select('*')
-        .eq('active', true)
         .order('created_at', { ascending: false })
 
       if (error) throw error
+
       if (!data || data.length === 0) {
-        console.warn('⚠️ Nenhum banner no banco. Usando fallback inicial.')
-        setBanners(initialBanners as unknown as Banner[])
+        console.warn('⚠️ Nenhum banner cadastrado no banco.')
+        setBanners([])
       } else {
         setBanners(data)
       }
+      setError(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar banners')
-      setBanners(initialBanners as unknown as Banner[])
+      setBanners([])
     } finally {
       setLoading(false)
     }
@@ -39,10 +39,13 @@ export function useBanners() {
         .select()
 
       if (error) throw error
-      if (data) {
-        setBanners(prev => [data[0], ...prev])
+      if (!data || data.length === 0) {
+        await fetchBanners()
+        return null
       }
-      return data?.[0]
+      const created = data[0]
+      setBanners(prev => [created, ...prev])
+      return created
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao adicionar banner')
       throw err
@@ -58,10 +61,13 @@ export function useBanners() {
         .select()
 
       if (error) throw error
-      if (data) {
-        setBanners(prev => prev.map(b => b.id === id ? data[0] : b))
+      if (!data || data.length === 0) {
+        await fetchBanners()
+        return null
       }
-      return data?.[0]
+      const updated = data[0]
+      setBanners(prev => prev.map(b => (b.id === id ? updated : b)))
+      return updated
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar banner')
       throw err
@@ -77,6 +83,9 @@ export function useBanners() {
 
       if (error) throw error
       setBanners(prev => prev.filter(b => b.id !== id))
+      if (banners.length <= 1) {
+        await fetchBanners()
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao deletar banner')
       throw err
