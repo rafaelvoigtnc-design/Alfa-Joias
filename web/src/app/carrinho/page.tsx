@@ -3,21 +3,13 @@
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 import Link from 'next/link'
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, MessageCircle } from 'lucide-react'
+import { formatPrice, formatPriceValue } from '@/lib/priceUtils'
 
 export default function Cart() {
   const { cart, updateQuantity, removeFromCart, clearCart, isLoggedIn } = useUnifiedAuth()
 
   // Função para formatar preço para exibição (sempre vírgula para decimais)
-  const formatPriceForDisplay = (price: string | number): string => {
-    if (typeof price === 'number') {
-      return price.toFixed(2).replace('.', ',')
-    }
-    // Limpar caracteres especiais e converter vírgula para ponto
-    const cleaned = price.toString().replace(/[^\d.,]/g, '').replace(',', '.')
-    const num = parseFloat(cleaned)
-    if (isNaN(num)) return '0,00'
-    return num.toFixed(2).replace('.', ',')
-  }
+  const formatPriceForDisplay = (price: string | number): string => formatPriceValue(price)
 
   if (!isLoggedIn) {
     return (

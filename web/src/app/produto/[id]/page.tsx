@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Phone, Eye, Clock, Gem, Share2, ShoppingCart } from 'lucide-react'
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
-import { formatPrice } from '@/lib/priceUtils'
+import { formatPrice, formatPriceValue } from '@/lib/priceUtils'
 import { supabase } from '@/lib/supabase'
 
 interface Product {
@@ -45,14 +45,7 @@ export default function ProductPage() {
 
   // Função para formatar preço para exibição (sempre vírgula para decimais)
   const formatPriceForDisplay = (price: string | number): string => {
-    if (typeof price === 'number') {
-      return price.toFixed(2).replace('.', ',')
-    }
-    // Limpar caracteres especiais e converter vírgula para ponto
-    const cleaned = price.toString().replace(/[^\d.,]/g, '').replace(',', '.')
-    const num = parseFloat(cleaned)
-    if (isNaN(num)) return '0,00'
-    return num.toFixed(2).replace('.', ',')
+    return formatPriceValue(price)
   }
 
   useEffect(() => {

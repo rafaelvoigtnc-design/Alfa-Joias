@@ -6,6 +6,7 @@ import { ShoppingCart, MessageCircle, User, Package } from 'lucide-react'
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
+import { formatPrice, formatPriceValue } from '@/lib/priceUtils'
 
 export default function Checkout() {
   const { cart, clearCart, user } = useUnifiedAuth()
@@ -97,16 +98,7 @@ export default function Checkout() {
   const [pendingSubmit, setPendingSubmit] = useState(false)
 
   // Função para formatar preço para exibição (sempre vírgula para decimais)
-  const formatPriceForDisplay = (price: string | number): string => {
-    if (typeof price === 'number') {
-      return price.toFixed(2).replace('.', ',')
-    }
-    // Limpar caracteres especiais e converter vírgula para ponto
-    const cleaned = price.toString().replace(/[^\d.,]/g, '').replace(',', '.')
-    const num = parseFloat(cleaned)
-    if (isNaN(num)) return '0,00'
-    return num.toFixed(2).replace('.', ',')
-  }
+  const formatPriceForDisplay = (price: string | number): string => formatPriceValue(price)
 
   const calculateTotal = () => {
     return cart.reduce((total, item) => {

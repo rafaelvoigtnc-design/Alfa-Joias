@@ -1,61 +1,87 @@
-// Utilitários para formatação de preços
+export function parsePrice(price: string | number): number {
+  if (typeof price === 'number') {
+    return Number.isFinite(price) ? price : 0
+  }
 
-export function formatPrice(price: string | number): string {
-  // Remove qualquer zero extra e formata corretamente
-  if (price === null || price === undefined) return 'R$ 0,00'
-  
-  // Converter número para string se necessário
-  const priceString = typeof price === 'number' ? price.toString() : String(price)
-  if (!priceString || priceString.trim() === '') return 'R$ 0,00'
-  
-  // Remove caracteres não numéricos exceto vírgula e ponto
-  let cleanPrice = priceString.replace(/[^\d,.]/g, '')
-  
-  // Se tem vírgula, processa as casas decimais
-  if (cleanPrice.includes(',')) {
-    const parts = cleanPrice.split(',')
-    const integerPart = parts[0]
-    let decimalPart = parts[1] || ''
-    
-    // Se tem mais de 2 casas decimais, corta para 2
-    if (decimalPart.length > 2) {
-      decimalPart = decimalPart.substring(0, 2)
-    }
-    // Se tem menos de 2 casas decimais, completa com zeros
-    else if (decimalPart.length === 1) {
-      decimalPart = decimalPart + '0'
-    }
-    // Se não tem casas decimais, adiciona 00
-    else if (decimalPart.length === 0) {
-      decimalPart = '00'
-    }
-    
-    cleanPrice = integerPart + ',' + decimalPart
+  if (price === null || price === undefined) {
+    return 0
   }
-  // Se não tem vírgula, adiciona ,00
-  else {
-    cleanPrice = cleanPrice + ',00'
+
+  const raw = String(price).trim()
+  if (raw === '') {
+    return 0
   }
-  
-  // Adiciona R$ no início
-  return `R$ ${cleanPrice}`
+
+  // Manter apenas dígitos, vírgulas, pontos e sinal de negativo
+  let cleaned = raw.replace(/[^0-9,.-]/g, '')
+
+  if (cleaned === '' || cleaned === '-' || cleaned === ',' || cleaned === '.') {
+    return 0
+  }
+
+  const lastComma = cleaned.lastIndexOf(',')
+  const lastDot = cleaned.lastIndexOf('.')
+  const separatorIndex = Math.max(lastComma, lastDot)
+
+  let integerPart = ''
+  let decimalPart = ''
+
+  if (separatorIndex !== -1) {
+    integerPart = cleaned.slice(0, separatorIndex).replace(/[^0-9-]/g, '')
+    decimalPart = cleaned.slice(separatorIndex + 1).replace(/[^0-9]/g, '')
+  } else {
+    integerPart = cleaned.replace(/[^0-9-]/g, '')
+  }
+
+  if (decimalPart.length > 2) {
+    decimalPart = decimalPart.slice(0, 2)
+  }
+
+  if (integerPart === '' && decimalPart === '') {
+    return 0
+  }
+
+  if (integerPart === '' || integerPart === '-') {
+    integerPart = integerPart.includes('-') ? '-0' : '0'
+  }
+
+  if (separatorIndex !== -1 && decimalPart === '') {
+    decimalPart = '0'
+  }
+
+  const normalized = decimalPart
+    ? `${integerPart}.${decimalPart.padEnd(2, '0')}`
+    : integerPart
+
+  const value = parseFloat(normalized)
+  return Number.isFinite(value) ? value : 0
 }
 
-export function parsePrice(price: string | number): number {
-  // Se já é número, retorna direto
-  if (typeof price === 'number') return price || 0
-  
-  // Converte preço string para número
-  if (!price) return 0
-  const cleanPrice = String(price).replace(/[^\d,]/g, '').replace(',', '.')
-  return parseFloat(cleanPrice) || 0
+export function formatPriceValue(price: string | number): string {
+  const numericValue = parsePrice(price)
+  return numericValue.toLocaleString('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+}
+
+export function formatPrice(price: string | number): string {
+  const numericValue = parsePrice(price)
+  return numericValue.toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
 }
 
 export function calculateDiscount(originalPrice: string, salePrice: string): number {
   const original = parsePrice(originalPrice)
   const sale = parsePrice(salePrice)
-  
-  if (original === 0) return 0
-  
+
+  if (original === 0) {
+    return 0
+  }
+
   return Math.round(((original - sale) / original) * 100)
 }
