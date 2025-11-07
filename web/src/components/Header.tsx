@@ -99,6 +99,16 @@ export default function Header() {
                       <p className="text-xs text-gray-500 truncate">{user.email}</p>
                     </div>
                     <Link 
+                      href="/conta" 
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      onClick={() => {
+                        setShowUserMenu(false)
+                        setIsMenuOpen(false)
+                      }}
+                    >
+                      Minha Conta
+                    </Link>
+                    <Link 
                       href="/pedidos" 
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                       onClick={() => {
@@ -182,6 +192,13 @@ export default function Header() {
                   
                   {showUserMenu && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                      <Link 
+                        href="/conta" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setShowUserMenu(false)}
+                      >
+                        Minha Conta
+                      </Link>
                       <Link 
                         href="/pedidos" 
                         className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
