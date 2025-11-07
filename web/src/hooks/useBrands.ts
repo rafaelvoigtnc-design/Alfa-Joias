@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase, Brand } from '@/lib/supabase'
-import { initialBrands } from '@/data/initial-data'
 
 export function useBrands() {
   const [brands, setBrands] = useState<Brand[]>([])
@@ -15,46 +14,33 @@ export function useBrands() {
       setError(null)
       
       console.log('🔄 Buscando marcas do Supabase...')
-      
-      // Timeout de 5 segundos para evitar carregamento infinito
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout ao carregar marcas')), 5000)
-      )
-      
-      const queryPromise = supabase
+
+      const { data, error } = await supabase
         .from('brands')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50) // Limitar para melhor performance
-
-      const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
-      const { data, error } = result
+        .limit(100)
 
       if (error) {
         console.error('❌ Erro do Supabase:', error.message)
         setError(`Erro ao conectar com o banco de dados: ${error.message}`)
-        setBrands(initialBrands as unknown as Brand[])
+        setBrands([])
         setLoading(false)
         return
       }
-      
+
       console.log('✅ Marcas carregadas do Supabase:', data?.length || 0)
       if (data && data.length > 0) {
         data.forEach(brand => console.log(`   - ${brand.name} (${brand.id})`))
       }
-      
-      if (!data || data.length === 0) {
-        console.warn('⚠️ Nenhuma marca no banco. Usando fallback inicial.')
-        setBrands(initialBrands as unknown as Brand[])
-      } else {
-        setBrands(data)
-      }
-      
+
+      setBrands(data || [])
+      setError(null)
+
     } catch (err) {
       console.error('❌ Erro ao carregar marcas:', err)
       setError(err instanceof Error ? err.message : 'Erro ao carregar marcas do banco de dados')
-      // Sempre usar fallback em caso de erro
-      setBrands(initialBrands as unknown as Brand[])
+      setBrands([])
     } finally {
       setLoading(false)
       console.log('✅ fetchBrands concluído')
@@ -65,7 +51,6 @@ export function useBrands() {
     console.log('🔄 addBrand chamado com:', brand)
     
     try {
-      // Preparar dados para o Supabase (sem a coluna 'active' que não existe)
       const brandData = {
         name: brand.name || 'Marca sem nome',
         image: brand.image || 'https://via.placeholder.com/200x100?text=Logo'
@@ -83,14 +68,10 @@ export function useBrands() {
         throw error
       }
 
-      console.log('✅ Marca inserida no Supabase:', data)
-      
-      // Atualizar estado local
-      const newBrand = data[0]
-      setBrands(prev => [...prev, newBrand])
-      
+      const created = data && data.length > 0 ? data[0] : null
+      await fetchBrands()
       console.log('✅ Marca adicionada com sucesso!')
-      return newBrand
+      return created
       
     } catch (error) {
       console.error('❌ ERRO CRÍTICO:', error)
@@ -101,7 +82,6 @@ export function useBrands() {
 
   const updateBrand = async (id: string, updates: Partial<Brand>) => {
     try {
-      // Remover 'active' se existir (coluna não existe no banco)
       const { active, ...updateData } = updates as any
       
       const { data, error } = await supabase
@@ -111,10 +91,10 @@ export function useBrands() {
         .select()
 
       if (error) throw error
-      if (data) {
-        setBrands(prev => prev.map(b => b.id === id ? data[0] : b))
-      }
-      return data?.[0]
+
+      const updated = data && data.length > 0 ? data[0] : null
+      await fetchBrands()
+      return updated
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao atualizar marca')
       throw err
@@ -132,16 +112,20 @@ export function useBrands() {
 
       if (error) {
         console.error('❌ Erro do Supabase:', error)
+        if (error.message && error.message.toLowerCase().includes('foreign key')) {
+          throw new Error('Não é possível excluir esta marca porque existem produtos vinculados a ela. Atualize ou remova esses produtos antes de excluir a marca.')
+        }
         throw error
       }
       
-      setBrands(prev => prev.filter(b => b.id !== id))
+      await fetchBrands()
       console.log('✅ Marca deletada do Supabase')
       
     } catch (err) {
       console.error('❌ Erro ao deletar marca:', err)
-      setError(err instanceof Error ? err.message : 'Erro ao deletar marca')
-      throw err
+      const friendlyMessage = err instanceof Error ? err.message : 'Erro ao deletar marca'
+      setError(friendlyMessage)
+      throw new Error(friendlyMessage)
     }
   }
 
