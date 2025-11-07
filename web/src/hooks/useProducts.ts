@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase, Product } from '@/lib/supabase'
-import { initialProducts } from '@/data/initial-data'
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([])
@@ -16,19 +15,19 @@ export function useProducts() {
       if (!response.ok) {
         const text = await response.text()
         console.error('❌ Erro na API de produtos:', response.status, text)
-        setProducts(initialProducts as unknown as Product[])
+        setProducts([])
         return
       }
       const { success, products: data, error } = await response.json()
       if (!success) {
         console.error('❌ Erro ao buscar produtos:', error)
-        setProducts(initialProducts as unknown as Product[])
+        setProducts([])
         return
       }
       
       if (!data || data.length === 0) {
-        console.warn('⚠️ Banco de produtos vazio. Usando fallback inicial.')
-        setProducts(initialProducts as unknown as Product[])
+        console.warn('⚠️ Banco de produtos vazio.')
+        setProducts([])
       } else {
         console.log('✅ Produtos carregados do Supabase:', data.length)
         setProducts(data)
@@ -36,7 +35,7 @@ export function useProducts() {
     } catch (err) {
       console.error('❌ Erro ao carregar produtos, usando fallback:', err)
       setError(err instanceof Error ? err.message : 'Erro ao carregar produtos')
-      setProducts(initialProducts as unknown as Product[])
+      setProducts([])
     } finally {
       setLoading(false)
     }
