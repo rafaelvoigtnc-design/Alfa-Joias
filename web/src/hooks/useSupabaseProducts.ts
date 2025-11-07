@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase, Product } from '@/lib/supabase'
-import { initialProducts } from '@/data/initial-data'
 
 export function useSupabaseProducts() {
   const [products, setProducts] = useState<Product[]>([])
@@ -42,7 +41,7 @@ export function useSupabaseProducts() {
         } else {
           setError(`Erro na API de produtos: ${errorData.error || response.status}`)
         }
-        setProducts(initialProducts as unknown as Product[])
+        setProducts([])
         setLoading(false)
         return
       }
@@ -53,14 +52,14 @@ export function useSupabaseProducts() {
           ? 'Erro de conexão. Verifique sua internet e tente novamente.'
           : `Erro ao conectar com o banco de dados: ${error}`
         setError(errorMsg)
-        setProducts(initialProducts as unknown as Product[])
+        setProducts([])
         setLoading(false)
         return
       }
       
       if (!data || data.length === 0) {
-        console.warn('⚠️ Banco de dados está vazio! Usando dados iniciais como fallback.')
-        setProducts(initialProducts as unknown as Product[])
+        console.warn('⚠️ Banco de dados está vazio!')
+        setProducts([])
         setLoading(false)
         return
       }
@@ -79,8 +78,7 @@ export function useSupabaseProducts() {
         setError(err instanceof Error ? err.message : 'Erro ao carregar produtos do banco de dados')
       }
       
-      // Usar fallback mesmo em caso de erro
-      setProducts(initialProducts as unknown as Product[])
+      setProducts([])
       setLoading(false)
     }
   }
