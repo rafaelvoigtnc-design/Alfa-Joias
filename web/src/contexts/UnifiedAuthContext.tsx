@@ -534,6 +534,7 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
       }
 
       filteredUpdates.id = user.id
+      filteredUpdates.email = existingUser?.email || user.email || filteredUpdates.email
       filteredUpdates.updated_at = filteredUpdates.updated_at || new Date().toISOString()
 
       const { data, error } = await supabase
