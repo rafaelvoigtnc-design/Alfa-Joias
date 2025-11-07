@@ -502,17 +502,28 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const updateProfile = async (updates: any) => {
+    if (!user?.id) {
+      const error = new Error('Usuário não autenticado')
+      return { data: null, error }
+    }
+
     try {
+      const dataToSave = {
+        id: user.id,
+        ...updates,
+        updated_at: new Date().toISOString(),
+      }
+
       const { data, error } = await supabase
         .from('users')
-        .update(updates)
-        .eq('id', user?.id)
+        .upsert(dataToSave, { onConflict: 'id' })
         .select()
         .single()
-      
+
       if (error) throw error
       return { data, error: null }
     } catch (error) {
+      console.error('❌ Erro ao atualizar perfil:', error)
       return { data: null, error }
     }
   }
