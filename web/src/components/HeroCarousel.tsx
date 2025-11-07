@@ -90,7 +90,7 @@ export default function HeroCarousel() {
     if (activeBanners.length > 1) {
       const interval = setInterval(() => {
         setCurrentSlide((prev) => (prev + 1) % activeBanners.length)
-      }, 5000)
+      }, 15000)
       return () => clearInterval(interval)
     }
   }, [activeBanners])
