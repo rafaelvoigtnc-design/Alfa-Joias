@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { User, Session } from '@supabase/supabase-js'
+import { getSiteUrl } from '@/lib/getSiteUrl'
 
 interface CartItem {
   id: string
@@ -74,10 +75,17 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = async () => {
     try {
       console.log('🔄 Iniciando login com Google...')
+      
+      // Obter URL correta do site
+      const siteUrl = getSiteUrl()
+      const redirectTo = `${siteUrl}/auth/callback`
+      
+      console.log('🔗 URL de redirecionamento:', redirectTo)
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: redirectTo,
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',
@@ -101,8 +109,15 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
   const resetPassword = async (email: string) => {
     try {
       console.log('🔄 Enviando email de recuperação de senha para:', email)
+      
+      // Obter URL correta do site
+      const siteUrl = getSiteUrl()
+      const redirectTo = `${siteUrl}/auth/reset-password`
+      
+      console.log('🔗 URL de redirecionamento:', redirectTo)
+      
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`
+        redirectTo: redirectTo
       })
       
       if (error) {

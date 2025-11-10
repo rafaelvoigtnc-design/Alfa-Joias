@@ -446,10 +446,21 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     try {
+      // Importar função dinamicamente para evitar problemas de SSR
+      const { getSiteUrl } = await import('@/lib/getSiteUrl')
+      const siteUrl = getSiteUrl()
+      const redirectTo = `${siteUrl}/auth/callback`
+      
+      console.log('🔗 URL de redirecionamento Google:', redirectTo)
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: redirectTo,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
         }
       })
       
@@ -557,8 +568,15 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
 
   const resetPassword = async (email: string) => {
     try {
+      // Importar função dinamicamente para evitar problemas de SSR
+      const { getSiteUrl } = await import('@/lib/getSiteUrl')
+      const siteUrl = getSiteUrl()
+      const redirectTo = `${siteUrl}/auth/reset-password`
+      
+      console.log('🔗 URL de redirecionamento reset password:', redirectTo)
+      
       const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/reset-password`
+        redirectTo: redirectTo
       })
       
       if (error) throw error

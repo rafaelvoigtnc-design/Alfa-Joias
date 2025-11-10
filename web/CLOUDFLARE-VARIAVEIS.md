@@ -10,19 +10,24 @@ Para o site funcionar, você **DEVE** configurar estas variáveis no Cloudflare 
 2. **NEXT_PUBLIC_SUPABASE_ANON_KEY**
    - Valor: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndodmlkaWN0cGhlYmNpdWlhYnVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg5MTk4NzgsImV4cCI6MjA3NDQ5NTg3OH0.sbXPX4RiHO-ppXn7HOQ7Db6L_XPKxnWLkq9WyqIjg_c`
 
+3. **NEXT_PUBLIC_SITE_URL** (NOVO - IMPORTANTE PARA LOGIN GOOGLE)
+   - Valor: `https://alfa-joias-nc.pages.dev`
+   - Esta variável é essencial para o login com Google funcionar corretamente em produção
+
 ## 📋 Como Configurar:
 
 1. Acesse: https://dash.cloudflare.com
 2. Vá em **Workers & Pages**
 3. Clique no seu projeto **alfa-joias-nc**
 4. Vá em **Settings** → **Environment Variables**
-5. Adicione as duas variáveis acima
+5. Adicione as três variáveis acima
 6. Certifique-se de que estão marcadas para **Production** e **Preview**
 7. Salve e faça um novo deploy
 
 ## ⚠️ IMPORTANTE:
 
 - Sem essas variáveis, o site não consegue conectar ao banco de dados
+- Sem `NEXT_PUBLIC_SITE_URL`, o login com Google redireciona para localhost
 - Isso causa o problema de "Carregando categorias..." infinito
 - Após configurar, o site deve funcionar normalmente
 
