@@ -32,56 +32,72 @@ function AuthCallbackContent() {
           return
         }
 
-        // Se houver access_token na hash, o Supabase já processou e temos sessão
+        // Se houver access_token na hash, o Supabase precisa processar
         if (accessToken) {
-          console.log('🔑 Token encontrado na hash, verificando sessão...')
+          console.log('🔑 Token encontrado na hash, processando...')
           
-          // Aguardar um pouco para o Supabase processar o token
-          await new Promise(resolve => setTimeout(resolve, 500))
+          // O Supabase processa automaticamente tokens na hash quando a página carrega
+          // Mas podemos forçar o processamento esperando um pouco e verificando a sessão
+          // Aguardar para o Supabase processar o token da hash
+          let sessionCreated = false
           
-          // Verificar se a sessão foi criada
-          const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-          
-          if (sessionData?.session) {
-            console.log('✅ Sessão criada com sucesso via token!')
+          // Tentar múltiplas vezes (o Supabase pode demorar para processar)
+          for (let attempt = 0; attempt < 5; attempt++) {
+            await new Promise(resolve => setTimeout(resolve, attempt === 0 ? 1000 : 500))
             
-            // Limpar a hash da URL
-            window.history.replaceState({}, document.title, window.location.pathname)
+            const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
             
-            // Garantir que o usuário existe na tabela users
-            try {
-              const { data: userData, error: userError } = await supabase
-                .from('users')
-                .select('id')
-                .eq('id', sessionData.session.user.id)
-                .single()
-
-              if (userError && userError.code === 'PGRST116') {
-                // Usuário não existe, criar
-                const { error: insertError } = await supabase
+            if (sessionData?.session) {
+              console.log(`✅ Sessão criada com sucesso via token! (tentativa ${attempt + 1})`)
+              
+              // Limpar a hash da URL imediatamente
+              const cleanUrl = window.location.pathname + (window.location.search || '')
+              window.history.replaceState({}, document.title, cleanUrl)
+              
+              // Garantir que o usuário existe na tabela users
+              try {
+                const { data: userData, error: userError } = await supabase
                   .from('users')
-                  .insert({
-                    id: sessionData.session.user.id,
-                    email: sessionData.session.user.email,
-                    name: sessionData.session.user.user_metadata?.full_name || sessionData.session.user.email?.split('@')[0] || 'Usuário',
-                    phone: null,
-                  })
+                  .select('id')
+                  .eq('id', sessionData.session.user.id)
+                  .single()
 
-                if (insertError) {
-                  console.error('❌ Erro ao criar usuário:', insertError)
-                } else {
-                  console.log('✅ Usuário criado na tabela users')
+                if (userError && userError.code === 'PGRST116') {
+                  // Usuário não existe, criar
+                  const { error: insertError } = await supabase
+                    .from('users')
+                    .insert({
+                      id: sessionData.session.user.id,
+                      email: sessionData.session.user.email,
+                      name: sessionData.session.user.user_metadata?.full_name || sessionData.session.user.email?.split('@')[0] || 'Usuário',
+                      phone: null,
+                    })
+
+                  if (insertError) {
+                    console.error('❌ Erro ao criar usuário:', insertError)
+                  } else {
+                    console.log('✅ Usuário criado na tabela users')
+                  }
                 }
+              } catch (userErr) {
+                console.error('❌ Erro ao verificar/criar usuário:', userErr)
               }
-            } catch (userErr) {
-              console.error('❌ Erro ao verificar/criar usuário:', userErr)
-            }
 
-            // Redirecionar para a home
-            router.push('/')
+              // Redirecionar para a home
+              router.push('/')
+              sessionCreated = true
+              return
+            } else if (sessionError) {
+              console.warn(`⚠️ Tentativa ${attempt + 1}: Ainda não há sessão. Erro:`, sessionError.message)
+            }
+          }
+          
+          if (!sessionCreated) {
+            console.error('❌ Não foi possível criar sessão após múltiplas tentativas')
+            // Tentar recarregar a página para forçar o processamento do token
+            console.log('🔄 Tentando recarregar página para processar token...')
+            window.location.reload()
             return
-          } else if (sessionError) {
-            console.error('❌ Erro ao obter sessão:', sessionError)
           }
         }
 
