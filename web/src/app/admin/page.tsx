@@ -11,6 +11,7 @@ import {
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 import ImageUpload from '@/components/ImageUpload'
 import CategoryImageEditor from '@/components/CategoryImageEditor'
+import ImageEditor from '@/components/ImageEditor'
 import BrandSelector from '@/components/BrandSelector'
 import { useOrders } from '@/hooks/useOrders'
 import { useSupabaseServices } from '@/hooks/useSupabaseServices'
@@ -1921,21 +1922,44 @@ export default function Admin() {
                     </div>
                   )}
                   
-                  {/* Upload de nova imagem */}
+                  {/* Upload de nova imagem com editor */}
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
-                    <ImageUpload
+                    <ImageEditor
+                      imageUrl={productImages[coverImageIndex] || ''}
                       onImageSelect={(imageUrl) => {
-                        if (imageUrl && !productImages.includes(imageUrl)) {
-                          setProductImages([...productImages, imageUrl])
-                          if (productImages.length === 0) {
-                            setCoverImageIndex(0)
+                        if (imageUrl) {
+                          const newImages = [...productImages]
+                          if (coverImageIndex < newImages.length) {
+                            newImages[coverImageIndex] = imageUrl
+                          } else {
+                            newImages.push(imageUrl)
+                            setCoverImageIndex(newImages.length - 1)
                           }
+                          setProductImages(newImages)
                         }
                       }}
-                      currentImage=""
-                      placeholder="Adicionar nova imagem"
+                      placeholder="Adicionar/editar imagem principal"
+                      aspectRatio={1} // Quadrado para produtos
                     />
                   </div>
+                  
+                  {/* Upload de imagens adicionais sem editor (apenas upload simples) */}
+                  {productImages.length > 0 && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Imagens Adicionais (opcional)
+                      </label>
+                      <ImageUpload
+                        onImageSelect={(imageUrl) => {
+                          if (imageUrl && !productImages.includes(imageUrl)) {
+                            setProductImages([...productImages, imageUrl])
+                          }
+                        }}
+                        currentImage=""
+                        placeholder="Adicionar imagem adicional"
+                      />
+                    </div>
+                  )}
                   
                   {/* Inputs hidden para enviar no form */}
                   <input
@@ -2183,13 +2207,16 @@ export default function Admin() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Imagem do Banner</label>
-                <ImageUpload
+                <p className="text-xs text-gray-500 mb-2">Recomendado: imagem horizontal (aspect ratio 2.4:1)</p>
+                <ImageEditor
+                  imageUrl={editingBanner?.image || ''}
                   onImageSelect={(imageUrl) => {
                     const input = document.querySelector('input[name="image"]') as HTMLInputElement
                     if (input) input.value = imageUrl
                   }}
-                  currentImage={editingBanner?.image}
                   placeholder="Selecione uma imagem para o banner"
+                  aspectRatio={2.4} // Banner horizontal
+                  cropSize={1200}
                 />
                 <input
                   type="hidden"
@@ -2380,10 +2407,13 @@ export default function Admin() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Logo da Marca</label>
-                <ImageUpload
+                <p className="text-xs text-gray-500 mb-2">Recomendado: logo horizontal (aspect ratio 2:1)</p>
+                <ImageEditor
+                  imageUrl={editingBrand?.image || brandImage}
                   onImageSelect={(image) => setBrandImage(image)}
-                  currentImage={editingBrand?.image || brandImage}
                   placeholder="Selecione o logo da marca"
+                  aspectRatio={2} // Logo horizontal
+                  cropSize={400}
                 />
                 <input type="hidden" name="image" value={brandImage} />
               </div>

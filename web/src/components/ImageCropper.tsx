@@ -20,7 +20,8 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   const [rotation, setRotation] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [cropSize, setCropSize] = useState(400) // Tamanho da área de crop (quadrada)
+  const [cropWidth, setCropWidth] = useState(400)
+  const [cropHeight, setCropHeight] = useState(400)
 
   // Carregar imagem e calcular escala inicial
   useEffect(() => {
@@ -37,14 +38,29 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
         const containerWidth = container.clientWidth - 40
         const containerHeight = container.clientHeight - 40
         
-        // Tamanho da área de crop (quadrada, 80% da menor dimensão)
-        const maxCropSize = Math.min(containerWidth, containerHeight) * 0.8
-        const cropSizeValue = Math.min(maxCropSize, 600)
-        setCropSize(cropSizeValue)
+        // Calcular dimensões da área de crop baseado no aspect ratio
+        const maxWidth = Math.min(containerWidth * 0.9, 800)
+        const maxHeight = Math.min(containerHeight * 0.8, 600)
+        
+        let cropWidthValue: number
+        let cropHeightValue: number
+        
+        if (aspectRatio >= 1) {
+          // Largura >= Altura (horizontal ou quadrado)
+          cropWidthValue = Math.min(maxWidth, maxHeight * aspectRatio)
+          cropHeightValue = cropWidthValue / aspectRatio
+        } else {
+          // Altura > Largura (vertical)
+          cropHeightValue = Math.min(maxHeight, maxWidth / aspectRatio)
+          cropWidthValue = cropHeightValue * aspectRatio
+        }
+        
+        setCropWidth(cropWidthValue)
+        setCropHeight(cropHeightValue)
         
         // Calcular escala inicial para preencher a área de crop
-        const scaleX = cropSizeValue / img.width
-        const scaleY = cropSizeValue / img.height
+        const scaleX = cropWidthValue / img.width
+        const scaleY = cropHeightValue / img.height
         const initialScale = Math.max(scaleX, scaleY) * 1.1 // 10% a mais para garantir preenchimento
         
         setScale(initialScale)
@@ -55,11 +71,11 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
       }
       img.src = imageUrl
     }
-  }, [imageUrl, cropSize])
+  }, [imageUrl, aspectRatio])
 
   useEffect(() => {
     drawImage()
-  }, [scale, position, rotation, cropSize])
+  }, [scale, position, rotation, cropWidth, cropHeight, aspectRatio])
 
   const drawImage = () => {
     const canvas = canvasRef.current
@@ -86,18 +102,18 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
     // Calcular posição da área de crop (centralizada)
-    const cropX = (canvas.width - cropSize) / 2
-    const cropY = (canvas.height - cropSize) / 2
+    const cropX = (canvas.width - cropWidth) / 2
+    const cropY = (canvas.height - cropHeight) / 2
 
-    // Criar clipping path para a área de crop (quadrada)
+    // Criar clipping path para a área de crop
     ctx.save()
     ctx.beginPath()
-    ctx.rect(cropX, cropY, cropSize, cropSize)
+    ctx.rect(cropX, cropY, cropWidth, cropHeight)
     ctx.clip()
 
     // Calcular transformações para a imagem
-    const centerX = cropX + cropSize / 2
-    const centerY = cropY + cropSize / 2
+    const centerX = cropX + cropWidth / 2
+    const centerY = cropY + cropHeight / 2
 
     // Aplicar transformações
     ctx.translate(centerX, centerY)
@@ -109,8 +125,8 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     const imgHeight = img.height
     
     // Calcular limites máximos de posição
-    const maxX = (imgWidth * scale) / 2 - cropSize / 2
-    const maxY = (imgHeight * scale) / 2 - cropSize / 2
+    const maxX = (imgWidth * scale) / 2 - cropWidth / 2
+    const maxY = (imgHeight * scale) / 2 - cropHeight / 2
     
     const constrainedX = Math.max(-maxX, Math.min(maxX, position.x))
     const constrainedY = Math.max(-maxY, Math.min(maxY, position.y))
@@ -125,23 +141,24 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     ctx.strokeStyle = '#ffffff'
     ctx.lineWidth = 2
     ctx.setLineDash([])
-    ctx.strokeRect(cropX, cropY, cropSize, cropSize)
+    ctx.strokeRect(cropX, cropY, cropWidth, cropHeight)
 
-    // Desenhar guias de grade
+    // Desenhar guias de grade (regra dos terços)
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'
     ctx.lineWidth = 1
-    const third = cropSize / 3
+    const thirdX = cropWidth / 3
+    const thirdY = cropHeight / 3
     ctx.beginPath()
     // Linhas verticais
-    ctx.moveTo(cropX + third, cropY)
-    ctx.lineTo(cropX + third, cropY + cropSize)
-    ctx.moveTo(cropX + third * 2, cropY)
-    ctx.lineTo(cropX + third * 2, cropY + cropSize)
+    ctx.moveTo(cropX + thirdX, cropY)
+    ctx.lineTo(cropX + thirdX, cropY + cropHeight)
+    ctx.moveTo(cropX + thirdX * 2, cropY)
+    ctx.lineTo(cropX + thirdX * 2, cropY + cropHeight)
     // Linhas horizontais
-    ctx.moveTo(cropX, cropY + third)
-    ctx.lineTo(cropX + cropSize, cropY + third)
-    ctx.moveTo(cropX, cropY + third * 2)
-    ctx.lineTo(cropX + cropSize, cropY + third * 2)
+    ctx.moveTo(cropX, cropY + thirdY)
+    ctx.lineTo(cropX + cropWidth, cropY + thirdY)
+    ctx.moveTo(cropX, cropY + thirdY * 2)
+    ctx.lineTo(cropX + cropWidth, cropY + thirdY * 2)
     ctx.stroke()
   }
 
@@ -169,8 +186,8 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     const imgHeight = img.height
     
     // Calcular limites máximos de posição
-    const maxX = (imgWidth * currentScale) / 2 - cropSize / 2
-    const maxY = (imgHeight * currentScale) / 2 - cropSize / 2
+    const maxX = (imgWidth * currentScale) / 2 - cropWidth / 2
+    const maxY = (imgHeight * currentScale) / 2 - cropHeight / 2
     
     return {
       x: Math.max(-maxX, Math.min(maxX, currentPosition.x)),
@@ -182,8 +199,8 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     if (!imageRef.current) return
     
     const img = imageRef.current
-    const scaleX = cropSize / img.width
-    const scaleY = cropSize / img.height
+    const scaleX = cropWidth / img.width
+    const scaleY = cropHeight / img.height
     const initialScale = Math.max(scaleX, scaleY) * 1.1
     
     setScale(initialScale)
@@ -207,10 +224,10 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     const y = e.clientY - rect.top
     
     // Verificar se o clique está dentro da área de crop
-    const cropX = (canvas.width - cropSize) / 2
-    const cropY = (canvas.height - cropSize) / 2
+    const cropX = (canvas.width - cropWidth) / 2
+    const cropY = (canvas.height - cropHeight) / 2
     
-    if (x >= cropX && x <= cropX + cropSize && y >= cropY && y <= cropY + cropSize) {
+    if (x >= cropX && x <= cropX + cropWidth && y >= cropY && y <= cropY + cropHeight) {
       setIsDragging(true)
       setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
     }
@@ -244,23 +261,27 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     const tempCtx = tempCanvas.getContext('2d')
     if (!tempCtx) return
 
-    // Tamanho final (quadrado)
-    tempCanvas.width = cropSize
-    tempCanvas.height = cropSize
+    // Tamanho final baseado no aspect ratio
+    // Usar tamanho fixo maior para melhor qualidade (pode ser ajustado)
+    const finalWidth = Math.round(cropWidth * 2) // 2x para melhor qualidade
+    const finalHeight = Math.round(cropHeight * 2)
+    
+    tempCanvas.width = finalWidth
+    tempCanvas.height = finalHeight
 
     // Calcular posição final com restrições
     const imgWidth = img.width
     const imgHeight = img.height
-    const maxX = (imgWidth * scale) / 2 - cropSize / 2
-    const maxY = (imgHeight * scale) / 2 - cropSize / 2
+    const maxX = (imgWidth * scale) / 2 - cropWidth / 2
+    const maxY = (imgHeight * scale) / 2 - cropHeight / 2
     const constrainedX = Math.max(-maxX, Math.min(maxX, position.x))
     const constrainedY = Math.max(-maxY, Math.min(maxY, position.y))
 
     // Aplicar transformações
     tempCtx.save()
-    tempCtx.translate(cropSize / 2, cropSize / 2)
+    tempCtx.translate(finalWidth / 2, finalHeight / 2)
     tempCtx.rotate((rotation * Math.PI) / 180)
-    tempCtx.scale(scale, scale)
+    tempCtx.scale(scale * 2, scale * 2) // Escalar 2x para corresponder ao tamanho do canvas
     tempCtx.translate(-imgWidth / 2 + constrainedX / scale, -imgHeight / 2 + constrainedY / scale)
     
     tempCtx.drawImage(img, 0, 0)
@@ -316,7 +337,7 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
         <div className="p-4 border-t bg-gray-50 flex-shrink-0 overflow-y-auto max-h-[300px]">
           <div className="mb-3 text-center">
             <p className="text-sm text-gray-600">
-              A imagem deve preencher a área quadrada. Arraste para mover, ajuste o zoom e gire se necessário.
+              A imagem deve preencher a área de recorte. Arraste para mover, ajuste o zoom e gire se necessário.
             </p>
           </div>
           

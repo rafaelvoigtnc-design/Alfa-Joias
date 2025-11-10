@@ -181,15 +181,25 @@ export default function HeroCarousel() {
           <>
             <button
               onClick={prevSlide}
-              className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-1.5 sm:p-2 rounded-full transition-all duration-300 backdrop-blur-sm active:scale-95"
+              onTouchStart={(e) => {
+                e.preventDefault()
+                prevSlide()
+              }}
+              className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white p-1.5 sm:p-2 rounded-full transition-all duration-300 backdrop-blur-sm active:scale-95 touch-manipulation z-20"
+              aria-label="Banner anterior"
             >
-              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 pointer-events-none" />
             </button>
             <button
               onClick={nextSlide}
-              className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white p-1.5 sm:p-2 rounded-full transition-all duration-300 backdrop-blur-sm active:scale-95"
+              onTouchStart={(e) => {
+                e.preventDefault()
+                nextSlide()
+              }}
+              className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white p-1.5 sm:p-2 rounded-full transition-all duration-300 backdrop-blur-sm active:scale-95 touch-manipulation z-20"
+              aria-label="Próximo banner"
             >
-              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 pointer-events-none" />
             </button>
           </>
         )}

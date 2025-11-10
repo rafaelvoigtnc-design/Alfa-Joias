@@ -8,7 +8,7 @@ import { useSimpleAuth } from '@/contexts/SimpleAuthContext'
 
 export default function Login() {
   const router = useRouter()
-  const { user, loading: authLoading, signIn, signUp, signInWithGoogle } = useSimpleAuth()
+  const { user, loading: authLoading, signIn, signUp, signInWithGoogle, resetPassword } = useSimpleAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
@@ -157,33 +157,36 @@ export default function Login() {
   const handleGoogleLogin = async () => {
     setLoading(true)
     setError('')
+    setSuccess('')
     
     try {
-      const { error } = await signInWithGoogle()
-      if (error) {
-        console.error('❌ Erro no login Google:', error)
+      const result = await signInWithGoogle()
+      
+      if (result.error) {
+        console.error('❌ Erro no login Google:', result.error)
         
         // Mensagens de erro mais específicas
-        let errorMessage = error.message
-        if (error.message.includes('redirect_uri_mismatch')) {
-          errorMessage = 'Configuração de redirecionamento incorreta. Verifique as configurações do Google OAuth.'
-        } else if (error.message.includes('access_denied')) {
-          errorMessage = 'Acesso negado pelo Google. Verifique se o Google+ API está ativado.'
-        } else if (error.message.includes('invalid_client')) {
-          errorMessage = 'Credenciais do Google inválidas. Verifique Client ID e Secret.'
-        } else if (error.message.includes('OAuth')) {
-          errorMessage = 'Google OAuth não configurado no Supabase. Siga o guia de configuração.'
+        let errorMessage = result.error.message || 'Erro ao fazer login com Google'
+        if (errorMessage.includes('redirect_uri_mismatch')) {
+          errorMessage = 'Configuração de redirecionamento incorreta. Verifique as configurações do Google OAuth no Supabase.'
+        } else if (errorMessage.includes('access_denied')) {
+          errorMessage = 'Acesso negado pelo Google. Verifique as permissões da aplicação.'
+        } else if (errorMessage.includes('invalid_client')) {
+          errorMessage = 'Credenciais do Google inválidas. Verifique Client ID e Secret no Supabase.'
+        } else if (errorMessage.includes('OAuth') || errorMessage.includes('provider')) {
+          errorMessage = 'Google OAuth não configurado no Supabase. Acesse Authentication > Providers > Google e configure.'
         }
         
         setError(errorMessage)
+        setLoading(false)
       } else {
-        // Login iniciado com sucesso - o usuário será redirecionado
+        // Login iniciado com sucesso - o usuário será redirecionado automaticamente
         setSuccess('Redirecionando para o Google...')
+        // Não definir loading como false aqui, pois o redirecionamento vai acontecer
       }
     } catch (err: any) {
       console.error('❌ Erro inesperado no login Google:', err)
-      setError(err.message || 'Erro inesperado ao fazer login com Google')
-    } finally {
+      setError(err.message || 'Erro inesperado ao fazer login com Google. Verifique se o Google OAuth está configurado no Supabase.')
       setLoading(false)
     }
   }
@@ -198,7 +201,44 @@ export default function Login() {
   }
 
   const handleResetPassword = async () => {
-    setError('Funcionalidade de recuperação de senha não implementada ainda.')
+    if (!resetEmail || !resetEmail.includes('@')) {
+      setError('Por favor, insira um email válido.')
+      return
+    }
+    
+    setLoading(true)
+    setError('')
+    setSuccess('')
+    
+    try {
+      const { error: resetError } = await resetPassword(resetEmail)
+      
+      if (resetError) {
+        console.error('❌ Erro ao enviar email de recuperação:', resetError)
+        let errorMessage = resetError.message || 'Erro ao enviar email de recuperação.'
+        
+        // Traduzir erros comuns
+        if (errorMessage.includes('rate limit')) {
+          errorMessage = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
+        } else if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+          errorMessage = 'Email não encontrado. Verifique se o email está correto.'
+        }
+        
+        setError(errorMessage)
+      } else {
+        setSuccess('✅ Email de recuperação enviado! Verifique sua caixa de entrada e spam.')
+        setResetEmail('')
+        setTimeout(() => {
+          setShowForgotPassword(false)
+          setSuccess('')
+        }, 3000)
+      }
+    } catch (err: any) {
+      console.error('❌ Erro ao resetar senha:', err)
+      setError(err.message || 'Erro ao enviar email de recuperação. Tente novamente.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Mostrar loading apenas se ainda estiver carregando E não forçou mostrar

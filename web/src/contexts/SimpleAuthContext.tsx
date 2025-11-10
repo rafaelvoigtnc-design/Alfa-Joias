@@ -25,6 +25,7 @@ interface SimpleAuthContextType {
   signIn: (email: string, password: string) => Promise<any>
   signInWithGoogle: () => Promise<any>
   signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<any>
   isAdmin: boolean
   isLoggedIn: boolean
   
@@ -71,14 +72,50 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signInWithGoogle = async () => {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+    try {
+      console.log('🔄 Iniciando login com Google...')
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+        }
+      })
+      
+      if (error) {
+        console.error('❌ Erro no login Google:', error)
+        throw error
       }
-    })
-    if (error) throw error
-    return data
+      
+      console.log('✅ Redirecionamento para Google iniciado')
+      return { data, error: null }
+    } catch (error: any) {
+      console.error('❌ Erro ao fazer login com Google:', error)
+      return { data: null, error }
+    }
+  }
+
+  const resetPassword = async (email: string) => {
+    try {
+      console.log('🔄 Enviando email de recuperação de senha para:', email)
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/reset-password`
+      })
+      
+      if (error) {
+        console.error('❌ Erro ao enviar email de recuperação:', error)
+        throw error
+      }
+      
+      console.log('✅ Email de recuperação enviado com sucesso')
+      return { data, error: null }
+    } catch (error: any) {
+      console.error('❌ Erro ao resetar senha:', error)
+      return { data: null, error }
+    }
   }
 
   const signOut = async () => {
@@ -177,6 +214,7 @@ export function SimpleAuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signInWithGoogle,
     signOut,
+    resetPassword,
     isAdmin,
     isLoggedIn: !!user,
     cart,
