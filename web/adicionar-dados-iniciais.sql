@@ -71,3 +71,4 @@ SELECT 'Serviços inseridos:' as info, COUNT(*) as quantidade FROM services;
 
 
 
+

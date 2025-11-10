@@ -79,3 +79,4 @@ export default function CategoryImageEditor({ imageUrl, onImageSelect, placehold
   )
 }
 
+
