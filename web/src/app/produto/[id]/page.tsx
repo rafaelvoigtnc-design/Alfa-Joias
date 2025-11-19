@@ -209,37 +209,99 @@ export default function ProductPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Images */}
           <div>
-            <div className="aspect-square bg-white rounded-xl overflow-hidden mb-4">
-              <img
-                src={product.additionalImages?.[selectedImage] || product.image || '/placeholder.jpg'}
-                alt={product.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  // Fallback para imagem padrão se a imagem falhar
-                  e.currentTarget.src = 'https://via.placeholder.com/600x600?text=Sem+Imagem'
-                }}
-              />
+            {/* Imagem principal com navegação */}
+            <div className="relative aspect-square bg-white rounded-xl overflow-hidden mb-4 group">
+              {/* Combinar imagem principal com imagens adicionais */}
+              {(() => {
+                const allImages = product.image 
+                  ? [product.image, ...(product.additionalImages || [])]
+                  : (product.additionalImages || [])
+                
+                if (allImages.length === 0) {
+                  return (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                      <span className="text-gray-400">Sem imagem</span>
+                    </div>
+                  )
+                }
+                
+                return (
+                  <>
+                    <img
+                      src={allImages[selectedImage] || allImages[0] || '/placeholder.jpg'}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = 'https://via.placeholder.com/600x600?text=Sem+Imagem'
+                      }}
+                    />
+                    
+                    {/* Botões de navegação (anterior/próximo) */}
+                    {allImages.length > 1 && (
+                      <>
+                        <button
+                          onClick={() => setSelectedImage((prev) => (prev > 0 ? prev - 1 : allImages.length - 1))}
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Imagem anterior"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => setSelectedImage((prev) => (prev < allImages.length - 1 ? prev + 1 : 0))}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Próxima imagem"
+                        >
+                          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                        
+                        {/* Indicador de imagem atual */}
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                          {selectedImage + 1} / {allImages.length}
+                        </div>
+                      </>
+                    )}
+                  </>
+                )
+              })()}
             </div>
             
-            {product.additionalImages && product.additionalImages.length > 1 && (
-              <div className="grid grid-cols-3 gap-2">
-                {product.additionalImages.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`aspect-square bg-white rounded-lg overflow-hidden border-2 ${
-                      selectedImage === index ? 'border-primary-600' : 'border-gray-200'
-                    }`}
-                  >
-                    <img
-                      src={image}
-                      alt={`${product.name} ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
+            {/* Galeria de miniaturas abaixo da imagem principal */}
+            {(() => {
+              const allImages = product.image 
+                ? [product.image, ...(product.additionalImages || [])]
+                : (product.additionalImages || [])
+              
+              if (allImages.length <= 1) return null
+              
+              return (
+                <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                  {allImages.map((image, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedImage(index)}
+                      className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-all ${
+                        selectedImage === index 
+                          ? 'border-primary-600 ring-2 ring-primary-200 scale-105' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <img
+                        src={image}
+                        alt={`${product.name} ${index + 1}`}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = 'https://via.placeholder.com/150?text=Erro'
+                        }}
+                      />
+                    </button>
+                  ))}
+                </div>
+              )
+            })()}
           </div>
 
           {/* Product Info */}
@@ -253,9 +315,19 @@ export default function ProductPage() {
               {product.name}
             </h1>
 
-            <p className="text-lg text-gray-600 mb-2">
-              {product.brand || 'Marca não informada'}
-            </p>
+            {/* Marca - só mostrar se existir */}
+            {product.brand && product.brand.trim() && (
+              <p className="text-lg text-gray-600 mb-2">
+                {product.brand}
+              </p>
+            )}
+            
+            {/* Modelo - só mostrar se existir */}
+            {(product as any).model && (product as any).model.trim() && (
+              <p className="text-base text-gray-500 mb-2">
+                Modelo: {(product as any).model}
+              </p>
+            )}
 
             {/* Estoque */}
             <div className="mb-4">

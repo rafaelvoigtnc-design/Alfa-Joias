@@ -2298,7 +2298,7 @@ export default function Admin() {
       {/* Banner Form Modal */}
       {showBannerForm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-0 sm:top-20 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-2xl shadow-lg rounded-none sm:rounded-md bg-white min-h-screen sm:min-h-0">
+          <div className="relative top-0 sm:top-20 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-2xl shadow-lg rounded-none sm:rounded-md bg-white min-h-screen sm:min-h-0 mb-8 sm:mb-20">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900">
                 {editingBanner ? 'Editar Banner' : 'Adicionar Banner'}
@@ -2314,7 +2314,7 @@ export default function Admin() {
               </button>
             </div>
 
-            <form onSubmit={handleBannerSubmit} className="space-y-4">
+            <form onSubmit={handleBannerSubmit} className="space-y-4 pb-8 sm:pb-12">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Título</label>
                 <input
