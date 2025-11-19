@@ -535,13 +535,23 @@ export default function Admin() {
         alert('✅ Serviço adicionado com sucesso!')
       }
       
-      // Fechar formulário e recarregar
+      // Recarregar serviços ANTES de fechar o formulário
+      if (refreshServices) {
+        console.log('🔄 Recarregando serviços após salvar...')
+        await refreshServices()
+        // Aguardar um pouco para garantir que os dados foram atualizados
+        await new Promise(resolve => setTimeout(resolve, 300))
+      }
+      
+      // Fechar formulário
       setEditingService(null)
       setShowServiceForm(false)
       
-      // Recarregar serviços
+      // Recarregar novamente após fechar para garantir sincronização
       if (refreshServices) {
-        await refreshServices()
+        setTimeout(() => {
+          refreshServices()
+        }, 500)
       }
     } catch (error) {
       console.error('❌ Erro ao salvar serviço:', error)

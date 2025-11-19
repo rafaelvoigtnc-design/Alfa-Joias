@@ -205,9 +205,20 @@ export function useSupabaseServices() {
       }
 
       console.log('✅ Serviço atualizado via API')
+      console.log('✅ Dados retornados da API:', JSON.stringify(data.service, null, 2))
+      console.log('✅ WhatsApp message retornado:', data.service?.whatsapp_message)
+      console.log('✅ Icon retornado:', data.service?.icon)
+      
+      // Atualizar estado local com os dados retornados
       setServices(prev => prev.map(service => 
-        service.id === id ? data.service : service
+        service.id === id ? { ...service, ...data.service } : service
       ))
+      
+      // Forçar reload para garantir que está sincronizado
+      setTimeout(() => {
+        loadServices()
+      }, 500)
+      
       return data.service
     } catch (error) {
       console.error('❌ Erro ao atualizar serviço:', error)

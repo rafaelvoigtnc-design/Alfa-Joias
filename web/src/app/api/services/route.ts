@@ -5,6 +5,10 @@ import { isConnectionError } from '@/lib/errorHandler'
 // Edge Runtime para Cloudflare Pages
 export const runtime = 'edge'
 
+// Forçar revalidação dinâmica
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     const { data, error } = await supabase
@@ -36,8 +40,14 @@ export async function GET() {
         'Content-Type': 'application/json; charset=utf-8',
       }
     })
-    // Cache por 60 segundos para melhorar performance
-    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+    // Desabilitar cache para sempre retornar dados atualizados
+    // Headers adicionais para forçar bypass do cache do Cloudflare/CDN
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    response.headers.set('X-Cache-Status', 'BYPASS')
+    response.headers.set('CDN-Cache-Control', 'no-cache')
+    response.headers.set('Cloudflare-CDN-Cache-Control', 'no-cache')
     return response
 
   } catch (error) {
@@ -60,9 +70,23 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { title, description, features, whatsappMessage, icon } = body
+    console.log('📥 API POST - Body recebido:', JSON.stringify(body, null, 2))
+    
+    const { title, description, features, whatsappMessage, whatsapp_message, icon } = body
 
-    console.log('➕ Criando novo serviço no banco:', { title, description })
+    // Aceitar tanto whatsappMessage quanto whatsapp_message
+    const whatsappMsg = whatsapp_message || whatsappMessage || ''
+
+    console.log('➕ Criando novo serviço no banco:', { 
+      title, 
+      description, 
+      features,
+      whatsapp_message: whatsappMsg, 
+      icon,
+      'whatsapp_message presente?': !!whatsapp_message,
+      'whatsappMessage presente?': !!whatsappMessage,
+      'icon presente?': !!icon
+    })
 
     // Validar dados obrigatórios
     if (!title || !description) {
@@ -77,21 +101,25 @@ export async function POST(request: Request) {
       })
     }
 
+    const insertData = {
+      title,
+      description,
+      features: features || [],
+      whatsapp_message: whatsappMsg,
+      icon: icon || 'wrench'
+    }
+    
+    console.log('💾 Dados que serão inseridos no banco:', JSON.stringify(insertData, null, 2))
+    
     const { data, error } = await supabase
       .from('services')
-      .insert([
-        {
-          title,
-          description,
-          features: features || [],
-          whatsapp_message: whatsappMessage || ''
-        }
-      ])
+      .insert([insertData])
       .select()
       .single()
 
     if (error) {
       console.error('❌ Erro ao criar serviço:', error.message)
+      console.error('❌ Detalhes do erro:', error)
       return NextResponse.json({
         success: false,
         error: error.message
@@ -104,6 +132,7 @@ export async function POST(request: Request) {
     }
 
     console.log('✅ Serviço criado com sucesso no banco:', data.id)
+    console.log('✅ Dados salvos no banco:', JSON.stringify(data, null, 2))
     
     return NextResponse.json({
       success: true,
@@ -132,9 +161,24 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json()
-    const { id, title, description, features, whatsappMessage, icon, active } = body
+    console.log('📥 API PUT - Body recebido:', JSON.stringify(body, null, 2))
+    
+    const { id, title, description, features, whatsappMessage, whatsapp_message, icon, active } = body
 
-    console.log('✏️ Editando serviço no banco:', { id, title, description })
+    // Aceitar tanto whatsappMessage quanto whatsapp_message
+    const whatsappMsg = whatsapp_message || whatsappMessage || ''
+
+    console.log('✏️ Editando serviço no banco:', { 
+      id, 
+      title, 
+      description, 
+      features,
+      whatsapp_message: whatsappMsg, 
+      icon,
+      'whatsapp_message presente?': !!whatsapp_message,
+      'whatsappMessage presente?': !!whatsappMessage,
+      'icon presente?': !!icon
+    })
 
     if (!id) {
       return NextResponse.json({
@@ -148,24 +192,49 @@ export async function PUT(request: Request) {
       })
     }
 
-    const { data, error } = await supabase
+    const updateData = {
+      title,
+      description,
+      features: features || [],
+      whatsapp_message: whatsappMsg,
+      icon: icon || 'wrench',
+      updated_at: new Date().toISOString()
+    }
+    
+    console.log('💾 Dados que serão salvos no banco:', JSON.stringify(updateData, null, 2))
+    
+    // Atualizar no banco
+    const { error: updateError } = await supabase
       .from('services')
-      .update({
-        title,
-        description,
-        features: features || [],
-        whatsapp_message: whatsappMessage || '',
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', id)
-      .select()
-      .single()
 
-    if (error) {
-      console.error('❌ Erro ao editar serviço:', error.message)
+    if (updateError) {
+      console.error('❌ Erro ao editar serviço:', updateError.message)
+      console.error('❌ Detalhes do erro:', updateError)
       return NextResponse.json({
         success: false,
-        error: error.message
+        error: updateError.message
+      }, { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json; charset=utf-8',
+        }
+      })
+    }
+
+    // Buscar dados atualizados do banco para garantir que retornamos os dados corretos
+    const { data, error: selectError } = await supabase
+      .from('services')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (selectError) {
+      console.error('❌ Erro ao buscar serviço atualizado:', selectError.message)
+      return NextResponse.json({
+        success: false,
+        error: selectError.message
       }, { 
         status: 500,
         headers: {
@@ -175,6 +244,9 @@ export async function PUT(request: Request) {
     }
 
     console.log('✅ Serviço editado com sucesso no banco:', data.id)
+    console.log('✅ Dados salvos no banco:', JSON.stringify(data, null, 2))
+    console.log('✅ WhatsApp message no banco:', data.whatsapp_message)
+    console.log('✅ Icon no banco:', data.icon)
     
     return NextResponse.json({
       success: true,
