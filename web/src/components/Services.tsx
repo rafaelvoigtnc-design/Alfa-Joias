@@ -14,12 +14,18 @@ import {
 import { useSupabaseServices } from '@/hooks/useSupabaseServices'
 
 export default function Services() {
-  const { services, loading } = useSupabaseServices()
+  const { services, loading, refresh } = useSupabaseServices()
+  
+  // Forçar reload dos dados sempre que o componente montar
+  useEffect(() => {
+    // Recarregar dados do banco sempre que o componente for montado
+    refresh()
+  }, [refresh])
   
   // Debug
   useEffect(() => {
     if (services.length > 0) {
-      console.log('🔍 Services carregados:', services)
+      console.log('🔍 Services carregados do BANCO:', services)
       console.log('🔍 Primeiro serviço:', services[0])
       console.log('🔍 Mensagem WhatsApp:', services[0]?.whatsapp_message)
     }
