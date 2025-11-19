@@ -6,12 +6,15 @@ import {
   Eye, Settings, Plus, Edit, Trash2, Save, X, Image, Percent, Star, Package, Truck, CheckCircle, Clock, DollarSign, Shield, Lock, Search, Filter,
   Gem, Diamond, Watch, ShoppingBag, Box, Gift, Tag, Award, Sparkles, Crown, Heart, Star as StarIcon, Zap, Flame, Leaf,
   Music, Camera, Gamepad2, Book, Coffee, Beer, Wine, Pizza, Utensils, Car, Plane, Home, Building, Briefcase,
-  Palette, Paintbrush, Scissors, Wrench, Hammer, Gauge, Cog, User, Users, Smile, ThumbsUp, Bell, Mail, Phone
+  Palette, Paintbrush, Scissors, Wrench, Hammer, Gauge, Cog, User, Users, Smile, ThumbsUp, Bell, Mail, Phone, Battery,
+  RotateCcw, RefreshCw, FileCheck, ClipboardCheck, Calendar, Timer, FastForward, 
+  Stethoscope, Activity, TrendingUp, Target, Layers, FileText, CreditCard, Key, Unlock, Lock as LockIcon
 } from 'lucide-react'
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 import ImageUpload from '@/components/ImageUpload'
 import CategoryImageEditor from '@/components/CategoryImageEditor'
 import ImageEditor from '@/components/ImageEditor'
+import BannerImageEditor from '@/components/BannerImageEditor'
 import BrandSelector from '@/components/BrandSelector'
 import { useOrders } from '@/hooks/useOrders'
 import { useSupabaseServices } from '@/hooks/useSupabaseServices'
@@ -22,7 +25,7 @@ import { useSupabaseCategories } from '@/hooks/useSupabaseCategories'
 import { supabase } from '@/lib/supabase'
 import WhatsAppNotification from '@/components/WhatsAppNotification'
 import { formatPrice } from '@/lib/priceUtils'
-import { clearCacheAndReload, resetToDefaults } from '@/lib/clearCache'
+import { clearCacheAndReload } from '@/lib/clearCache'
 
 interface Product {
   id: string
@@ -57,6 +60,7 @@ interface Service {
   description: string
   features: string[]
   whatsapp_message: string
+  icon?: string
 }
 
 interface Banner {
@@ -85,7 +89,7 @@ export default function Admin() {
   const [editingCategory, setEditingCategory] = useState<any>(null)
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
-  const { services, addService, updateService, deleteService } = useSupabaseServices()
+  const { services, addService, updateService, deleteService, refresh: refreshServices } = useSupabaseServices()
   const { banners, addBanner, updateBanner, deleteBanner } = useBanners()
   const [categories, setCategories] = useState<any[]>([])
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -97,10 +101,38 @@ export default function Admin() {
   const [showBannerForm, setShowBannerForm] = useState(false)
   const [showBrandForm, setShowBrandForm] = useState(false)
   const [brandImage, setBrandImage] = useState('')
+  const [bannerImage, setBannerImage] = useState('')
   const [selectedBrand, setSelectedBrand] = useState('')
   const [productImages, setProductImages] = useState<string[]>([])
   const [coverImageIndex, setCoverImageIndex] = useState(0)
+  const [selectedServiceIcon, setSelectedServiceIcon] = useState<string>('wrench')
   
+  // Inicializar bannerImage quando editar banner
+  useEffect(() => {
+    if (editingBanner && showBannerForm) {
+      setBannerImage(editingBanner.image || '')
+    } else if (!showBannerForm) {
+      setBannerImage('')
+    }
+  }, [editingBanner, showBannerForm])
+
+  // Log quando o formulário de serviço é aberto/fechado
+  useEffect(() => {
+    if (showServiceForm && editingService) {
+      console.log('📋 Formulário de serviço ABERTO - EDITANDO')
+      console.log('📋 Serviço sendo editado:', editingService)
+      console.log('📋 Ícone do serviço:', editingService.icon)
+      // Inicializar ícone selecionado com o ícone do serviço sendo editado
+      setSelectedServiceIcon(editingService.icon || 'wrench')
+    } else if (showServiceForm && !editingService) {
+      console.log('📋 Formulário de serviço ABERTO - NOVO')
+      setSelectedServiceIcon('wrench')
+    } else {
+      console.log('📋 Formulário de serviço FECHADO')
+      setSelectedServiceIcon('wrench')
+    }
+  }, [showServiceForm, editingService])
+
   // Inicializar imagens quando editar produto
   useEffect(() => {
     if (editingProduct) {
@@ -160,8 +192,6 @@ export default function Admin() {
   
   // Hook para pedidos
   const { orders, loading: ordersLoading, updateOrderStatus, addTrackingNumber, refetch: refetchOrders } = useOrders()
-  const [migrateLoading, setMigrateLoading] = useState(false)
-  const [migrateResult, setMigrateResult] = useState<any>(null)
   const [showDeliveryModal, setShowDeliveryModal] = useState(false)
   const [pendingOrderId, setPendingOrderId] = useState<string | null>(null)
   const [deliveryMethod, setDeliveryMethod] = useState<'delivery' | 'pickup'>('pickup')
@@ -323,19 +353,6 @@ export default function Admin() {
     saveToStorage('alfajoias-categories-images', updatedCategories)
   }
 
-  const handleMigrateOldOrders = async () => {
-    try {
-      setMigrateLoading(true)
-      setMigrateResult(null)
-      const res = await fetch('/api/admin/migrate-orders', { method: 'POST' })
-      const json = await res.json()
-      setMigrateResult(json)
-    } catch (e: any) {
-      setMigrateResult({ success: false, error: e.message })
-    } finally {
-      setMigrateLoading(false)
-    }
-  }
 
   // Função para normalizar preços (remover formatação e converter para número)
   const normalizePrice = (price: string): string => {
@@ -447,26 +464,65 @@ export default function Admin() {
 
   const handleServiceSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const formData = new FormData(e.target as HTMLFormElement)
+    const form = e.target as HTMLFormElement
+    const formData = new FormData(form)
+    
+    // Coletar dados do formulário
+    const title = (formData.get('title') as string) || ''
+    const description = (formData.get('description') as string) || ''
+    const featuresText = formData.get('features')?.toString() || ''
+    const features = featuresText.split('\n').filter(f => f.trim())
+    const whatsapp_message = (formData.get('whatsapp_message') as string) || ''
+    const icon = selectedServiceIcon || 'wrench'
+    
+    console.log('📝 Dados coletados do formulário:', {
+      title,
+      description,
+      features,
+      whatsapp_message,
+      icon,
+      'whatsapp_message length': whatsapp_message.length,
+      'whatsapp_message presente?': !!whatsapp_message
+    })
+    
+    // Validar campos obrigatórios
+    if (!title || !description) {
+      alert('❌ Título e descrição são obrigatórios!')
+      return
+    }
     
     const serviceData = {
-      title: formData.get('title') as string,
-      description: formData.get('description') as string,
-      features: formData.get('features')?.toString().split('\n').filter(f => f.trim()) || [],
-      whatsapp_message: formData.get('whatsappMessage') as string,
+      title: title.trim(),
+      description: description.trim(),
+      features,
+      whatsapp_message: whatsapp_message.trim() || `Olá! Gostaria de solicitar o serviço: ${title.trim()}. Podem me ajudar?`,
+      icon: icon.trim() || 'wrench',
     }
+    
+    console.log('💾 Dados que serão enviados para a API:', serviceData)
+    console.log('💾 WhatsApp message length:', serviceData.whatsapp_message.length)
+    console.log('💾 Icon:', serviceData.icon)
 
     try {
       if (editingService) {
         await updateService(editingService.id, serviceData)
+        alert('✅ Serviço atualizado com sucesso!')
       } else {
         await addService(serviceData)
+        alert('✅ Serviço adicionado com sucesso!')
       }
+      
+      // Fechar formulário e recarregar
       setEditingService(null)
       setShowServiceForm(false)
+      
+      // Recarregar serviços
+      if (refreshServices) {
+        await refreshServices()
+      }
     } catch (error) {
-      console.error('Erro ao salvar serviço:', error)
-      alert('Erro ao salvar serviço. Tente novamente.')
+      console.error('❌ Erro ao salvar serviço:', error)
+      alert(`❌ Erro ao salvar serviço: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
     }
   }
 
@@ -500,6 +556,7 @@ export default function Admin() {
       
       setEditingBanner(null)
       setShowBannerForm(false)
+      setBannerImage('')
       
     } catch (error) {
       console.error('❌ Erro ao salvar banner:', error)
@@ -799,78 +856,41 @@ export default function Admin() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6 mb-4 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center space-x-3">
-              <Settings className="h-8 w-8 text-blue-600" />
+              <Settings className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600" />
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
-                <p className="text-gray-600">Gerencie produtos, serviços, banners e marcas</p>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Painel Administrativo</h1>
+                <p className="text-sm sm:text-base text-gray-600 hidden sm:block">Gerencie produtos, serviços, banners e marcas</p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto">
+              <a
+                href="/"
+                target="_blank"
+                className="flex items-center space-x-2 text-xs sm:text-sm text-gray-500 hover:text-gray-700 px-2 sm:px-0"
+              >
                 <Eye className="h-4 w-4" />
-                <span>Visualizar site</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={clearCacheAndReload}
-                  className="px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200"
-                  title="Limpar cache e recarregar dados"
-                >
-                  🔄 Atualizar
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm('Tem certeza? Isso irá resetar TODOS os dados para o padrão!')) {
-                      resetToDefaults()
-                    }
-                  }}
-                  className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200"
-                  title="Resetar todos os dados"
-                >
-                  ⚠️ Reset
-                </button>
-                <button
-                  onClick={handleMigrateOldOrders}
-                  disabled={migrateLoading}
-                  className={`px-3 py-1 text-xs rounded border ${migrateLoading ? 'bg-gray-100 text-gray-400 border-gray-200' : 'bg-white text-gray-700 hover:bg-gray-50 border-gray-300'}`}
-                  title="Normaliza status, gera número e corrige totais dos pedidos antigos"
-                >
-                  {migrateLoading ? 'Migrando pedidos…' : 'Atualizar pedidos antigos'}
-                </button>
-              </div>
+                <span className="hidden sm:inline">Visualizar site</span>
+                <span className="sm:hidden">Site</span>
+              </a>
+              <button
+                onClick={clearCacheAndReload}
+                className="px-2 sm:px-3 py-1 text-xs bg-yellow-100 text-yellow-800 rounded hover:bg-yellow-200"
+                title="Limpar cache e recarregar dados"
+              >
+                🔄
+              </button>
             </div>
+            {/* Botões removidos: Reset, Atualizar pedidos antigos, Sincronizar Dados */}
           </div>
         </div>
 
-        {migrateResult && (
-          <div className={`mb-6 rounded-md p-4 ${migrateResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`}>
-            {migrateResult.success ? (
-              <div>
-                <p className="font-medium">Migração concluída</p>
-                <p className="text-sm">Pedidos analisados: {migrateResult.scanned} | Atualizados: {migrateResult.updated}</p>
-                {migrateResult.errors && migrateResult.errors.length > 0 && (
-                  <details className="mt-2 text-xs">
-                    <summary>Ver erros ({migrateResult.errors.length})</summary>
-                    <pre className="mt-1 whitespace-pre-wrap">{JSON.stringify(migrateResult.errors, null, 2)}</pre>
-                  </details>
-                )}
-              </div>
-            ) : (
-              <div>
-                <p className="font-medium">Falha na migração</p>
-                <p className="text-sm">{migrateResult.error || 'Erro desconhecido'}</p>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-8">
+        <div className="bg-white rounded-lg shadow-sm mb-4 sm:mb-8 overflow-hidden">
           <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8 px-6">
+            <nav className="-mb-px flex space-x-2 sm:space-x-8 px-2 sm:px-6 overflow-x-auto scrollbar-hide">
               {[
                 { id: 'products', name: 'Produtos', count: products.length },
                 { id: 'services', name: 'Serviços', count: services.length },
@@ -882,13 +902,14 @@ export default function Admin() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap flex-shrink-0 ${
                     activeTab === tab.id
                       ? 'border-blue-500 text-blue-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  {tab.name} ({tab.count})
+                  <span className="hidden sm:inline">{tab.name} ({tab.count})</span>
+                  <span className="sm:hidden">{tab.name}</span>
                 </button>
               ))}
             </nav>
@@ -899,28 +920,18 @@ export default function Admin() {
         <div className="bg-white rounded-lg shadow-sm">
           {/* Products Tab */}
           {activeTab === 'products' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Produtos</h2>
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Produtos</h2>
                 <button
                   onClick={() => setShowProductForm(true)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Produto
                 </button>
-                
-                <button
-                  onClick={() => {
-                    // Forçar sincronização dos dados
-                    window.location.reload()
-                  }}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 ml-2"
-                >
-                  <Settings className="h-4 w-4 mr-2" />
-                  Sincronizar Dados
-                </button>
               </div>
+              {/* Botão "Sincronizar Dados" removido */}
 
               {supabaseLoading ? (
                 <div className="text-center py-12">
@@ -1124,7 +1135,7 @@ export default function Admin() {
                       </button>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
                       {filteredProducts.map((product) => {
                         const isOutOfStock = (product as any).stock === 0
                         return (
@@ -1224,12 +1235,15 @@ export default function Admin() {
 
           {/* Services Tab */}
           {activeTab === 'services' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Serviços</h2>
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Serviços</h2>
                 <button
-                  onClick={() => setShowServiceForm(true)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  onClick={() => {
+                    console.log('➕ Abrindo formulário para adicionar serviço')
+                    setShowServiceForm(true)
+                  }}
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Serviço
@@ -1264,6 +1278,7 @@ export default function Admin() {
                     <div className="flex space-x-2">
                       <button
                         onClick={() => {
+                          console.log('✏️ Editando serviço:', service)
                           setEditingService(service)
                           setShowServiceForm(true)
                         }}
@@ -1288,12 +1303,12 @@ export default function Admin() {
 
           {/* Banners Tab */}
           {activeTab === 'banners' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Banners do Hero</h2>
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Banners do Hero</h2>
                 <button
                   onClick={() => setShowBannerForm(true)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Banner
@@ -1335,12 +1350,12 @@ export default function Admin() {
 
           {/* Brands Tab */}
           {activeTab === 'brands' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Marcas</h2>
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Marcas</h2>
                 <button
                   onClick={() => setShowBrandForm(true)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Marca
@@ -1381,15 +1396,15 @@ export default function Admin() {
 
           {/* Categories Tab */}
           {activeTab === 'categories' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Categorias</h2>
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Categorias</h2>
                 <button
                   onClick={() => {
                     setEditingCategory(null)
                     setShowCategoryForm(true)
                   }}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                  className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Categoria
@@ -1444,9 +1459,9 @@ export default function Admin() {
 
           {/* Orders Tab */}
           {activeTab === 'orders' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Pedidos</h2>
+            <div className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Pedidos</h2>
                 <div className="text-sm text-gray-500">
                   {orders.length} pedido(s) encontrado(s)
                 </div>
@@ -1521,7 +1536,7 @@ export default function Admin() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-4">
                         {/* Produtos */}
                         <div>
                           <h4 className="font-medium text-gray-900 mb-2">Produtos</h4>
@@ -1778,7 +1793,7 @@ export default function Admin() {
       {/* Product Form Modal */}
       {showProductForm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+          <div className="relative top-0 sm:top-20 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-2xl shadow-lg rounded-none sm:rounded-md bg-white min-h-screen sm:min-h-0">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900">
                 {editingProduct ? 'Editar Produto' : 'Adicionar Produto'}
@@ -2166,7 +2181,7 @@ export default function Admin() {
       {/* Banner Form Modal */}
       {showBannerForm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+          <div className="relative top-0 sm:top-20 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-2xl shadow-lg rounded-none sm:rounded-md bg-white min-h-screen sm:min-h-0">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900">
                 {editingBanner ? 'Editar Banner' : 'Adicionar Banner'}
@@ -2207,21 +2222,20 @@ export default function Admin() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700">Imagem do Banner</label>
-                <p className="text-xs text-gray-500 mb-2">Recomendado: imagem horizontal (aspect ratio 2.4:1)</p>
-                <ImageEditor
-                  imageUrl={editingBanner?.image || ''}
+                <p className="text-xs text-gray-500 mb-2">Edite o enquadramento separadamente para desktop e mobile</p>
+                <BannerImageEditor
+                  imageUrl={bannerImage || editingBanner?.image || ''}
                   onImageSelect={(imageUrl) => {
+                    setBannerImage(imageUrl)
                     const input = document.querySelector('input[name="image"]') as HTMLInputElement
                     if (input) input.value = imageUrl
                   }}
                   placeholder="Selecione uma imagem para o banner"
-                  aspectRatio={2.4} // Banner horizontal
-                  cropSize={1200}
                 />
                 <input
                   type="hidden"
                   name="image"
-                  defaultValue={editingBanner?.image || ''}
+                  value={bannerImage || editingBanner?.image || ''}
                   required
                 />
               </div>
@@ -2288,13 +2302,14 @@ export default function Admin() {
       {/* Service Form Modal */}
       {showServiceForm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+          <div className="relative top-0 sm:top-20 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-2xl shadow-lg rounded-none sm:rounded-md bg-white min-h-screen sm:min-h-0">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900">
                 {editingService ? 'Editar Serviço' : 'Adicionar Serviço'}
               </h3>
               <button
                 onClick={() => {
+                  console.log('❌ Fechando formulário de serviço')
                   setShowServiceForm(false)
                   setEditingService(null)
                 }}
@@ -2304,7 +2319,7 @@ export default function Admin() {
               </button>
             </div>
 
-            <form onSubmit={handleServiceSubmit} className="space-y-4">
+            <form onSubmit={handleServiceSubmit} className="space-y-4" id="service-form" key={editingService?.id || 'new'}>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Título</label>
                 <input
@@ -2337,16 +2352,405 @@ export default function Admin() {
                 />
               </div>
 
+              <div className="my-6 p-4 bg-yellow-50 border-2 border-yellow-400 rounded-lg">
+                <label className="block text-lg font-bold text-gray-900 mb-3">
+                  <span className="text-red-600 mr-2">*</span> Ícone do Serviço
+                </label>
+                
+                {/* Ícone selecionado atual */}
+                <div className="mb-4 p-3 bg-white rounded-lg border-2 border-blue-500">
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold text-gray-700">Ícone selecionado:</span>
+                    {(() => {
+                      const IconComponent = (() => {
+                        const iconMap: { [key: string]: any } = {
+                          // Manutenção e Reparo
+                          wrench: Wrench,
+                          hammer: Hammer,
+                          scissors: Scissors,
+                          'rotate-ccw': RotateCcw,
+                          'refresh-cw': RefreshCw,
+                          // Relógios e Óculos
+                          clock: Clock,
+                          watch: Watch,
+                          eye: Eye,
+                          battery: Battery,
+                          // Qualidade e Garantia
+                          shield: Shield,
+                          award: Award,
+                          'check-circle': CheckCircle,
+                          'file-check': FileCheck,
+                          'clipboard-check': ClipboardCheck,
+                          star: Star,
+                          crown: Crown,
+                          // Velocidade e Agilidade
+                          zap: Zap,
+                          flame: Flame,
+                          truck: Truck,
+                          'fast-forward': FastForward,
+                          timer: Timer,
+                          // Serviços Especializados
+                          settings: Settings,
+                          cog: Cog,
+                          gauge: Gauge,
+                          stethoscope: Stethoscope,
+                          activity: Activity,
+                          target: Target,
+                          // Documentação e Processos
+                          'file-text': FileText,
+                          'credit-card': CreditCard,
+                          key: Key,
+                          unlock: Unlock,
+                          lock: LockIcon,
+                          calendar: Calendar,
+                          // Joias e Acessórios
+                          gem: Gem,
+                          diamond: Diamond,
+                          sparkles: Sparkles,
+                          // Outros
+                          heart: Heart,
+                          leaf: Leaf,
+                          package: Box,
+                          box: Box,
+                          gift: Gift,
+                          'shopping-bag': ShoppingBag,
+                          tag: Tag,
+                          music: Music,
+                          camera: Camera,
+                          gamepad2: Gamepad2,
+                          book: Book,
+                          coffee: Coffee,
+                          beer: Beer,
+                          wine: Wine,
+                          pizza: Pizza,
+                          utensils: Utensils,
+                          car: Car,
+                          plane: Plane,
+                          home: Home,
+                          building: Building,
+                          briefcase: Briefcase,
+                          palette: Palette,
+                          paintbrush: Paintbrush,
+                          user: User,
+                          users: Users,
+                          smile: Smile,
+                          'thumbs-up': ThumbsUp,
+                          bell: Bell,
+                          mail: Mail,
+                          phone: Phone,
+                          layers: Layers,
+                          'trending-up': TrendingUp
+                        }
+                        return iconMap[selectedServiceIcon] || Wrench
+                      })()
+                      return <IconComponent className="h-8 w-8 text-blue-600" />
+                    })()}
+                    <span className="text-sm font-medium text-gray-600 capitalize">{selectedServiceIcon.replace('-', ' ')}</span>
+                  </div>
+                </div>
+
+                {/* Grid de seleção de ícones */}
+                <div className="max-h-96 overflow-y-auto border-2 border-gray-300 rounded-lg p-4 bg-white">
+                  {/* Organizar por categorias de serviços */}
+                  <div className="space-y-4">
+                    {/* Manutenção e Reparo */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">🔧 Manutenção e Reparo</h4>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                        {[
+                          { value: 'wrench', label: 'Chave', icon: Wrench },
+                          { value: 'hammer', label: 'Martelo', icon: Hammer },
+                          { value: 'scissors', label: 'Tesoura', icon: Scissors },
+                          { value: 'rotate-ccw', label: 'Restaurar', icon: RotateCcw },
+                          { value: 'refresh-cw', label: 'Atualizar', icon: RefreshCw },
+                          { value: 'settings', label: 'Configuração', icon: Settings },
+                          { value: 'cog', label: 'Engrenagem', icon: Cog }
+                        ].map(({ value, label, icon: IconComponent }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSelectedServiceIcon(value)}
+                            className={`
+                              flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                              ${selectedServiceIcon === value
+                                ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                              }
+                            `}
+                            title={label}
+                          >
+                            <IconComponent className={`h-6 w-6 ${selectedServiceIcon === value ? 'text-blue-600' : 'text-gray-600'}`} />
+                            <span className={`text-xs mt-1 text-center ${selectedServiceIcon === value ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Relógios e Óculos */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">⌚ Relógios e Óculos</h4>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                        {[
+                          { value: 'clock', label: 'Relógio', icon: Clock },
+                          { value: 'watch', label: 'Pulso', icon: Watch },
+                          { value: 'eye', label: 'Óculos', icon: Eye },
+                          { value: 'battery', label: 'Bateria', icon: Battery }
+                        ].map(({ value, label, icon: IconComponent }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSelectedServiceIcon(value)}
+                            className={`
+                              flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                              ${selectedServiceIcon === value
+                                ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                              }
+                            `}
+                            title={label}
+                          >
+                            <IconComponent className={`h-6 w-6 ${selectedServiceIcon === value ? 'text-blue-600' : 'text-gray-600'}`} />
+                            <span className={`text-xs mt-1 text-center ${selectedServiceIcon === value ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Qualidade e Garantia */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">🛡️ Qualidade e Garantia</h4>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                        {[
+                          { value: 'shield', label: 'Proteção', icon: Shield },
+                          { value: 'award', label: 'Prêmio', icon: Award },
+                          { value: 'check-circle', label: 'Aprovado', icon: CheckCircle },
+                          { value: 'file-check', label: 'Verificado', icon: FileCheck },
+                          { value: 'clipboard-check', label: 'Checklist', icon: ClipboardCheck },
+                          { value: 'star', label: 'Destaque', icon: Star },
+                          { value: 'crown', label: 'Premium', icon: Crown }
+                        ].map(({ value, label, icon: IconComponent }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSelectedServiceIcon(value)}
+                            className={`
+                              flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                              ${selectedServiceIcon === value
+                                ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                              }
+                            `}
+                            title={label}
+                          >
+                            <IconComponent className={`h-6 w-6 ${selectedServiceIcon === value ? 'text-blue-600' : 'text-gray-600'}`} />
+                            <span className={`text-xs mt-1 text-center ${selectedServiceIcon === value ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Velocidade e Agilidade */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">⚡ Velocidade e Agilidade</h4>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                        {[
+                          { value: 'zap', label: 'Rápido', icon: Zap },
+                          { value: 'flame', label: 'Urgente', icon: Flame },
+                          { value: 'truck', label: 'Entrega', icon: Truck },
+                          { value: 'fast-forward', label: 'Expresso', icon: FastForward },
+                          { value: 'timer', label: 'Tempo', icon: Timer }
+                        ].map(({ value, label, icon: IconComponent }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSelectedServiceIcon(value)}
+                            className={`
+                              flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                              ${selectedServiceIcon === value
+                                ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                              }
+                            `}
+                            title={label}
+                          >
+                            <IconComponent className={`h-6 w-6 ${selectedServiceIcon === value ? 'text-blue-600' : 'text-gray-600'}`} />
+                            <span className={`text-xs mt-1 text-center ${selectedServiceIcon === value ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Serviços Especializados */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">🎯 Serviços Especializados</h4>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                        {[
+                          { value: 'gauge', label: 'Precisão', icon: Gauge },
+                          { value: 'stethoscope', label: 'Diagnóstico', icon: Stethoscope },
+                          { value: 'activity', label: 'Atividade', icon: Activity },
+                          { value: 'target', label: 'Foco', icon: Target },
+                          { value: 'layers', label: 'Camadas', icon: Layers },
+                          { value: 'trending-up', label: 'Crescimento', icon: TrendingUp }
+                        ].map(({ value, label, icon: IconComponent }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSelectedServiceIcon(value)}
+                            className={`
+                              flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                              ${selectedServiceIcon === value
+                                ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                              }
+                            `}
+                            title={label}
+                          >
+                            <IconComponent className={`h-6 w-6 ${selectedServiceIcon === value ? 'text-blue-600' : 'text-gray-600'}`} />
+                            <span className={`text-xs mt-1 text-center ${selectedServiceIcon === value ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Documentação e Processos */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">📄 Documentação e Processos</h4>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                        {[
+                          { value: 'file-text', label: 'Documento', icon: FileText },
+                          { value: 'credit-card', label: 'Pagamento', icon: CreditCard },
+                          { value: 'key', label: 'Chave', icon: Key },
+                          { value: 'unlock', label: 'Acesso', icon: Unlock },
+                          { value: 'lock', label: 'Segurança', icon: LockIcon },
+                          { value: 'calendar', label: 'Agendamento', icon: Calendar }
+                        ].map(({ value, label, icon: IconComponent }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSelectedServiceIcon(value)}
+                            className={`
+                              flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                              ${selectedServiceIcon === value
+                                ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                              }
+                            `}
+                            title={label}
+                          >
+                            <IconComponent className={`h-6 w-6 ${selectedServiceIcon === value ? 'text-blue-600' : 'text-gray-600'}`} />
+                            <span className={`text-xs mt-1 text-center ${selectedServiceIcon === value ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Joias e Acessórios */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">💎 Joias e Acessórios</h4>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                        {[
+                          { value: 'gem', label: 'Gema', icon: Gem },
+                          { value: 'diamond', label: 'Diamante', icon: Diamond },
+                          { value: 'sparkles', label: 'Brilho', icon: Sparkles }
+                        ].map(({ value, label, icon: IconComponent }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSelectedServiceIcon(value)}
+                            className={`
+                              flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                              ${selectedServiceIcon === value
+                                ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                              }
+                            `}
+                            title={label}
+                          >
+                            <IconComponent className={`h-6 w-6 ${selectedServiceIcon === value ? 'text-blue-600' : 'text-gray-600'}`} />
+                            <span className={`text-xs mt-1 text-center ${selectedServiceIcon === value ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Comunicação */}
+                    <div>
+                      <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">📞 Comunicação</h4>
+                      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                        {[
+                          { value: 'phone', label: 'Telefone', icon: Phone },
+                          { value: 'mail', label: 'Email', icon: Mail },
+                          { value: 'bell', label: 'Notificação', icon: Bell },
+                          { value: 'user', label: 'Usuário', icon: User },
+                          { value: 'users', label: 'Equipe', icon: Users },
+                          { value: 'smile', label: 'Atendimento', icon: Smile },
+                          { value: 'thumbs-up', label: 'Aprovação', icon: ThumbsUp }
+                        ].map(({ value, label, icon: IconComponent }) => (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setSelectedServiceIcon(value)}
+                            className={`
+                              flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-all
+                              ${selectedServiceIcon === value
+                                ? 'border-blue-500 bg-blue-50 shadow-md scale-105'
+                                : 'border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50'
+                              }
+                            `}
+                            title={label}
+                          >
+                            <IconComponent className={`h-6 w-6 ${selectedServiceIcon === value ? 'text-blue-600' : 'text-gray-600'}`} />
+                            <span className={`text-xs mt-1 text-center ${selectedServiceIcon === value ? 'text-blue-600 font-semibold' : 'text-gray-500'}`}>
+                              {label}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Campo hidden para manter compatibilidade com o formulário */}
+                <input type="hidden" name="icon" value={selectedServiceIcon} />
+                
+                <p className="mt-3 text-sm text-gray-700 font-medium">⚠️ Clique em um ícone acima para selecioná-lo</p>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700">Mensagem do WhatsApp</label>
+                <label className="block text-sm font-medium text-gray-700">
+                  Mensagem do WhatsApp <span className="text-red-600">*</span>
+                </label>
                 <textarea
                   name="whatsapp_message"
+                  key={editingService?.id || 'new'} // Forçar re-render quando editar
                   defaultValue={editingService?.whatsapp_message || ''}
-                  rows={3}
+                  rows={4}
+                  required
                   placeholder="Ex: Olá! Gostaria de solicitar informações sobre [nome do serviço]. Podem me ajudar?"
-                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                  className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
-                <p className="mt-1 text-sm text-gray-500">Esta mensagem será enviada automaticamente quando o cliente clicar no botão do WhatsApp</p>
+                <p className="mt-1 text-sm text-gray-500">
+                  Esta mensagem será enviada automaticamente quando o cliente clicar no botão do WhatsApp.
+                  {editingService?.whatsapp_message && (
+                    <span className="block mt-1 text-green-600 font-medium">
+                      ✓ Mensagem atual: {editingService.whatsapp_message.substring(0, 50)}...
+                    </span>
+                  )}
+                </p>
               </div>
 
               <div className="flex justify-end space-x-3">
@@ -2376,7 +2780,7 @@ export default function Admin() {
       {/* Brand Form Modal */}
       {showBrandForm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white">
+          <div className="relative top-0 sm:top-20 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-2xl shadow-lg rounded-none sm:rounded-md bg-white min-h-screen sm:min-h-0">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900">
                 {editingBrand ? 'Editar Marca' : 'Adicionar Marca'}
@@ -2449,7 +2853,7 @@ export default function Admin() {
       {/* Category Form Modal */}
       {showCategoryForm && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-40">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-2xl shadow-lg rounded-md bg-white mb-20">
+          <div className="relative top-0 sm:top-20 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-2xl shadow-lg rounded-none sm:rounded-md bg-white min-h-screen sm:min-h-0 mb-0 sm:mb-20">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-bold text-gray-900">
                 {editingCategory ? 'Editar Categoria' : 'Adicionar Categoria'}
@@ -2665,7 +3069,7 @@ export default function Admin() {
       {/* Order Details Modal */}
       {showOrderDetails && selectedOrder && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 max-w-4xl shadow-lg rounded-md bg-white">
+          <div className="relative top-0 sm:top-20 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-4xl shadow-lg rounded-none sm:rounded-md bg-white min-h-screen sm:min-h-0">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-xl font-bold text-gray-900">
                 Detalhes do Pedido #{selectedOrder.order_number}
