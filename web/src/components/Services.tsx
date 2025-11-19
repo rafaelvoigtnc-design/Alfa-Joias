@@ -176,7 +176,7 @@ export default function Services() {
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-6 lg:gap-8">
             {services.map((service, index) => {
-            const IconComponent = getServiceIcon(service.icon)
+            const IconComponent = getServiceIcon((service as any).icon)
             return (
               <div
                 key={service.id}
