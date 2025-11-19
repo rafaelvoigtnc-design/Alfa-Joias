@@ -32,6 +32,9 @@ export function useSupabaseServices() {
       return
     }
     
+    // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar no escopo do catch)
+    const currentRequestId = ++requestIdRef.current
+    
     try {
       // Cancelar requisição anterior se existir
       if (abortControllerRef.current) {
@@ -41,9 +44,6 @@ export function useSupabaseServices() {
       // Criar novo AbortController para esta requisição
       const controller = new AbortController()
       abortControllerRef.current = controller
-      
-      // Incrementar ID da requisição para rastrear a mais recente
-      const currentRequestId = ++requestIdRef.current
       
       isFetchingRef.current = true
       setLoading(true)
