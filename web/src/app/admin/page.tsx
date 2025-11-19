@@ -743,7 +743,8 @@ export default function Admin() {
   }
 
   // Categorias de produtos disponíveis
-  const productCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Carteiras', 'Cintos', 'Bebidas', 'Acessórios', 'Outros', 'Afins', 'Serviços']
+  // Categorias que realmente aparecem no site (baseado em Categories.tsx)
+  const productCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins', 'Serviços']
   
   // Função para categorias iniciais
   const initialCategoriesData = () => [
