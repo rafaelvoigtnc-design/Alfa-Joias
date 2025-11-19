@@ -14,13 +14,7 @@ import {
 import { useSupabaseServices } from '@/hooks/useSupabaseServices'
 
 export default function Services() {
-  const { services, loading, refresh } = useSupabaseServices()
-  
-  // Forçar reload dos dados sempre que o componente montar
-  useEffect(() => {
-    // Recarregar dados do banco sempre que o componente for montado
-    refresh()
-  }, [refresh])
+  const { services, loading } = useSupabaseServices()
   
   // Debug
   useEffect(() => {
