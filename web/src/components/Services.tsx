@@ -118,9 +118,9 @@ export default function Services() {
             line-height: 1.3 !important;
           }
           
-          /* Características - 8px (MENOR que descrição) - MÁXIMA ESPECIFICIDADE */
+          /* Características - 10px (MENOR que descrição) - MÁXIMA ESPECIFICIDADE */
           #services-section ul li span.service-card-feat {
-            font-size: 8px !important;
+            font-size: 10px !important;
             line-height: 1.2 !important;
             display: inline-block !important;
             -webkit-text-size-adjust: none !important;
