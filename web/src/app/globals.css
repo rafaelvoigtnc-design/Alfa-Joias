@@ -10,6 +10,15 @@ html, body {
   line-height: 1.6;
   color: #333;
   background: #fff;
+  margin: 0;
+  padding: 0;
+}
+
+/* Garantir que o header não tenha deslocamento */
+header {
+  margin: 0 !important;
+  padding-top: 0 !important;
+  top: 0 !important;
 }
 
 /* Links globais (remover sublinhado e azul padrão) */
