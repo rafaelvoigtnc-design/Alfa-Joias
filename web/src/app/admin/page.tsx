@@ -1926,33 +1926,42 @@ export default function Admin() {
                   {productImages.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {productImages.map((img, index) => (
-                        <div key={`product-img-${index}`} className="relative group bg-gray-100 rounded-lg overflow-hidden">
-                          {img ? (
-                            <img
-                              src={img}
-                              alt={`Imagem ${index + 1}`}
-                              className={`w-full h-24 sm:h-28 object-cover rounded-lg border-2 ${
-                                coverImageIndex === index 
-                                  ? 'border-blue-500 ring-2 ring-blue-300' 
-                                  : 'border-gray-200'
-                              }`}
-                              onError={(e) => {
-                                console.error('❌ Erro ao carregar imagem:', img)
-                                const target = e.target as HTMLImageElement
-                                target.style.display = 'none'
-                                const parent = target.parentElement
-                                if (parent) {
-                                  parent.innerHTML = '<div class="w-full h-24 sm:h-28 flex items-center justify-center bg-red-50 border-2 border-red-200 rounded-lg"><span class="text-xs text-red-600">Erro ao carregar</span></div>'
-                                }
-                              }}
-                              onLoad={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.style.opacity = '1'
-                              }}
-                              style={{ opacity: 0, transition: 'opacity 0.3s' }}
-                            />
+                        <div key={`product-img-${index}`} className="relative group bg-white rounded-lg overflow-hidden shadow-sm">
+                          {img && img.trim() ? (
+                            <div className="relative w-full h-24 sm:h-28 bg-white">
+                              <img
+                                src={img}
+                                alt={`Imagem ${index + 1}`}
+                                className={`w-full h-full object-cover rounded-lg border-2 bg-white ${
+                                  coverImageIndex === index 
+                                    ? 'border-blue-500 ring-2 ring-blue-300' 
+                                    : 'border-gray-200'
+                                }`}
+                                onError={(e) => {
+                                  console.error('❌ Erro ao carregar imagem:', img?.substring(0, 50))
+                                  const target = e.target as HTMLImageElement
+                                  target.style.display = 'none'
+                                  const parent = target.parentElement
+                                  if (parent) {
+                                    const errorDiv = document.createElement('div')
+                                    errorDiv.className = 'w-full h-full flex items-center justify-center bg-red-50 border-2 border-red-200 rounded-lg'
+                                    errorDiv.innerHTML = '<span class="text-xs text-red-600 font-medium">Erro ao carregar</span>'
+                                    parent.appendChild(errorDiv)
+                                  }
+                                }}
+                                onLoad={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.style.opacity = '1'
+                                }}
+                                style={{ 
+                                  opacity: 0, 
+                                  transition: 'opacity 0.3s',
+                                  backgroundColor: '#ffffff'
+                                }}
+                              />
+                            </div>
                           ) : (
-                            <div className="w-full h-24 sm:h-28 flex items-center justify-center bg-gray-200 border-2 border-gray-300 rounded-lg">
+                            <div className="w-full h-24 sm:h-28 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded-lg">
                               <span className="text-xs text-gray-500">Sem imagem</span>
                             </div>
                           )}
