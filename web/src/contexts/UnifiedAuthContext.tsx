@@ -665,9 +665,11 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
       console.log('✅ Senha atualizada com sucesso!')
       
       // Atualizar a sessão após mudança de senha
-      if ('session' in data && data.session) {
-        setSession(data.session)
-        setUser(data.user)
+      if ('session' in data && data.session && typeof data.session === 'object' && 'access_token' in data.session) {
+        setSession(data.session as Session)
+        if (data.user) {
+          setUser(data.user)
+        }
       } else if ('user' in data && data.user) {
         // Se não retornou sessão, atualizar apenas o usuário
         setUser(data.user)
