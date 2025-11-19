@@ -9,7 +9,7 @@ import {
   Hammer, Gauge, Cog, User, Users, Smile, ThumbsUp, Bell, Mail, Phone, Truck,
   CheckCircle, Eye, RotateCcw, RefreshCw, FileCheck, ClipboardCheck, Calendar, 
   Timer, FastForward, Stethoscope, Activity, TrendingUp, Target, Layers, 
-  FileText, CreditCard, Key, Unlock, Lock
+  FileText, CreditCard, Key, Unlock, Lock, Glasses, Clipboard
 } from 'lucide-react'
 import { useSupabaseServices } from '@/hooks/useSupabaseServices'
 
@@ -37,6 +37,7 @@ export default function Services() {
       clock: Clock,
       watch: Watch,
       eye: Eye,
+      glasses: Glasses,
       battery: Battery,
       // Qualidade e Garantia
       shield: Shield,
@@ -61,6 +62,7 @@ export default function Services() {
       target: Target,
       // Documentação e Processos
       'file-text': FileText,
+      clipboard: Clipboard,
       'credit-card': CreditCard,
       key: Key,
       unlock: Unlock,

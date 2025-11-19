@@ -8,7 +8,8 @@ import {
   Music, Camera, Gamepad2, Book, Coffee, Beer, Wine, Pizza, Utensils, Car, Plane, Home, Building, Briefcase,
   Palette, Paintbrush, Scissors, Wrench, Hammer, Gauge, Cog, User, Users, Smile, ThumbsUp, Bell, Mail, Phone, Battery,
   RotateCcw, RefreshCw, FileCheck, ClipboardCheck, Calendar, Timer, FastForward, 
-  Stethoscope, Activity, TrendingUp, Target, Layers, FileText, CreditCard, Key, Unlock, Lock as LockIcon
+  Stethoscope, Activity, TrendingUp, Target, Layers, FileText, CreditCard, Key, Unlock, Lock as LockIcon,
+  Glasses, Clipboard
 } from 'lucide-react'
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 import ImageUpload from '@/components/ImageUpload'
@@ -2407,6 +2408,7 @@ export default function Admin() {
                           clock: Clock,
                           watch: Watch,
                           eye: Eye,
+                          glasses: Glasses,
                           battery: Battery,
                           // Qualidade e Garantia
                           shield: Shield,
@@ -2431,6 +2433,7 @@ export default function Admin() {
                           target: Target,
                           // Documentação e Processos
                           'file-text': FileText,
+                          clipboard: Clipboard,
                           'credit-card': CreditCard,
                           key: Key,
                           unlock: Unlock,
@@ -2529,6 +2532,7 @@ export default function Admin() {
                           { value: 'clock', label: 'Relógio', icon: Clock },
                           { value: 'watch', label: 'Pulso', icon: Watch },
                           { value: 'eye', label: 'Óculos', icon: Eye },
+                          { value: 'glasses', label: 'Armação', icon: Glasses },
                           { value: 'battery', label: 'Bateria', icon: Battery }
                         ].map(({ value, label, icon: IconComponent }) => (
                           <button
@@ -2661,6 +2665,7 @@ export default function Admin() {
                       <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
                         {[
                           { value: 'file-text', label: 'Documento', icon: FileText },
+                          { value: 'clipboard', label: 'Prancheta', icon: Clipboard },
                           { value: 'credit-card', label: 'Pagamento', icon: CreditCard },
                           { value: 'key', label: 'Chave', icon: Key },
                           { value: 'unlock', label: 'Acesso', icon: Unlock },
