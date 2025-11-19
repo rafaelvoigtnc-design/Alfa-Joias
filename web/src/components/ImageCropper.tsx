@@ -1,23 +1,23 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Crop, ZoomIn, ZoomOut, Move, RotateCw, X, RotateCcw } from 'lucide-react'
+import { Crop, ZoomIn, ZoomOut, Move, X } from 'lucide-react'
 
-interface ImageCropperProps {
+export interface ImageCropperProps {
   imageUrl: string
   onCrop: (croppedImageUrl: string) => void
   onCancel: () => void
   aspectRatio?: number // Proporção desejada (largura/altura)
+  noModal?: boolean // Se true, não renderiza o modal wrapper
 }
 
-export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio = 1 }: ImageCropperProps) {
+export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio = 1, noModal = false }: ImageCropperProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement | null>(null)
   
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
-  const [rotation, setRotation] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [cropWidth, setCropWidth] = useState(400)
@@ -65,7 +65,6 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
         
         setScale(initialScale)
         setPosition({ x: 0, y: 0 })
-        setRotation(0)
         
         drawImage()
       }
@@ -75,7 +74,7 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
 
   useEffect(() => {
     drawImage()
-  }, [scale, position, rotation, cropWidth, cropHeight, aspectRatio])
+  }, [scale, position, cropWidth, cropHeight, aspectRatio])
 
   const drawImage = () => {
     const canvas = canvasRef.current
@@ -117,7 +116,6 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
 
     // Aplicar transformações
     ctx.translate(centerX, centerY)
-    ctx.rotate((rotation * Math.PI) / 180)
     ctx.scale(scale, scale)
     
     // Limitar posição para que a imagem nunca saia dos limites
@@ -165,7 +163,8 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   const handleZoomIn = () => {
     setScale(prev => {
       const newScale = Math.min(prev + 0.1, 5)
-      constrainPosition(newScale, position)
+      const constrained = constrainPosition(newScale, position)
+      setPosition(constrained)
       return newScale
     })
   }
@@ -173,7 +172,19 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   const handleZoomOut = () => {
     setScale(prev => {
       const newScale = Math.max(prev - 0.1, 0.3)
-      constrainPosition(newScale, position)
+      const constrained = constrainPosition(newScale, position)
+      setPosition(constrained)
+      return newScale
+    })
+  }
+  
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault()
+    const delta = e.deltaY > 0 ? -0.05 : 0.05
+    setScale(prev => {
+      const newScale = Math.max(0.3, Math.min(5, prev + delta))
+      const constrained = constrainPosition(newScale, position)
+      setPosition(constrained)
       return newScale
     })
   }
@@ -205,14 +216,6 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     
     setScale(initialScale)
     setPosition({ x: 0, y: 0 })
-  }
-
-  const handleRotate = () => {
-    setRotation(prev => (prev + 90) % 360)
-  }
-
-  const handleResetRotation = () => {
-    setRotation(0)
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -280,7 +283,6 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     // Aplicar transformações
     tempCtx.save()
     tempCtx.translate(finalWidth / 2, finalHeight / 2)
-    tempCtx.rotate((rotation * Math.PI) / 180)
     tempCtx.scale(scale * 2, scale * 2) // Escalar 2x para corresponder ao tamanho do canvas
     tempCtx.translate(-imgWidth / 2 + constrainedX / scale, -imgHeight / 2 + constrainedY / scale)
     
@@ -299,15 +301,9 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     }
   }
 
-  return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-y-auto"
-      onClick={handleBackdropClick}
-    >
-      <div 
-        className="bg-white rounded-lg shadow-xl w-full max-w-4xl my-8 flex flex-col max-h-[calc(100vh-4rem)]"
-        onClick={(e) => e.stopPropagation()}
-      >
+  const cropperContent = (
+    <>
+      {!noModal && (
         <div className="flex justify-between items-center p-4 border-b flex-shrink-0">
           <h3 className="text-lg font-semibold text-gray-900">Editar Imagem</h3>
           <button
@@ -318,94 +314,101 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
             <X className="h-6 w-6" />
           </button>
         </div>
+      )}
 
-        <div 
-          ref={containerRef}
-          className="flex-1 p-4 overflow-auto bg-gray-100 flex items-center justify-center min-h-[400px]"
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
-          style={{ maxHeight: 'calc(100vh - 400px)' }}
-        >
-          <canvas
-            ref={canvasRef}
-            className="border border-gray-300 bg-white shadow-lg cursor-move"
-            onMouseDown={handleMouseDown}
-          />
+      <div 
+        ref={containerRef}
+        className="flex-1 p-4 overflow-auto bg-gray-100 flex items-center justify-center min-h-[400px]"
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+        style={{ maxHeight: noModal ? '100%' : 'calc(100vh - 400px)' }}
+      >
+        <canvas
+          ref={canvasRef}
+          className="border border-gray-300 bg-white shadow-lg cursor-move"
+          onMouseDown={handleMouseDown}
+        />
+      </div>
+
+      <div className="p-4 border-t bg-gray-50 flex-shrink-0 overflow-y-auto max-h-[300px]">
+        <div className="mb-3 text-center">
+          <p className="text-sm text-gray-600">
+            A imagem deve preencher a área de recorte. Arraste para mover, ajuste o zoom e gire se necessário.
+          </p>
+        </div>
+        
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
+          <button
+            onClick={handleZoomOut}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            type="button"
+          >
+            <ZoomOut className="h-4 w-4" />
+            <span className="text-sm">Diminuir</span>
+          </button>
+          <button
+            onClick={handleZoomIn}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            type="button"
+          >
+            <ZoomIn className="h-4 w-4" />
+            <span className="text-sm">Aumentar</span>
+          </button>
+          <button
+            onClick={handleResetZoom}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-300 rounded-md hover:bg-blue-50 transition-colors text-blue-600"
+            type="button"
+          >
+            <ZoomOut className="h-4 w-4" />
+            <span className="text-sm">Resetar Zoom</span>
+          </button>
+          <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md">
+            <Move className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-600">Arraste para mover</span>
+          </div>
         </div>
 
-        <div className="p-4 border-t bg-gray-50 flex-shrink-0 overflow-y-auto max-h-[300px]">
-          <div className="mb-3 text-center">
-            <p className="text-sm text-gray-600">
-              A imagem deve preencher a área de recorte. Arraste para mover, ajuste o zoom e gire se necessário.
-            </p>
-          </div>
-          
-          <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
-            <button
-              onClick={handleZoomOut}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              type="button"
-            >
-              <ZoomOut className="h-4 w-4" />
-              <span className="text-sm">Diminuir</span>
-            </button>
-            <button
-              onClick={handleZoomIn}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              type="button"
-            >
-              <ZoomIn className="h-4 w-4" />
-              <span className="text-sm">Aumentar</span>
-            </button>
-            <button
-              onClick={handleResetZoom}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-300 rounded-md hover:bg-blue-50 transition-colors text-blue-600"
-              type="button"
-            >
-              <ZoomOut className="h-4 w-4" />
-              <span className="text-sm">Resetar Zoom</span>
-            </button>
-            <button
-              onClick={handleRotate}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              type="button"
-            >
-              <RotateCw className="h-4 w-4" />
-              <span className="text-sm">Girar 90°</span>
-            </button>
-            <button
-              onClick={handleResetRotation}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-300 rounded-md hover:bg-blue-50 transition-colors text-blue-600"
-              type="button"
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span className="text-sm">Resetar Rotação</span>
-            </button>
-            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md">
-              <Move className="h-4 w-4 text-gray-500" />
-              <span className="text-sm text-gray-600">Arraste para mover</span>
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 flex-wrap">
-            <button
-              onClick={onCancel}
-              className="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
-              type="button"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleCrop}
-              className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 flex items-center gap-2 transition-colors"
-              type="button"
-            >
-              <Crop className="h-4 w-4" />
-              Salvar Imagem
-            </button>
-          </div>
+        <div className="flex justify-end gap-3 flex-wrap">
+          <button
+            onClick={onCancel}
+            className="px-6 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
+            type="button"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={handleCrop}
+            className="px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 flex items-center gap-2 transition-colors"
+            type="button"
+          >
+            <Crop className="h-4 w-4" />
+            Salvar Imagem
+          </button>
         </div>
+      </div>
+    </>
+  )
+
+  if (noModal) {
+    return (
+      <div className="flex flex-col h-full w-full">
+        {cropperContent}
+      </div>
+    )
+  }
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      onClick={handleBackdropClick}
+    >
+      <div 
+        className="bg-white rounded-lg shadow-xl w-full max-w-4xl my-8 flex flex-col max-h-[calc(100vh-4rem)]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {cropperContent}
       </div>
     </div>
   )
