@@ -1,32 +1,134 @@
 'use client'
 
-import { Wrench, Battery, Settings, Shield, Clock, Award } from 'lucide-react'
+import { useEffect } from 'react'
+import { 
+  Wrench, Battery, Settings, Shield, Clock, Award, Gem, Diamond, Watch, 
+  ShoppingBag, Box, Gift, Tag, Star, Sparkles, Crown, Heart, Zap, Flame, 
+  Leaf, Music, Camera, Gamepad2, Book, Coffee, Beer, Wine, Pizza, Utensils, 
+  Car, Plane, Home, Building, Briefcase, Palette, Paintbrush, Scissors, 
+  Hammer, Gauge, Cog, User, Users, Smile, ThumbsUp, Bell, Mail, Phone, Truck,
+  CheckCircle, Eye, RotateCcw, RefreshCw, FileCheck, ClipboardCheck, Calendar, 
+  Timer, FastForward, Stethoscope, Activity, TrendingUp, Target, Layers, 
+  FileText, CreditCard, Key, Unlock, Lock
+} from 'lucide-react'
 import { useSupabaseServices } from '@/hooks/useSupabaseServices'
 
 export default function Services() {
   const { services, loading } = useSupabaseServices()
-
-  const getServiceIcon = (title: string) => {
-    switch (title) {
-      case 'Manutenção de Relógios':
-        return Wrench
-      case 'Ajustes de Óculos':
-        return Settings
-      case 'Garantia Estendida':
-        return Shield
-      case 'Serviço Rápido':
-        return Clock
-      case 'Qualidade Garantida':
-        return Award
-      case 'Troca de Bateria':
-        return Battery
-      default:
-        return Wrench
+  
+  // Debug
+  useEffect(() => {
+    if (services.length > 0) {
+      console.log('🔍 Services carregados:', services)
+      console.log('🔍 Primeiro serviço:', services[0])
+      console.log('🔍 Mensagem WhatsApp:', services[0]?.whatsapp_message)
     }
+  }, [services])
+
+  const getServiceIcon = (iconName?: string) => {
+    const iconMap: { [key: string]: any } = {
+      // Manutenção e Reparo
+      wrench: Wrench,
+      hammer: Hammer,
+      scissors: Scissors,
+      'rotate-ccw': RotateCcw,
+      'refresh-cw': RefreshCw,
+      // Relógios e Óculos
+      clock: Clock,
+      watch: Watch,
+      eye: Eye,
+      battery: Battery,
+      // Qualidade e Garantia
+      shield: Shield,
+      award: Award,
+      'check-circle': CheckCircle,
+      'file-check': FileCheck,
+      'clipboard-check': ClipboardCheck,
+      star: Star,
+      crown: Crown,
+      // Velocidade e Agilidade
+      zap: Zap,
+      flame: Flame,
+      truck: Truck,
+      'fast-forward': FastForward,
+      timer: Timer,
+      // Serviços Especializados
+      settings: Settings,
+      cog: Cog,
+      gauge: Gauge,
+      stethoscope: Stethoscope,
+      activity: Activity,
+      target: Target,
+      // Documentação e Processos
+      'file-text': FileText,
+      'credit-card': CreditCard,
+      key: Key,
+      unlock: Unlock,
+      lock: Lock,
+      calendar: Calendar,
+      // Joias e Acessórios
+      gem: Gem,
+      diamond: Diamond,
+      sparkles: Sparkles,
+      // Outros
+      heart: Heart,
+      leaf: Leaf,
+      package: Box,
+      box: Box,
+      gift: Gift,
+      'shopping-bag': ShoppingBag,
+      tag: Tag,
+      music: Music,
+      camera: Camera,
+      gamepad2: Gamepad2,
+      book: Book,
+      coffee: Coffee,
+      beer: Beer,
+      wine: Wine,
+      pizza: Pizza,
+      utensils: Utensils,
+      car: Car,
+      plane: Plane,
+      home: Home,
+      building: Building,
+      briefcase: Briefcase,
+      palette: Palette,
+      paintbrush: Paintbrush,
+      user: User,
+      users: Users,
+      smile: Smile,
+      'thumbs-up': ThumbsUp,
+      bell: Bell,
+      mail: Mail,
+      phone: Phone,
+      layers: Layers,
+      'trending-up': TrendingUp
+    }
+    
+    return iconMap[iconName || 'wrench'] || Wrench
   }
 
   return (
-    <section className="py-20 bg-white">
+    <>
+      <style dangerouslySetInnerHTML={{__html: `
+        @media screen and (max-width: 640px) {
+          /* Descrição - 11px */
+          #services-section p.service-card-desc {
+            font-size: 11px !important;
+            line-height: 1.3 !important;
+          }
+          
+          /* Características - 8px (MENOR que descrição) - MÁXIMA ESPECIFICIDADE */
+          #services-section ul li span.service-card-feat {
+            font-size: 8px !important;
+            line-height: 1.2 !important;
+            display: inline-block !important;
+            -webkit-text-size-adjust: none !important;
+            text-size-adjust: none !important;
+          }
+        }
+      `}} />
+    <section id="services-section" className="py-20 bg-white">
       {/* Banner de Serviços com Imagem */}
       <div className="relative h-[200px] sm:h-[300px] md:h-[400px] lg:h-[500px] mb-8 sm:mb-12 md:mb-16 overflow-hidden">
         <div 
@@ -74,7 +176,7 @@ export default function Services() {
         ) : (
           <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 md:gap-6 lg:gap-8">
             {services.map((service, index) => {
-            const IconComponent = getServiceIcon(service.title)
+            const IconComponent = getServiceIcon(service.icon)
             return (
               <div
                 key={service.id}
@@ -88,27 +190,29 @@ export default function Services() {
                   {service.title}
                 </h3>
 
-                <p className="text-[11px] sm:text-[12px] md:text-sm text-gray-700 mb-1 sm:mb-1.5 md:mb-4 text-center font-light leading-tight px-0.5">
+                <p className="text-gray-700 mb-1 sm:mb-1.5 md:mb-4 text-center font-light leading-tight px-0.5 service-card-desc">
                   {service.description}
                 </p>
 
                 <ul className="space-y-0.5 mb-1.5 sm:mb-2 md:mb-4">
                   {service.features.slice(0, 2).map((feature, featureIndex) => (
-                    <li key={featureIndex} className="flex items-start space-x-1 text-[8px] sm:text-[9px] md:text-sm text-gray-600">
+                    <li key={featureIndex} className="flex items-start space-x-1 text-gray-600">
                       <div className="w-1 h-1 sm:w-1.5 sm:h-1 md:w-2 md:h-2 bg-gray-800 rounded-full mt-0.5 flex-shrink-0"></div>
-                      <span className="leading-tight">{feature}</span>
+                      <span className="leading-tight service-card-feat">
+                        {feature}
+                      </span>
                     </li>
                   ))}
                 </ul>
 
                 <a
-                  href={`https://wa.me/5555991288464?text=${encodeURIComponent(service.whatsapp_message)}`}
+                  href={`https://wa.me/5555991288464?text=${encodeURIComponent(service.whatsapp_message || `Olá! Gostaria de solicitar o serviço: ${service.title}`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-full bg-gray-800 hover:bg-gray-900 text-white px-2 sm:px-3 md:px-6 py-1 sm:py-1.5 md:py-3 rounded text-[8px] sm:text-[9px] md:text-base font-medium transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 mt-auto"
+                  className="service-card-btn w-full bg-gray-800 hover:bg-gray-900 text-white px-2 sm:px-3 md:px-6 py-1 sm:py-1.5 md:py-3 rounded font-medium transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95 mt-auto"
+                  style={{ fontSize: 'inherit' }}
                 >
-                  <span className="hidden sm:inline">Solicitar</span>
-                  <span className="sm:hidden">Ver</span>
+                  <span>Solicitar</span>
                 </a>
               </div>
               )
@@ -141,5 +245,6 @@ Podem me ajudar com informações sobre os serviços disponíveis?`)}`}
         )}
       </div>
     </section>
+    </>
   )
 }
