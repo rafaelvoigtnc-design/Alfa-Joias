@@ -1926,16 +1926,36 @@ export default function Admin() {
                   {productImages.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                       {productImages.map((img, index) => (
-                        <div key={index} className="relative group">
-                          <img
-                            src={img}
-                            alt={`Imagem ${index + 1}`}
-                            className={`w-full h-24 object-cover rounded-lg border-2 ${
-                              coverImageIndex === index 
-                                ? 'border-blue-500 ring-2 ring-blue-300' 
-                                : 'border-gray-200'
-                            }`}
-                          />
+                        <div key={`product-img-${index}`} className="relative group bg-gray-100 rounded-lg overflow-hidden">
+                          {img ? (
+                            <img
+                              src={img}
+                              alt={`Imagem ${index + 1}`}
+                              className={`w-full h-24 sm:h-28 object-cover rounded-lg border-2 ${
+                                coverImageIndex === index 
+                                  ? 'border-blue-500 ring-2 ring-blue-300' 
+                                  : 'border-gray-200'
+                              }`}
+                              onError={(e) => {
+                                console.error('❌ Erro ao carregar imagem:', img)
+                                const target = e.target as HTMLImageElement
+                                target.style.display = 'none'
+                                const parent = target.parentElement
+                                if (parent) {
+                                  parent.innerHTML = '<div class="w-full h-24 sm:h-28 flex items-center justify-center bg-red-50 border-2 border-red-200 rounded-lg"><span class="text-xs text-red-600">Erro ao carregar</span></div>'
+                                }
+                              }}
+                              onLoad={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.style.opacity = '1'
+                              }}
+                              style={{ opacity: 0, transition: 'opacity 0.3s' }}
+                            />
+                          ) : (
+                            <div className="w-full h-24 sm:h-28 flex items-center justify-center bg-gray-200 border-2 border-gray-300 rounded-lg">
+                              <span className="text-xs text-gray-500">Sem imagem</span>
+                            </div>
+                          )}
                           {coverImageIndex === index && (
                             <div className="absolute top-1 left-1 bg-blue-500 text-white text-xs px-2 py-0.5 rounded">
                               CAPA
@@ -2001,8 +2021,35 @@ export default function Admin() {
                       </label>
                       <div className="space-y-3">
                         {productImages.slice(1).map((img, index) => (
-                          <div key={`additional-${index}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                            <img src={img} alt={`Adicional ${index + 1}`} className="w-16 h-16 object-cover rounded border border-gray-300" />
+                          <div key={`additional-${index + 1}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            {img ? (
+                              <img 
+                                src={img} 
+                                alt={`Adicional ${index + 1}`} 
+                                className="w-16 h-16 object-cover rounded border border-gray-300 bg-white"
+                                onError={(e) => {
+                                  console.error('❌ Erro ao carregar imagem adicional:', img)
+                                  const target = e.target as HTMLImageElement
+                                  target.style.display = 'none'
+                                  const parent = target.parentElement
+                                  if (parent) {
+                                    const errorDiv = document.createElement('div')
+                                    errorDiv.className = 'w-16 h-16 flex items-center justify-center bg-red-50 border border-red-200 rounded'
+                                    errorDiv.innerHTML = '<span class="text-xs text-red-600">Erro</span>'
+                                    parent.insertBefore(errorDiv, target)
+                                  }
+                                }}
+                                onLoad={(e) => {
+                                  const target = e.target as HTMLImageElement
+                                  target.style.opacity = '1'
+                                }}
+                                style={{ opacity: 0, transition: 'opacity 0.3s' }}
+                              />
+                            ) : (
+                              <div className="w-16 h-16 flex items-center justify-center bg-gray-200 border border-gray-300 rounded">
+                                <span className="text-xs text-gray-500">Sem img</span>
+                              </div>
+                            )}
                             <div className="flex-1">
                               <p className="text-sm text-gray-700">Imagem adicional {index + 1}</p>
                             </div>
