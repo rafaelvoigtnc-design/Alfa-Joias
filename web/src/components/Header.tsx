@@ -33,9 +33,9 @@ export default function Header() {
   ]
 
   return (
-    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+    <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm relative">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-14 sm:h-16">
+        <div className="flex justify-between items-center h-14 sm:h-16 py-0">
           {/* Logo - menor no mobile */}
           <Link href="/" className="flex items-center space-x-1 sm:space-x-2 no-underline hover:no-underline">
             <span className="text-lg sm:text-xl font-semibold tracking-tight text-gray-800">
