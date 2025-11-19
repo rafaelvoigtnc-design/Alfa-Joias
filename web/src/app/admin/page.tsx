@@ -472,8 +472,23 @@ export default function Admin() {
     const description = (formData.get('description') as string) || ''
     const featuresText = formData.get('features')?.toString() || ''
     const features = featuresText.split('\n').filter(f => f.trim())
-    const whatsapp_message = (formData.get('whatsapp_message') as string) || ''
-    const icon = selectedServiceIcon || 'wrench'
+    
+    // IMPORTANTE: Coletar whatsapp_message diretamente do textarea (não confiar no FormData com defaultValue)
+    const whatsappTextarea = form.querySelector('textarea[name="whatsapp_message"]') as HTMLTextAreaElement
+    const whatsapp_message = whatsappTextarea?.value?.trim() || (formData.get('whatsapp_message') as string)?.trim() || ''
+    
+    // IMPORTANTE: Usar selectedServiceIcon do state atual, não do formData
+    // O formData pode ter valor antigo se o estado não foi atualizado
+    const iconFromForm = formData.get('icon') as string
+    const icon = selectedServiceIcon || iconFromForm || 'wrench'
+    
+    console.log('🔍 Debug de coleta:', {
+      'selectedServiceIcon (state)': selectedServiceIcon,
+      'iconFromForm (formData)': iconFromForm,
+      'icon final': icon,
+      'whatsappTextarea.value': whatsappTextarea?.value,
+      'whatsapp_message final': whatsapp_message
+    })
     
     console.log('📝 Dados coletados do formulário:', {
       title,
@@ -482,7 +497,9 @@ export default function Admin() {
       whatsapp_message,
       icon,
       'whatsapp_message length': whatsapp_message.length,
-      'whatsapp_message presente?': !!whatsapp_message
+      'whatsapp_message presente?': !!whatsapp_message,
+      'selectedServiceIcon': selectedServiceIcon,
+      'icon do formData': formData.get('icon')
     })
     
     // Validar campos obrigatórios
@@ -491,15 +508,21 @@ export default function Admin() {
       return
     }
     
+    // Validar whatsapp_message
+    if (!whatsapp_message.trim()) {
+      alert('❌ Mensagem do WhatsApp é obrigatória!')
+      return
+    }
+    
     const serviceData = {
       title: title.trim(),
       description: description.trim(),
       features,
-      whatsapp_message: whatsapp_message.trim() || `Olá! Gostaria de solicitar o serviço: ${title.trim()}. Podem me ajudar?`,
+      whatsapp_message: whatsapp_message.trim(),
       icon: icon.trim() || 'wrench',
     }
     
-    console.log('💾 Dados que serão enviados para a API:', serviceData)
+    console.log('💾 Dados que serão enviados para a API:', JSON.stringify(serviceData, null, 2))
     console.log('💾 WhatsApp message length:', serviceData.whatsapp_message.length)
     console.log('💾 Icon:', serviceData.icon)
 
@@ -2725,7 +2748,13 @@ export default function Admin() {
                 </div>
                 
                 {/* Campo hidden para manter compatibilidade com o formulário */}
-                <input type="hidden" name="icon" value={selectedServiceIcon} />
+                <input 
+                  type="hidden" 
+                  name="icon" 
+                  id="icon_input"
+                  value={selectedServiceIcon} 
+                  key={`icon-${editingService?.id || 'new'}`}
+                />
                 
                 <p className="mt-3 text-sm text-gray-700 font-medium">⚠️ Clique em um ícone acima para selecioná-lo</p>
               </div>
@@ -2736,7 +2765,8 @@ export default function Admin() {
                 </label>
                 <textarea
                   name="whatsapp_message"
-                  key={editingService?.id || 'new'} // Forçar re-render quando editar
+                  id="whatsapp_message_input"
+                  key={`whatsapp-${editingService?.id || 'new'}`} // Forçar re-render quando editar
                   defaultValue={editingService?.whatsapp_message || ''}
                   rows={4}
                   required
