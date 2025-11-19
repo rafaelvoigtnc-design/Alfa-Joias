@@ -65,39 +65,40 @@ export default function HeroCarousel() {
           console.log('✅ Banners carregados do BANCO:', data.length, { requestId: currentRequestId })
           if (currentRequestId === requestIdRef.current) {
             setBanners(data.map((b: any) => {
-            // Parsear imagem (pode ser string simples ou JSON com desktop/mobile)
-            let image = b.image
-            let imageDesktop = b.image
-            let imageMobile = b.image
-            
-            try {
-              const parsed = JSON.parse(b.image)
-              if (typeof parsed === 'object' && (parsed.desktop || parsed.mobile)) {
-                imageDesktop = parsed.desktop || parsed.original || b.image
-                imageMobile = parsed.mobile || parsed.original || b.image
-                image = imageDesktop // Fallback para compatibilidade
+              // Parsear imagem (pode ser string simples ou JSON com desktop/mobile)
+              let image = b.image
+              let imageDesktop = b.image
+              let imageMobile = b.image
+              
+              try {
+                const parsed = JSON.parse(b.image)
+                if (typeof parsed === 'object' && (parsed.desktop || parsed.mobile)) {
+                  imageDesktop = parsed.desktop || parsed.original || b.image
+                  imageMobile = parsed.mobile || parsed.original || b.image
+                  image = imageDesktop // Fallback para compatibilidade
+                }
+              } catch {
+                // Não é JSON, usar string simples
+                imageDesktop = b.image
+                imageMobile = b.image
               }
-            } catch {
-              // Não é JSON, usar string simples
-              imageDesktop = b.image
-              imageMobile = b.image
-            }
-            
-            return {
-              id: b.id,
-              title: b.title,
-              subtitle: b.subtitle,
-              image: image,
-              imageDesktop: imageDesktop,
-              imageMobile: imageMobile,
-              ctaText: b.cta_text,
-              ctaLink: b.cta_link,
-              active: b.active
-            }
-          }))
-          setLoading(false)
-          isFetchingRef.current = false
-          return
+              
+              return {
+                id: b.id,
+                title: b.title,
+                subtitle: b.subtitle,
+                image: image,
+                imageDesktop: imageDesktop,
+                imageMobile: imageMobile,
+                ctaText: b.cta_text,
+                ctaLink: b.cta_link,
+                active: b.active
+              }
+            }))
+            setLoading(false)
+            isFetchingRef.current = false
+            return
+          }
         }
         
         console.warn('⚠️ Banco de banners vazio')
