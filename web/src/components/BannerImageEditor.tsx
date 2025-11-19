@@ -172,30 +172,38 @@ export default function BannerImageEditor({
             </div>
 
             {/* Preview Mobile */}
-            <div className="border border-gray-300 rounded-lg p-3 bg-gray-50">
-              <div className="flex justify-between items-center mb-2">
-                <div className="text-xs font-medium text-gray-700">📱 Mobile (1.2:1)</div>
+            <div className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
+              <div className="flex justify-between items-center mb-3">
+                <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                  <span>📱</span>
+                  <span>Preview Mobile (1.2:1)</span>
+                </div>
                 <button
                   type="button"
                   onClick={() => handleEditCrop('mobile')}
-                  className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-sm"
                 >
-                  Editar
+                  Editar Crop
                 </button>
               </div>
-              <div className="relative w-48 mx-auto overflow-hidden rounded border border-gray-200 bg-white">
-                <img
-                  src={mobileImage}
-                  alt="Preview Mobile"
-                  className="w-full h-40 object-cover"
-                  style={{
-                    aspectRatio: mobileAspectRatio.toString(),
-                    objectPosition: 'center'
-                  }}
-                />
+              {/* Simulação de celular */}
+              <div className="relative mx-auto bg-gray-800 rounded-lg p-2 shadow-lg" style={{ maxWidth: '280px' }}>
+                <div className="bg-white rounded overflow-hidden">
+                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: mobileAspectRatio.toString() }}>
+                    <img
+                      src={mobileImage}
+                      alt="Preview Mobile"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {/* Simulação de botão CTA no mobile */}
+                  <div className="p-3 bg-white">
+                    <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
+                  </div>
+                </div>
               </div>
               {!images.mobile && (
-                <p className="text-xs text-yellow-600 mt-1">⚠️ Crop não configurado - usando imagem original</p>
+                <p className="text-xs text-yellow-600 mt-2 text-center">⚠️ Crop não configurado - usando imagem original</p>
               )}
             </div>
           </div>

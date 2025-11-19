@@ -166,6 +166,12 @@ export default function Account() {
     setPasswordError('')
     setPasswordSuccess('')
     
+    // Validações
+    if (!passwordData.newPassword || passwordData.newPassword.trim().length === 0) {
+      setPasswordError('Por favor, digite uma nova senha')
+      return
+    }
+    
     if (passwordData.newPassword.length < 6) {
       setPasswordError('A senha deve ter pelo menos 6 caracteres')
       return
@@ -179,19 +185,26 @@ export default function Account() {
     setPasswordLoading(true)
     
     try {
+      console.log('🔄 Iniciando atualização de senha...')
       const { error } = await updatePassword(passwordData.newPassword)
+      
       if (error) {
-        setPasswordError(error.message)
+        console.error('❌ Erro ao atualizar senha:', error)
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        setPasswordError(errorMessage || 'Erro ao atualizar senha. Tente novamente.')
       } else {
-        setPasswordSuccess('Senha atualizada com sucesso!')
+        console.log('✅ Senha atualizada com sucesso!')
+        setPasswordSuccess('✅ Senha atualizada com sucesso!')
         setPasswordData({ newPassword: '', confirmPassword: '' })
         setTimeout(() => {
           setShowPasswordSection(false)
           setPasswordSuccess('')
-        }, 2000)
+        }, 3000)
       }
     } catch (err: any) {
-      setPasswordError(err.message || 'Erro ao atualizar senha')
+      console.error('❌ Erro capturado ao atualizar senha:', err)
+      const errorMessage = err?.message || err?.toString() || 'Erro desconhecido ao atualizar senha'
+      setPasswordError(errorMessage)
     } finally {
       setPasswordLoading(false)
     }

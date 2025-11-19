@@ -1992,21 +1992,47 @@ export default function Admin() {
                     />
                   </div>
                   
-                  {/* Upload de imagens adicionais sem editor (apenas upload simples) */}
+                  {/* Upload de imagens adicionais com editor */}
                   {productImages.length > 0 && (
-                    <div className="mt-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="mt-4 border-t pt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-3">
                         Imagens Adicionais (opcional)
                       </label>
-                      <ImageUpload
-                        onImageSelect={(imageUrl) => {
-                          if (imageUrl && !productImages.includes(imageUrl)) {
-                            setProductImages([...productImages, imageUrl])
-                          }
-                        }}
-                        currentImage=""
-                        placeholder="Adicionar imagem adicional"
-                      />
+                      <div className="space-y-3">
+                        {productImages.slice(1).map((img, index) => (
+                          <div key={`additional-${index}`} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            <img src={img} alt={`Adicional ${index + 1}`} className="w-16 h-16 object-cover rounded border border-gray-300" />
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-700">Imagem adicional {index + 1}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newImages = productImages.filter((_, i) => i !== index + 1)
+                                setProductImages(newImages)
+                                if (coverImageIndex >= newImages.length) {
+                                  setCoverImageIndex(Math.max(0, newImages.length - 1))
+                                }
+                              }}
+                              className="text-red-600 hover:text-red-800 p-1"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ))}
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-3">
+                          <ImageEditor
+                            imageUrl=""
+                            onImageSelect={(imageUrl) => {
+                              if (imageUrl && !productImages.includes(imageUrl)) {
+                                setProductImages([...productImages, imageUrl])
+                              }
+                            }}
+                            placeholder="Adicionar nova imagem adicional"
+                            aspectRatio={1}
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
                   

@@ -71,7 +71,9 @@ export default function Promotions() {
             <h3 className="text-xl font-medium text-gray-900 mb-2">Nenhuma promoção ativa</h3>
             <p className="text-gray-600 mb-6">Fique atento às nossas ofertas especiais!</p>
             <a
-              href="https://wa.me/5555991288464"
+              href={`https://wa.me/5555991288464?text=${encodeURIComponent(`Olá! Gostaria de saber mais sobre as promoções da Alfa Jóias.
+
+Podem me ajudar?`)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white px-6 py-3 transition-all duration-300 font-medium hover:scale-105 active:scale-95"

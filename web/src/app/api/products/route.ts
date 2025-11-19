@@ -5,6 +5,10 @@ import { isConnectionError } from '@/lib/errorHandler'
 // Edge Runtime para Cloudflare Pages
 export const runtime = 'edge'
 
+// Forçar revalidação dinâmica
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     // Otimizar query: selecionar apenas campos necessários para listagem
@@ -34,8 +38,14 @@ export async function GET() {
     }
 
     const response = NextResponse.json({ success: true, products: data || [] })
-    // Cache otimizado: 5 minutos para dados estáticos, 1 minuto stale-while-revalidate
-    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=60')
+    // Desabilitar cache para sempre retornar dados atualizados
+    // Headers adicionais para forçar bypass do cache do Cloudflare/CDN
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
+    response.headers.set('X-Cache-Status', 'BYPASS')
+    response.headers.set('CDN-Cache-Control', 'no-cache')
+    response.headers.set('Cloudflare-CDN-Cache-Control', 'no-cache')
     return response
   } catch (err) {
     console.error('❌ Erro na API de produtos:', err)

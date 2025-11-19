@@ -1,19 +1,34 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export default function HeroCarousel() {
   const [banners, setBanners] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [currentSlide, setCurrentSlide] = useState(0)
+  
+  // Refs para prevenir race conditions
+  const isFetchingRef = useRef(false)
+  const requestIdRef = useRef(0)
 
   useEffect(() => {
     const loadBanners = async () => {
+      // Prevenir múltiplas chamadas simultâneas
+      if (isFetchingRef.current) {
+        console.log('⏸️ Já está buscando banners, ignorando chamada duplicada...')
+        return
+      }
+      
+      // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar acessível no catch)
+      const currentRequestId = ++requestIdRef.current
+      
       try {
+        
+        isFetchingRef.current = true
         setLoading(true)
         const { supabase } = await import('@/lib/supabase')
-        console.log('🔄 Buscando banners do banco...')
+        console.log('🔄 Buscando banners do banco...', { requestId: currentRequestId })
         
         // Timeout de 5 segundos para evitar carregamento infinito
         const timeoutPromise = new Promise((_, reject) => 
@@ -30,55 +45,79 @@ export default function HeroCarousel() {
         const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
         const { data, error } = result
         
-        if (error) {
-          console.error('❌ Erro ao buscar banners:', error)
-          // Usar fallback em caso de erro
-          throw new Error('Erro ao buscar banners')
-        }
-        
-        if (data && data.length > 0) {
-          console.log('✅ Banners carregados do BANCO:', data.length)
-          setBanners(data.map((b: any) => ({
-            id: b.id,
-            title: b.title,
-            subtitle: b.subtitle,
-            image: b.image,
-            ctaText: b.cta_text,
-            ctaLink: b.cta_link,
-            active: b.active
-          })))
-          setLoading(false)
+        // Verificar se ainda é a requisição mais recente
+        if (currentRequestId !== requestIdRef.current) {
+          console.log('⏹️ Resposta de requisição antiga de banners ignorada')
           return
         }
         
-        console.warn('⚠️ Banco de banners vazio, usando banners padrão')
-      } catch (err) {
-        console.log('⚠️ Erro ao buscar banners, usando padrão:', err)
-      }
-      
-      // Fallback: banners padrão (sempre usar se houver erro ou banco vazio)
-      const defaultBanners = [
-        {
-          id: '1',
-          title: 'Alfa Jóias',
-          subtitle: 'A Vitrine dos seus Olhos',
-          image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1200&h=800&fit=crop',
-          ctaText: 'Explorar',
-          ctaLink: '/produtos',
-          active: true
-        },
-        {
-          id: '2',
-          title: 'Promoções Especiais',
-          subtitle: 'Até 50% de desconto em produtos selecionados',
-          image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=1200&h=800&fit=crop',
-          ctaText: 'Ver Ofertas',
-          ctaLink: '/promocoes',
-          active: true
+        if (error) {
+          console.error('❌ Erro ao buscar banners:', error)
+          if (currentRequestId === requestIdRef.current) {
+            setBanners([])
+            setLoading(false)
+          }
+          isFetchingRef.current = false
+          return
         }
-      ]
-      setBanners(defaultBanners)
-      setLoading(false)
+        
+        if (data && data.length > 0) {
+          console.log('✅ Banners carregados do BANCO:', data.length, { requestId: currentRequestId })
+          if (currentRequestId === requestIdRef.current) {
+            setBanners(data.map((b: any) => {
+            // Parsear imagem (pode ser string simples ou JSON com desktop/mobile)
+            let image = b.image
+            let imageDesktop = b.image
+            let imageMobile = b.image
+            
+            try {
+              const parsed = JSON.parse(b.image)
+              if (typeof parsed === 'object' && (parsed.desktop || parsed.mobile)) {
+                imageDesktop = parsed.desktop || parsed.original || b.image
+                imageMobile = parsed.mobile || parsed.original || b.image
+                image = imageDesktop // Fallback para compatibilidade
+              }
+            } catch {
+              // Não é JSON, usar string simples
+              imageDesktop = b.image
+              imageMobile = b.image
+            }
+            
+            return {
+              id: b.id,
+              title: b.title,
+              subtitle: b.subtitle,
+              image: image,
+              imageDesktop: imageDesktop,
+              imageMobile: imageMobile,
+              ctaText: b.cta_text,
+              ctaLink: b.cta_link,
+              active: b.active
+            }
+          }))
+          setLoading(false)
+          isFetchingRef.current = false
+          return
+        }
+        
+        console.warn('⚠️ Banco de banners vazio')
+        if (currentRequestId === requestIdRef.current) {
+          setBanners([])
+          setLoading(false)
+        }
+        isFetchingRef.current = false
+        return
+      } catch (err) {
+        console.error('❌ Erro ao buscar banners:', err)
+        // Em caso de erro, retornar array vazio (não usar fallback)
+        const latestRequestId = requestIdRef.current
+        if (currentRequestId === latestRequestId) {
+          setBanners([])
+          setLoading(false)
+        }
+        isFetchingRef.current = false
+        return
+      }
     }
     
     loadBanners()
@@ -149,9 +188,15 @@ export default function HeroCarousel() {
   return (
     <section className="relative bg-white">
       <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] lg:h-[70vh] min-h-[300px] sm:min-h-[400px] md:min-h-[500px] overflow-hidden">
+        {/* Imagem Desktop */}
         <div 
-          className="absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
-          style={{ backgroundImage: `url(${activeBanners[currentSlide]?.image})` }}
+          className="hidden md:block absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
+          style={{ backgroundImage: `url(${activeBanners[currentSlide]?.imageDesktop || activeBanners[currentSlide]?.image})` }}
+        />
+        {/* Imagem Mobile */}
+        <div 
+          className="md:hidden absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
+          style={{ backgroundImage: `url(${activeBanners[currentSlide]?.imageMobile || activeBanners[currentSlide]?.image})` }}
         />
         <div className="absolute inset-0 bg-black/30 transition-opacity duration-1000" />
         
@@ -166,10 +211,10 @@ export default function HeroCarousel() {
             </p>
             <a
               href={activeBanners[currentSlide]?.ctaLink || '/produtos'}
-              className="inline-flex items-center border border-white text-white hover:bg-white hover:text-gray-900 px-4 sm:px-6 md:px-8 py-2 sm:py-3 md:py-4 text-sm sm:text-base transition-all duration-300 font-medium hover:scale-105 active:scale-95"
+              className="inline-flex items-center justify-center border-2 border-white text-white hover:bg-white hover:text-gray-900 px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg transition-all duration-300 font-medium hover:scale-105 active:scale-95 rounded-md shadow-lg backdrop-blur-sm bg-white/10 min-w-[140px] sm:min-w-[160px]"
             >
-              {activeBanners[currentSlide]?.ctaText || 'Explorar'}
-              <svg className="ml-2 h-3 w-3 sm:h-4 sm:w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="flex-1 text-center">{activeBanners[currentSlide]?.ctaText || 'Explorar'}</span>
+              <svg className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </a>

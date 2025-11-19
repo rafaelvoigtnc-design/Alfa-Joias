@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { supabase, Category } from '@/lib/supabase'
-import { initialCategories } from '@/data/initial-data'
 
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([])
@@ -20,16 +19,13 @@ export function useCategories() {
       if (error) throw error
       
       console.log('✅ Categorias carregadas do Supabase:', data?.length || 0)
-      if (!data || data.length === 0) {
-        console.warn('⚠️ Nenhuma categoria no banco. Usando fallback inicial.')
-        setCategories(initialCategories as unknown as Category[])
-      } else {
-        setCategories(data)
-      }
+      // SEMPRE usar dados do banco - se vazio, retornar array vazio (não usar fallback)
+      setCategories(data || [])
     } catch (err) {
       console.error('❌ Erro ao carregar categorias:', err)
       setError(err instanceof Error ? err.message : 'Erro ao carregar categorias')
-      setCategories(initialCategories as unknown as Category[])
+      // Em caso de erro, retornar array vazio (não usar fallback)
+      setCategories([])
     } finally {
       setLoading(false)
     }

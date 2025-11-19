@@ -588,14 +588,96 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
 
   const updatePassword = async (newPassword: string) => {
     try {
+      // Primeiro, verificar se há usuário logado no contexto
+      if (!user) {
+        console.error('❌ Nenhum usuário logado no contexto')
+        return { data: null, error: new Error('Você precisa estar logado para alterar a senha.') }
+      }
+      
+      console.log('🔄 Verificando e atualizando sessão antes de alterar senha...')
+      
+      // Sempre buscar a sessão mais recente do Supabase
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+      
+      if (sessionError) {
+        console.error('❌ Erro ao verificar sessão:', sessionError)
+        return { data: null, error: new Error('Erro ao verificar sessão. Faça login novamente.') }
+      }
+      
+      if (!sessionData.session) {
+        console.error('❌ Nenhuma sessão ativa encontrada')
+        return { data: null, error: new Error('Sessão expirada. Por favor, faça login novamente.') }
+      }
+      
+      // Atualizar a sessão no contexto
+      setSession(sessionData.session)
+      setUser(sessionData.session.user)
+      
+      console.log('✅ Sessão verificada, tentando atualizar senha...')
+      
+      // Tentar atualizar a sessão antes de mudar a senha (refresh)
+      try {
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(sessionData.session)
+        if (!refreshError && refreshData.session) {
+          console.log('✅ Sessão atualizada (refresh)')
+          setSession(refreshData.session)
+          setUser(refreshData.user)
+        } else {
+          console.warn('⚠️ Não foi possível atualizar a sessão, continuando...')
+        }
+      } catch (refreshErr) {
+        console.warn('⚠️ Erro ao atualizar sessão, continuando...', refreshErr)
+      }
+      
+      // Verificar novamente a sessão antes de atualizar
+      const { data: finalSessionData } = await supabase.auth.getSession()
+      if (!finalSessionData.session) {
+        console.error('❌ Sessão perdida após refresh')
+        return { data: null, error: new Error('Sessão expirada. Por favor, faça login novamente.') }
+      }
+      
+      console.log('🔄 Atualizando senha no Supabase...')
+      
+      // Atualizar a senha - o Supabase usa a sessão atual automaticamente
       const { data, error } = await supabase.auth.updateUser({
         password: newPassword
       })
       
-      if (error) throw error
+      if (error) {
+        console.error('❌ Erro ao atualizar senha:', error)
+        
+        // Mensagens de erro mais amigáveis
+        let errorMessage = error.message || 'Erro ao atualizar senha'
+        
+        if (error.message?.includes('same password') || error.message?.includes('mesma senha')) {
+          errorMessage = 'A nova senha deve ser diferente da senha atual.'
+        } else if (error.message?.includes('weak password') || error.message?.includes('senha fraca')) {
+          errorMessage = 'A senha é muito fraca. Use uma senha mais forte (mínimo 6 caracteres).'
+        } else if (error.message?.includes('session') || error.message?.includes('Auth session missing')) {
+          errorMessage = 'Sessão expirada ou inválida. Por favor, faça logout e login novamente, depois tente alterar a senha.'
+        } else if (error.message?.includes('JWT') || error.message?.includes('token')) {
+          errorMessage = 'Token de autenticação inválido. Faça login novamente.'
+        }
+        
+        return { data: null, error: new Error(errorMessage) }
+      }
+      
+      console.log('✅ Senha atualizada com sucesso!')
+      
+      // Atualizar a sessão após mudança de senha
+      if ('session' in data && data.session) {
+        setSession(data.session)
+        setUser(data.user)
+      } else if ('user' in data && data.user) {
+        // Se não retornou sessão, atualizar apenas o usuário
+        setUser(data.user)
+      }
+      
       return { data, error: null }
-    } catch (error) {
-      return { data: null, error }
+    } catch (error: any) {
+      console.error('❌ Erro capturado ao atualizar senha:', error)
+      const errorMessage = error?.message || 'Erro desconhecido ao atualizar senha'
+      return { data: null, error: error instanceof Error ? error : new Error(errorMessage) }
     }
   }
 

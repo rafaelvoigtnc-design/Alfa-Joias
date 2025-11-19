@@ -19,6 +19,17 @@ header {
   margin: 0 !important;
   padding-top: 0 !important;
   top: 0 !important;
+  position: sticky !important;
+}
+
+/* Corrigir qualquer deslocamento do body/html */
+body {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
+}
+
+html {
+  scroll-padding-top: 0 !important;
 }
 
 /* Links globais (remover sublinhado e azul padrão) */

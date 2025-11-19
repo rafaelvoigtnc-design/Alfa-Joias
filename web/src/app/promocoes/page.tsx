@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Phone, Clock, Search, Eye, Percent, Filter, ChevronDown } from 'lucide-react'
 import Link from 'next/link'
 
@@ -39,6 +39,11 @@ export default function Promocoes() {
   const [loading, setLoading] = useState(true)
   const [showReload, setShowReload] = useState(false)
   const [categoriesFromDb, setCategoriesFromDb] = useState<string[]>([])
+  
+  // Refs para prevenir race conditions
+  const isFetchingRef = useRef(false)
+  const requestIdRef = useRef(0)
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   // Carregar categorias dinamicamente do banco
   useEffect(() => {
@@ -97,21 +102,42 @@ export default function Promocoes() {
   useEffect(() => {
     const loadProducts = async () => {
       if (typeof window !== 'undefined') {
+        // Prevenir múltiplas chamadas simultâneas
+        if (isFetchingRef.current) {
+          console.log('⏸️ Já está buscando promoções, ignorando chamada duplicada...')
+          return
+        }
+        
+        // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar acessível no catch)
+        const currentRequestId = ++requestIdRef.current
+        
         let reloadTimeout: NodeJS.Timeout | undefined
         
         try {
+          // Cancelar requisição anterior se existir
+          if (abortControllerRef.current) {
+            abortControllerRef.current.abort()
+          }
+          
+          // Criar novo AbortController para esta requisição
+          const controller = new AbortController()
+          abortControllerRef.current = controller
+          
+          isFetchingRef.current = true
           setLoading(true)
           setDbError(null)
           setShowReload(false)
           
           // Timeout de 30 segundos para mostrar opção de reload
           reloadTimeout = setTimeout(() => {
-            setShowReload(true)
+            if (currentRequestId === requestIdRef.current) {
+              setShowReload(true)
+            }
           }, 30000)
           
           // SEMPRE carregar APENAS do Supabase
           const { supabase } = await import('@/lib/supabase')
-          console.log('🔄 Buscando promoções do banco de dados...')
+          console.log('🔄 Buscando promoções do banco de dados...', { requestId: currentRequestId })
           
           // Otimizar query: apenas produtos em promoção com campos necessários
           const { data, error } = await supabase
@@ -123,50 +149,72 @@ export default function Promocoes() {
           
           clearTimeout(reloadTimeout)
           
+          // Verificar se ainda é a requisição mais recente
+          if (currentRequestId !== requestIdRef.current) {
+            console.log('⏹️ Resposta de requisição antiga de promoções ignorada')
+            isFetchingRef.current = false
+            return
+          }
+          
           if (error) {
             console.error('❌ Erro ao buscar do banco:', error.message)
-            setDbError('Não foi possível carregar as promoções no momento. Por favor, tente novamente.')
-            setProducts([])
-            setFilteredProducts([])
-            setLoading(false)
-            setShowReload(false)
+            if (currentRequestId === requestIdRef.current) {
+              setDbError('Não foi possível carregar as promoções no momento. Por favor, tente novamente.')
+              setProducts([])
+              setFilteredProducts([])
+              setLoading(false)
+              setShowReload(false)
+            }
+            isFetchingRef.current = false
             return
           }
           
           if (!data || data.length === 0) {
             console.warn('⚠️ Banco de dados está vazio!')
-            // Não mostrar erro quando não há produtos, apenas não exibir nada
-            setProducts([])
-            setFilteredProducts([])
-            setLoading(false)
-            setShowReload(false)
+            if (currentRequestId === requestIdRef.current) {
+              // Não mostrar erro quando não há produtos, apenas não exibir nada
+              setProducts([])
+              setFilteredProducts([])
+              setLoading(false)
+              setShowReload(false)
+            }
+            isFetchingRef.current = false
             return
           }
           
           // Já filtrado no banco, mas verificar dupla segurança
           const productsOnSale = data.filter((p: any) => p.on_sale === true || p.onSale === true)
           
-          console.log('✅ Produtos em PROMOÇÃO carregados:', productsOnSale.length)
-          
-          setProducts(productsOnSale)
-          setFilteredProducts(productsOnSale)
-          setLoading(false)
-          setShowReload(false)
+          // Verificar novamente antes de atualizar estado
+          if (currentRequestId === requestIdRef.current) {
+            console.log('✅ Produtos em PROMOÇÃO carregados:', productsOnSale.length, { requestId: currentRequestId })
+            setProducts(productsOnSale)
+            setFilteredProducts(productsOnSale)
+            setLoading(false)
+            setShowReload(false)
+          }
+          isFetchingRef.current = false
           
         } catch (err: any) {
           if (reloadTimeout) clearTimeout(reloadTimeout)
           console.error('❌ Falha ao carregar promoções:', err)
-          // Mensagem amigável para o cliente
-          const errorMessage = err.message || 'Não foi possível carregar as promoções no momento.'
-          // Remover mensagens técnicas
-          const friendlyMessage = errorMessage
-            .replace(/Timeout.*/i, 'Não foi possível carregar as promoções. Por favor, tente novamente.')
-            .replace(/banco de dados/i, 'servidor')
-            .replace(/supabase/i, 'servidor')
-          setDbError(friendlyMessage)
-          setProducts([])
-          setFilteredProducts([])
-          setLoading(false)
+          
+          // Verificar se ainda é a requisição mais recente
+          const latestRequestId = requestIdRef.current
+          if (currentRequestId === latestRequestId) {
+            // Mensagem amigável para o cliente
+            const errorMessage = err.message || 'Não foi possível carregar as promoções no momento.'
+            // Remover mensagens técnicas
+            const friendlyMessage = errorMessage
+              .replace(/Timeout.*/i, 'Não foi possível carregar as promoções. Por favor, tente novamente.')
+              .replace(/banco de dados/i, 'servidor')
+              .replace(/supabase/i, 'servidor')
+            setDbError(friendlyMessage)
+            setProducts([])
+            setFilteredProducts([])
+            setLoading(false)
+          }
+          isFetchingRef.current = false
         }
       }
     }
@@ -509,7 +557,9 @@ export default function Promocoes() {
                   Ver Todos os Produtos
                 </Link>
                 <a
-                  href="https://wa.me/5555991288464"
+                  href={`https://wa.me/5555991288464?text=${encodeURIComponent(`Olá! Gostaria de saber mais sobre as promoções da Alfa Jóias.
+
+Podem me ajudar?`)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-lg font-semibold transition-colors flex items-center space-x-2"
@@ -606,7 +656,9 @@ export default function Promocoes() {
                 Seguir no Instagram
               </a>
               <a
-                href="https://wa.me/5555991288464"
+                href={`https://wa.me/5555991288464?text=${encodeURIComponent(`Olá! Gostaria de saber mais sobre as promoções da Alfa Jóias.
+
+Podem me ajudar?`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full font-semibold transition-colors"

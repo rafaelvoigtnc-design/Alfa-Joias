@@ -3,20 +3,23 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Eye, EyeOff, Lock, AlertCircle, CheckCircle } from 'lucide-react'
+import { Eye, EyeOff, Lock, AlertCircle, CheckCircle, Mail } from 'lucide-react'
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 import { supabase } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
 
 export default function ResetPassword() {
   const router = useRouter()
-  const { updatePassword, signOut } = useUnifiedAuth()
+  const { updatePassword, signOut, resetPassword } = useUnifiedAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [verifying, setVerifying] = useState(true)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [hasValidToken, setHasValidToken] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [sendingEmail, setSendingEmail] = useState(false)
   const [passwords, setPasswords] = useState({
     newPassword: '',
     confirmPassword: ''
@@ -48,6 +51,8 @@ export default function ResetPassword() {
             refreshToken: !!refreshToken,
             type
           })
+          
+          setHasValidToken(true)
           
           if (type === 'recovery' && accessToken) {
             try {
@@ -195,6 +200,44 @@ export default function ResetPassword() {
     }
   }
 
+  const handleSendResetEmail = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSendingEmail(true)
+    setError('')
+    setSuccess('')
+    
+    if (!resetEmail || !resetEmail.includes('@')) {
+      setError('Por favor, insira um email válido.')
+      setSendingEmail(false)
+      return
+    }
+    
+    try {
+      const { error: resetError } = await resetPassword(resetEmail)
+      
+      if (resetError) {
+        console.error('❌ Erro ao enviar email de recuperação:', resetError)
+        let errorMessage = resetError.message || 'Erro ao enviar email de recuperação.'
+        
+        if (errorMessage.includes('rate limit')) {
+          errorMessage = 'Muitas tentativas. Aguarde alguns minutos e tente novamente.'
+        } else if (errorMessage.includes('not found') || errorMessage.includes('does not exist')) {
+          errorMessage = 'Email não encontrado. Verifique se o email está correto.'
+        }
+        
+        setError(errorMessage)
+      } else {
+        setSuccess('✅ Email de recuperação enviado! Verifique sua caixa de entrada e spam.')
+        setResetEmail('')
+      }
+    } catch (err: any) {
+      console.error('❌ Erro ao resetar senha:', err)
+      setError(err.message || 'Erro ao enviar email de recuperação. Tente novamente.')
+    } finally {
+      setSendingEmail(false)
+    }
+  }
+
   // Tela de verificação
   if (verifying) {
     return (
@@ -203,6 +246,102 @@ export default function ResetPassword() {
           <div className="bg-white py-8 px-6 shadow-lg rounded-lg">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Verificando link de recuperação...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Se não tem token válido, mostrar formulário para solicitar email
+  if (!hasValidToken) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          {/* Header */}
+          <div className="text-center">
+            <Link href="/" className="inline-block">
+              <span className="text-2xl font-semibold tracking-tight text-gray-800">Alfa Jóias</span>
+            </Link>
+            <h2 className="mt-6 text-3xl font-light text-gray-900">
+              Recuperar Senha
+            </h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Digite seu email para receber um link de recuperação
+            </p>
+          </div>
+
+          {/* Form */}
+          <div className="bg-white py-8 px-6 shadow-lg rounded-lg">
+            <form className="space-y-6" onSubmit={handleSendResetEmail}>
+              {/* Email */}
+              <div>
+                <label htmlFor="resetEmail" className="block text-sm font-medium text-gray-700">
+                  Email
+                </label>
+                <div className="mt-1 relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="resetEmail"
+                    name="resetEmail"
+                    type="email"
+                    required
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="seu@email.com"
+                  />
+                </div>
+              </div>
+
+              {/* Mensagens de erro/sucesso */}
+              {error && (
+                <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-md">
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="text-sm">{error}</span>
+                </div>
+              )}
+
+              {success && (
+                <div className="flex items-center space-x-2 text-green-600 bg-green-50 p-3 rounded-md">
+                  <CheckCircle className="h-5 w-5" />
+                  <span className="text-sm">{success}</span>
+                </div>
+              )}
+
+              {/* Botão de submit */}
+              <button
+                type="submit"
+                disabled={sendingEmail}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {sendingEmail ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Enviando...</span>
+                  </div>
+                ) : (
+                  'Enviar Link de Recuperação'
+                )}
+              </button>
+            </form>
+          </div>
+
+          {/* Links adicionais */}
+          <div className="text-center space-y-2">
+            <Link
+              href="/login"
+              className="block text-sm text-blue-600 hover:text-blue-500 transition-colors"
+            >
+              Voltar para o login
+            </Link>
+            <Link
+              href="/"
+              className="block text-sm text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              ← Voltar para o site
+            </Link>
           </div>
         </div>
       </div>

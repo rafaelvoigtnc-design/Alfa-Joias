@@ -25,6 +25,10 @@ const BASE_CATEGORIES = ['Óculos', 'Relógios', 'Joias', 'Semi-Joias', 'Afins',
 export default function Categories() {
   const [categories, setCategories] = useState<CategoryData[]>([])
   const [loading, setLoading] = useState(true)
+  
+  // Refs para prevenir race conditions
+  const isFetchingRef = useRef(false)
+  const requestIdRef = useRef(0)
 
   const getDefaultCategory = (name: string): CategoryData | null => {
     const defaults: { [key: string]: CategoryData } = {
@@ -81,7 +85,18 @@ export default function Categories() {
   }
 
   const loadCategories = async () => {
+    // Prevenir múltiplas chamadas simultâneas
+    if (isFetchingRef.current) {
+      console.log('⏸️ Já está buscando categorias, ignorando chamada duplicada...')
+      return
+    }
+    
+    // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar acessível no catch)
+    const currentRequestId = ++requestIdRef.current
+    
     try {
+      
+      isFetchingRef.current = true
       setLoading(true)
       const { supabase } = await import('@/lib/supabase')
       
@@ -101,19 +116,25 @@ export default function Categories() {
       const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
       const { data, error } = result
       
-      if (error) {
-        console.error('❌ Erro ao buscar categorias do Supabase:', error)
-        console.error('Detalhes do erro:', JSON.stringify(error, null, 2))
-        // Usar fallback em caso de erro
-        const defaultCategories: CategoryData[] = BASE_CATEGORIES
-          .map(name => getDefaultCategory(name))
-          .filter((cat): cat is CategoryData => cat !== null)
-        setCategories(defaultCategories)
-        setLoading(false)
+      // Verificar se ainda é a requisição mais recente
+      if (currentRequestId !== requestIdRef.current) {
+        console.log('⏹️ Resposta de requisição antiga de categorias ignorada')
         return
       }
       
-      if (data && data.length > 0 && !error) {
+      if (error) {
+        console.error('❌ Erro ao buscar categorias do Supabase:', error)
+        console.error('Detalhes do erro:', JSON.stringify(error, null, 2))
+        // Em caso de erro, retornar array vazio (não usar fallback)
+        if (currentRequestId === requestIdRef.current) {
+          setCategories([])
+          setLoading(false)
+        }
+        isFetchingRef.current = false
+        return
+      }
+      
+      if (data && data.length > 0) {
         // PROCESSAR TODAS AS CATEGORIAS DO BANCO (incluindo Serviços)
         const dbCategories = data
           .map((cat: any) => ({
@@ -143,37 +164,33 @@ export default function Categories() {
             return a.name.localeCompare(b.name)
           })
         
-        setCategories(dbCategories)
-        setLoading(false)
+        if (currentRequestId === requestIdRef.current) {
+          setCategories(dbCategories)
+          setLoading(false)
+        }
+        isFetchingRef.current = false
         return
-      } else if (data && data.length === 0) {
-        // Se banco está vazio, usar fallback
-        console.warn('⚠️ Banco de categorias está vazio, usando fallback')
-        const defaultCategories: CategoryData[] = BASE_CATEGORIES
-          .map(name => getDefaultCategory(name))
-          .filter((cat): cat is CategoryData => cat !== null)
-        setCategories(defaultCategories)
-        setLoading(false)
+      } else {
+        // Se banco está vazio, retornar array vazio (não usar fallback)
+        console.warn('⚠️ Banco de categorias está vazio')
+        if (currentRequestId === requestIdRef.current) {
+          setCategories([])
+          setLoading(false)
+        }
+        isFetchingRef.current = false
         return
       }
     } catch (err) {
       console.error('❌ Erro ao carregar categorias:', err)
-      // Sempre usar fallback em caso de erro ou timeout
-      const defaultCategories: CategoryData[] = BASE_CATEGORIES
-        .map(name => getDefaultCategory(name))
-        .filter((cat): cat is CategoryData => cat !== null)
-      setCategories(defaultCategories)
-      setLoading(false)
+      // Em caso de erro, retornar array vazio (não usar fallback)
+      const latestRequestId = requestIdRef.current
+      if (currentRequestId === latestRequestId) {
+        setCategories([])
+        setLoading(false)
+      }
+      isFetchingRef.current = false
       return
     }
-    
-    // Fallback: usar apenas as categorias padrão base (se chegou aqui, algo deu errado)
-    const defaultCategories: CategoryData[] = BASE_CATEGORIES
-      .map(name => getDefaultCategory(name))
-      .filter((cat): cat is CategoryData => cat !== null)
-    
-    setCategories(defaultCategories)
-    setLoading(false)
   }
 
   useEffect(() => {

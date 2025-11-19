@@ -15,75 +15,34 @@ export function useServices() {
   useEffect(() => {
     const loadServices = async () => {
       try {
-        // Primeiro, verificar se há dados no localStorage (prioridade para mudanças do admin)
-        const savedServices = localStorage.getItem('alfajoias-services')
-        if (savedServices) {
-          setServices(JSON.parse(savedServices))
-          setLoading(false)
-          return
-        }
-
-        // Se não há dados locais, tentar carregar do banco
-        const response = await fetch('/api/services')
+        // SEMPRE carregar do banco - NUNCA usar localStorage ou fallback
+        const timestamp = Date.now()
+        const response = await fetch(`/api/services?_t=${timestamp}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          }
+        })
+        
         if (response.ok) {
           const data = await response.json()
-          setServices(data.services || [])
+          if (data.success && data.services) {
+            setServices(data.services)
+          } else {
+            // Se não houver serviços no banco, retornar array vazio
+            setServices([])
+          }
         } else {
-          // Se não conseguir do banco, usar serviços padrão apenas se não há dados
-          const defaultServices: Service[] = [
-            {
-              id: '1',
-              title: 'Manutenção de Relógios',
-              description: 'Reparos e ajustes em relógios de todas as marcas',
-              features: ['Troca de bateria', 'Ajuste de pulseira', 'Limpeza interna'],
-              whatsappMessage: 'Olá! Gostaria de solicitar informações sobre manutenção de relógios. Podem me ajudar?'
-            },
-            {
-              id: '2',
-              title: 'Ajustes de Óculos',
-              description: 'Ajustes precisos para melhor conforto e visual',
-              features: ['Ajuste de hastes', 'Correção de posição', 'Troca de lentes'],
-              whatsappMessage: 'Olá! Gostaria de solicitar informações sobre ajustes de óculos. Podem me ajudar?'
-            },
-            {
-              id: '3',
-              title: 'Garantia Estendida',
-              description: 'Garantia adicional em produtos e serviços',
-              features: ['Garantia de 1 ano', 'Suporte técnico', 'Troca sem burocracia'],
-              whatsappMessage: 'Olá! Gostaria de solicitar informações sobre garantia estendida. Podem me ajudar?'
-            },
-            {
-              id: '4',
-              title: 'Serviço Rápido',
-              description: 'Atendimento ágil para suas necessidades urgentes',
-              features: ['Entrega no mesmo dia', 'Orçamento imediato', 'Atendimento prioritário'],
-              whatsappMessage: 'Olá! Gostaria de solicitar informações sobre serviço rápido. Podem me ajudar?'
-            },
-            {
-              id: '5',
-              title: 'Qualidade Garantida',
-              description: 'Produtos e serviços com certificação de qualidade',
-              features: ['Produtos originais', 'Técnicos especializados', 'Materiais premium'],
-              whatsappMessage: 'Olá! Gostaria de solicitar informações sobre qualidade garantida. Podem me ajudar?'
-            },
-            {
-              id: '6',
-              title: 'Troca de Bateria',
-              description: 'Troca de bateria para relógios e acessórios',
-              features: ['Baterias originais', 'Instalação gratuita', 'Garantia de 6 meses'],
-              whatsappMessage: 'Olá! Gostaria de solicitar informações sobre troca de bateria. Podem me ajudar?'
-            }
-          ]
-          setServices(defaultServices)
-          localStorage.setItem('alfajoias-services', JSON.stringify(defaultServices))
+          // Se erro na API, retornar array vazio (não usar fallback)
+          console.error('❌ Erro ao carregar serviços da API:', response.status)
+          setServices([])
         }
       } catch (error) {
-        console.error('Erro ao carregar serviços:', error)
-        // Fallback para localStorage
-        const savedServices = localStorage.getItem('alfajoias-services')
-        if (savedServices) {
-          setServices(JSON.parse(savedServices))
-        }
+        console.error('❌ Erro ao carregar serviços:', error)
+        // Em caso de erro, retornar array vazio (não usar fallback)
+        setServices([])
       } finally {
         setLoading(false)
       }
@@ -108,19 +67,11 @@ export function useServices() {
         setServices(prev => [...prev, newService])
         return newService
       } else {
-        // Fallback para localStorage
-        const newService = { ...service, id: Date.now().toString() }
-        setServices(prev => [...prev, newService])
-        localStorage.setItem('alfajoias-services', JSON.stringify([...services, newService]))
-        return newService
+        throw new Error(`Erro na API: ${response.status}`)
       }
     } catch (error) {
       console.error('Erro ao adicionar serviço:', error)
-      // Fallback para localStorage
-      const newService = { ...service, id: Date.now().toString() }
-      setServices(prev => [...prev, newService])
-      localStorage.setItem('alfajoias-services', JSON.stringify([...services, newService]))
-      return newService
+      throw error
     }
   }
 
@@ -129,13 +80,13 @@ export function useServices() {
       service.id === id ? { ...service, ...updatedService } : service
     )
     setServices(updated)
-    localStorage.setItem('alfajoias-services', JSON.stringify(updated))
+    // NÃO salvar no localStorage - sempre usar banco
   }
 
   const deleteService = (id: string) => {
     const updated = services.filter(service => service.id !== id)
     setServices(updated)
-    localStorage.setItem('alfajoias-services', JSON.stringify(updated))
+    // NÃO salvar no localStorage - sempre usar banco
   }
 
   return {

@@ -17,7 +17,9 @@ export default function Hero() {
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-3">
               <a
-                href="https://wa.me/5555991288464"
+                href={`https://wa.me/5555991288464?text=${encodeURIComponent(`Olá! Gostaria de entrar em contato com a Alfa Jóias.
+
+Podem me ajudar com informações sobre produtos e serviços?`)}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-animated bg-green-500 hover:bg-green-600 text-white px-8 py-3 rounded-full font-semibold inline-flex items-center gap-2 shadow-lg"

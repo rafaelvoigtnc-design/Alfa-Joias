@@ -1,29 +1,71 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase, Product } from '@/lib/supabase'
 
 export function useSupabaseProducts() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Refs para prevenir race conditions
+  const isFetchingRef = useRef(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const requestIdRef = useRef(0)
 
   const fetchProducts = async () => {
+    // Prevenir múltiplas chamadas simultâneas
+    if (isFetchingRef.current) {
+      console.log('⏸️ Já está buscando produtos, ignorando chamada duplicada...')
+      return
+    }
+    
     try {
+      // Cancelar requisição anterior se existir
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
+      
+      // Criar novo AbortController para esta requisição
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+      
+      // Incrementar ID da requisição para rastrear a mais recente
+      const currentRequestId = ++requestIdRef.current
+      
+      isFetchingRef.current = true
       setLoading(true)
       setError(null)
-      console.log('🔄 Buscando produtos do banco de dados...')
+      console.log('🔄 Buscando produtos do banco de dados...', { requestId: currentRequestId })
       
       // Timeout de 5 segundos para evitar carregamento infinito
-      const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 5000)
       
-      // Usar cache para melhor performance (5 minutos)
-      const response = await fetch('/api/products', { 
-        cache: 'default',
-        next: { revalidate: 300 }, // Revalidar a cada 5 minutos
+      // Desabilitar cache para sempre buscar dados atualizados
+      // Adicionar timestamp para forçar bypass do cache do Cloudflare/CDN
+      const timestamp = Date.now()
+      const response = await fetch(`/api/products?_t=${timestamp}`, { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
         signal: controller.signal
       })
       
       clearTimeout(timeoutId)
+      
+      // Verificar se esta requisição foi cancelada
+      if (controller.signal.aborted) {
+        console.log('⏹️ Requisição cancelada (nova requisição iniciada)')
+        return
+      }
+      
+      // Verificar se ainda é a requisição mais recente
+      if (currentRequestId !== requestIdRef.current) {
+        console.log('⏹️ Requisição antiga ignorada (nova requisição já iniciada)')
+        return
+      }
+      
       if (!response.ok) {
         const text = await response.text()
         let errorData: any = {}
@@ -43,9 +85,18 @@ export function useSupabaseProducts() {
         }
         setProducts([])
         setLoading(false)
+        isFetchingRef.current = false
         return
       }
+      
       const { success, products: data, error, connectionError } = await response.json()
+      
+      // Verificar novamente se ainda é a requisição mais recente
+      if (currentRequestId !== requestIdRef.current) {
+        console.log('⏹️ Resposta de requisição antiga ignorada')
+        return
+      }
+      
       if (!success) {
         console.error('❌ Erro ao buscar do banco:', error)
         const errorMsg = connectionError 
@@ -54,6 +105,7 @@ export function useSupabaseProducts() {
         setError(errorMsg)
         setProducts([])
         setLoading(false)
+        isFetchingRef.current = false
         return
       }
       
@@ -61,25 +113,36 @@ export function useSupabaseProducts() {
         console.warn('⚠️ Banco de dados está vazio!')
         setProducts([])
         setLoading(false)
+        isFetchingRef.current = false
         return
       }
       
-      console.log('✅ Produtos carregados do BANCO:', data.length, 'produtos')
+      console.log('✅ Produtos carregados do BANCO:', data.length, 'produtos', { requestId: currentRequestId })
       setProducts(data)
       setLoading(false)
+      isFetchingRef.current = false
       
     } catch (err) {
-      console.error('❌ Erro ao carregar produtos do banco, usando fallback:', err)
-      
-      // Verificar se foi timeout
+      // Verificar se foi cancelamento (não é erro real)
       if (err instanceof Error && err.name === 'AbortError') {
+        // Verificar se foi cancelado por nova requisição ou timeout
+        if (abortControllerRef.current?.signal.aborted) {
+          console.log('⏹️ Requisição cancelada (nova requisição ou timeout)')
+          return // Não atualizar estado se foi cancelada
+        }
         setError('Tempo de carregamento excedido. Verifique sua conexão.')
       } else {
+        console.error('❌ Erro ao carregar produtos do banco:', err)
         setError(err instanceof Error ? err.message : 'Erro ao carregar produtos do banco de dados')
       }
       
-      setProducts([])
-      setLoading(false)
+      // Só atualizar estado se ainda for a requisição mais recente
+      const latestRequestId = requestIdRef.current
+      if (currentRequestId === latestRequestId) {
+        setProducts([])
+        setLoading(false)
+      }
+      isFetchingRef.current = false
     }
   }
 

@@ -1,43 +1,122 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase, Product } from '@/lib/supabase'
 
 export function useProducts() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  
+  // Refs para prevenir race conditions
+  const isFetchingRef = useRef(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const requestIdRef = useRef(0)
 
   const fetchProducts = async () => {
+    // Prevenir múltiplas chamadas simultâneas
+    if (isFetchingRef.current) {
+      console.log('⏸️ Já está buscando produtos, ignorando chamada duplicada...')
+      return
+    }
+    
+    // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar acessível no catch)
+    const currentRequestId = ++requestIdRef.current
+    
     try {
-      setLoading(true)
-      console.log('🔄 Buscando produtos do Supabase...')
+      // Cancelar requisição anterior se existir
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
       
-      const response = await fetch('/api/products', { cache: 'no-store' })
+      // Criar novo AbortController para esta requisição
+      const controller = new AbortController()
+      abortControllerRef.current = controller
+      
+      isFetchingRef.current = true
+      setLoading(true)
+      setError(null)
+      console.log('🔄 Buscando produtos do Supabase...', { requestId: currentRequestId })
+      
+      // Adicionar timestamp para forçar bypass do cache do Cloudflare/CDN
+      const timestamp = Date.now()
+      const response = await fetch(`/api/products?_t=${timestamp}`, { 
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        },
+        signal: controller.signal
+      })
+      
+      // Verificar se esta requisição foi cancelada
+      if (controller.signal.aborted) {
+        console.log('⏹️ Requisição cancelada (nova requisição iniciada)')
+        return
+      }
+      
+      // Verificar se ainda é a requisição mais recente
+      if (currentRequestId !== requestIdRef.current) {
+        console.log('⏹️ Requisição antiga ignorada (nova requisição já iniciada)')
+        return
+      }
       if (!response.ok) {
         const text = await response.text()
         console.error('❌ Erro na API de produtos:', response.status, text)
-        setProducts([])
+        if (currentRequestId === requestIdRef.current) {
+          setProducts([])
+          setLoading(false)
+        }
+        isFetchingRef.current = false
         return
       }
+      
       const { success, products: data, error } = await response.json()
+      
+      // Verificar novamente se ainda é a requisição mais recente
+      if (currentRequestId !== requestIdRef.current) {
+        console.log('⏹️ Resposta de requisição antiga ignorada')
+        return
+      }
+      
       if (!success) {
         console.error('❌ Erro ao buscar produtos:', error)
-        setProducts([])
+        if (currentRequestId === requestIdRef.current) {
+          setProducts([])
+          setLoading(false)
+        }
+        isFetchingRef.current = false
         return
       }
       
       if (!data || data.length === 0) {
         console.warn('⚠️ Banco de produtos vazio.')
-        setProducts([])
+        if (currentRequestId === requestIdRef.current) {
+          setProducts([])
+          setLoading(false)
+        }
       } else {
-        console.log('✅ Produtos carregados do Supabase:', data.length)
-        setProducts(data)
+        console.log('✅ Produtos carregados do Supabase:', data.length, { requestId: currentRequestId })
+        if (currentRequestId === requestIdRef.current) {
+          setProducts(data)
+          setLoading(false)
+        }
       }
+      isFetchingRef.current = false
     } catch (err) {
-      console.error('❌ Erro ao carregar produtos, usando fallback:', err)
-      setError(err instanceof Error ? err.message : 'Erro ao carregar produtos')
-      setProducts([])
-    } finally {
-      setLoading(false)
+      // Verificar se foi cancelamento (não é erro real)
+      if (err instanceof Error && err.name === 'AbortError') {
+        console.log('⏹️ Requisição cancelada (nova requisição ou timeout)')
+        return // Não atualizar estado se foi cancelada
+      }
+      
+      console.error('❌ Erro ao carregar produtos:', err)
+      const latestRequestId = requestIdRef.current
+      if (currentRequestId === latestRequestId) {
+        setError(err instanceof Error ? err.message : 'Erro ao carregar produtos')
+        setProducts([])
+        setLoading(false)
+      }
+      isFetchingRef.current = false
     }
   }
 

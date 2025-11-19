@@ -40,16 +40,30 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   generateEtags: false,
-  // Cache otimizado
+  // Cache otimizado - desabilitar em desenvolvimento
   onDemandEntries: {
     maxInactiveAge: 25 * 1000,
     pagesBufferLength: 2,
   },
+  // Desabilitar cache em desenvolvimento
+  ...(process.env.NODE_ENV === 'development' && {
+    generateBuildId: async () => {
+      return `dev-${Date.now()}`
+    }
+  }),
   // Configuração para Cloudflare Pages - desabilitar cache do webpack completamente
   webpack: (config, { isServer, dev, webpack }) => {
     // Desabilitar completamente o cache do webpack (tanto client quanto server)
     // Isso evita gerar arquivos .pack grandes que excedem o limite do Cloudflare
     config.cache = false
+    
+    // Em desenvolvimento, forçar recompilação completa
+    if (dev) {
+      config.cache = false
+      // Desabilitar cache de módulos
+      config.module = config.module || {}
+      config.module.unsafeCache = false
+    }
     
     // Remover configurações de cache persistent
     if (config.optimization) {
@@ -70,6 +84,21 @@ const nextConfig = {
       {
         source: '/:path*',
         headers: [
+          // Desabilitar cache em desenvolvimento
+          ...(process.env.NODE_ENV === 'development' ? [
+            {
+              key: 'Cache-Control',
+              value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0'
+            },
+            {
+              key: 'Pragma',
+              value: 'no-cache'
+            },
+            {
+              key: 'Expires',
+              value: '0'
+            }
+          ] : []),
           // Segurança
           {
             key: 'X-DNS-Prefetch-Control',
