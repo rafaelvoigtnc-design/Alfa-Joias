@@ -143,9 +143,9 @@ export default function HeroCarousel() {
   const minSwipeDistance = 50
 
   const onTouchStart = (e: React.TouchEvent) => {
-    // Ignorar se o toque foi em um botão
+    // Ignorar se o toque foi em um botão ou seus filhos
     const target = e.target as HTMLElement
-    if (target.closest('button')) {
+    if (target.closest('button[aria-label*="banner"], button[aria-label*="Banner"]')) {
       return
     }
     setTouchEnd(null)
@@ -153,19 +153,19 @@ export default function HeroCarousel() {
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
-    // Ignorar se o toque foi em um botão
+    // Ignorar se o toque foi em um botão ou seus filhos
     const target = e.target as HTMLElement
-    if (target.closest('button')) {
+    if (target.closest('button[aria-label*="banner"], button[aria-label*="Banner"]')) {
       return
     }
     setTouchEnd(e.targetTouches[0].clientX)
   }
 
   const onTouchEnd = (e?: React.TouchEvent) => {
-    // Ignorar se o toque foi em um botão
+    // Ignorar se o toque foi em um botão ou seus filhos
     if (e) {
       const target = e.target as HTMLElement
-      if (target.closest('button')) {
+      if (target.closest('button[aria-label*="banner"], button[aria-label*="Banner"]')) {
         return
       }
     }
@@ -235,7 +235,7 @@ export default function HeroCarousel() {
     <section 
       className="relative bg-white" 
       id="hero-carousel-section" 
-      style={{ position: 'relative' }}
+      style={{ position: 'relative', touchAction: 'pan-y' }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -258,48 +258,66 @@ export default function HeroCarousel() {
           <>
             {/* Botão Anterior */}
             <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                goToPrevSlide()
-              }}
               onTouchStart={(e) => {
                 e.stopPropagation()
-              }}
-              onTouchEnd={(e) => {
                 e.preventDefault()
+                goToPrevSlide()
+              }}
+              onClick={(e) => {
                 e.stopPropagation()
                 goToPrevSlide()
               }}
-              className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
+              onMouseDown={(e) => {
+                e.stopPropagation()
+              }}
+              style={{
+                position: 'absolute',
+                left: '4px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 30,
+                pointerEvents: 'auto',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
+              }}
+              className="bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95"
               aria-label="Banner anterior"
               type="button"
             >
-              <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" pointerEvents="none">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
             {/* Botão Próximo */}
             <button
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-                goToNextSlide()
-              }}
               onTouchStart={(e) => {
                 e.stopPropagation()
-              }}
-              onTouchEnd={(e) => {
                 e.preventDefault()
+                goToNextSlide()
+              }}
+              onClick={(e) => {
                 e.stopPropagation()
                 goToNextSlide()
               }}
-              className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
+              onMouseDown={(e) => {
+                e.stopPropagation()
+              }}
+              style={{
+                position: 'absolute',
+                right: '4px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                zIndex: 30,
+                pointerEvents: 'auto',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent'
+              }}
+              className="bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95"
               aria-label="Próximo banner"
               type="button"
             >
-              <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" pointerEvents="none">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
               </svg>
             </button>
