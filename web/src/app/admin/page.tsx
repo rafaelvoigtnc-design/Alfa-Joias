@@ -602,6 +602,20 @@ export default function Admin() {
         alert('❌ Imagem é obrigatória!')
         return
       }
+      
+      // Validar que a imagem contém desktop e mobile
+      try {
+        const imageData = JSON.parse(image)
+        if (!imageData.desktop || !imageData.mobile) {
+          alert('❌ É obrigatório fazer upload de imagens separadas para Desktop e Mobile!\n\nPor favor, faça upload de ambas as imagens antes de salvar.')
+          return
+        }
+      } catch {
+        // Se não for JSON, significa que é uma string simples (formato antigo)
+        // Mas agora exigimos JSON com desktop e mobile
+        alert('❌ É obrigatório fazer upload de imagens separadas para Desktop e Mobile!\n\nPor favor, faça upload de ambas as imagens antes de salvar.')
+        return
+      }
       if (!ctaText) {
         alert('❌ Texto do botão é obrigatório!')
         return

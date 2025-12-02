@@ -107,6 +107,22 @@ export default function ProductPage() {
         
         console.log('✅ Dados brutos do produto:', data)
         
+        // Processar additional_images - pode ser string JSON ou array
+        let additionalImages: string[] = []
+        if (data.additional_images) {
+          if (typeof data.additional_images === 'string') {
+            try {
+              const parsed = JSON.parse(data.additional_images)
+              additionalImages = Array.isArray(parsed) ? parsed : []
+            } catch {
+              // Se não for JSON válido, tratar como string única
+              additionalImages = [data.additional_images]
+            }
+          } else if (Array.isArray(data.additional_images)) {
+            additionalImages = data.additional_images
+          }
+        }
+        
         // Mapear campos do banco para interface (com fallbacks seguros)
         const mappedProduct: Product = {
           id: data.id || '',
@@ -117,7 +133,7 @@ export default function ProductPage() {
           image: data.image || '',
           description: data.description || '',
           detailedDescription: data.detailed_description || data.description || '',
-          additionalImages: Array.isArray(data.additional_images) ? data.additional_images : [],
+          additionalImages: additionalImages.filter(img => img && img.trim()), // Filtrar imagens vazias
           features: Array.isArray(data.features) ? data.features : [],
           specifications: data.specifications && typeof data.specifications === 'object' ? data.specifications : {},
           on_sale: data.on_sale || false,
@@ -126,6 +142,12 @@ export default function ProductPage() {
           discount_percentage: data.discount_percentage || 0,
           stock: data.stock
         }
+        
+        console.log('📸 Imagens processadas:', {
+          principal: mappedProduct.image,
+          adicionais: mappedProduct.additionalImages,
+          total: mappedProduct.additionalImages.length + (mappedProduct.image ? 1 : 0)
+        })
         
         console.log('✅ Produto mapeado com sucesso:', mappedProduct.name)
         setProduct(mappedProduct)
@@ -210,8 +232,7 @@ export default function ProductPage() {
           {/* Images */}
           <div>
             {/* Imagem principal com navegação */}
-            <div className="relative aspect-square bg-white rounded-xl overflow-hidden mb-4 group">
-              {/* Combinar imagem principal com imagens adicionais */}
+            <div className="relative bg-white rounded-xl overflow-hidden mb-4 group" style={{ aspectRatio: '1 / 1', minHeight: '400px' }}>
               {(() => {
                 const allImages = product.image 
                   ? [product.image, ...(product.additionalImages || [])]
@@ -219,7 +240,7 @@ export default function ProductPage() {
                 
                 if (allImages.length === 0) {
                   return (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100" style={{ aspectRatio: '1 / 1', minHeight: '400px' }}>
                       <span className="text-gray-400">Sem imagem</span>
                     </div>
                   )
@@ -230,19 +251,21 @@ export default function ProductPage() {
                     <img
                       src={allImages[selectedImage] || allImages[0] || '/placeholder.jpg'}
                       alt={product.name}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain bg-white"
+                      style={{ aspectRatio: '1 / 1', minHeight: '400px' }}
                       onError={(e) => {
                         e.currentTarget.src = 'https://via.placeholder.com/600x600?text=Sem+Imagem'
                       }}
                     />
                     
-                    {/* Botões de navegação (anterior/próximo) */}
+                    {/* Botões de navegação (anterior/próximo) - sempre visíveis no mobile */}
                     {allImages.length > 1 && (
                       <>
                         <button
                           onClick={() => setSelectedImage((prev) => (prev > 0 ? prev - 1 : allImages.length - 1))}
-                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity z-10 touch-manipulation"
                           aria-label="Imagem anterior"
+                          type="button"
                         >
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -250,8 +273,9 @@ export default function ProductPage() {
                         </button>
                         <button
                           onClick={() => setSelectedImage((prev) => (prev < allImages.length - 1 ? prev + 1 : 0))}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 md:opacity-0 md:group-hover:opacity-100 opacity-100 transition-opacity z-10 touch-manipulation"
                           aria-label="Próxima imagem"
+                          type="button"
                         >
                           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -259,7 +283,7 @@ export default function ProductPage() {
                         </button>
                         
                         {/* Indicador de imagem atual */}
-                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 text-white text-xs px-2 py-1 rounded-full">
+                        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full z-10">
                           {selectedImage + 1} / {allImages.length}
                         </div>
                       </>
@@ -283,16 +307,18 @@ export default function ProductPage() {
                     <button
                       key={index}
                       onClick={() => setSelectedImage(index)}
-                      className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-all ${
+                      className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-all touch-manipulation ${
                         selectedImage === index 
                           ? 'border-primary-600 ring-2 ring-primary-200 scale-105' 
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
+                      type="button"
                     >
                       <img
                         src={image}
                         alt={`${product.name} ${index + 1}`}
                         className="w-full h-full object-cover"
+                        style={{ aspectRatio: '1 / 1' }}
                         onError={(e) => {
                           e.currentTarget.src = 'https://via.placeholder.com/150?text=Erro'
                         }}
@@ -375,18 +401,24 @@ export default function ProductPage() {
               )}
             </div>
 
-            <p className="text-gray-700 mb-6">
-              {product.detailedDescription || product.description}
-            </p>
+            {/* Descrição - só mostrar se existir */}
+            {(product.detailedDescription || product.description) && (
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Descrição:</h3>
+                <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+                  {product.detailedDescription || product.description}
+                </p>
+              </div>
+            )}
 
-            {/* Features */}
-            {product.features && (
+            {/* Features - só mostrar se existir e tiver itens */}
+            {product.features && Array.isArray(product.features) && product.features.length > 0 && (
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Características:</h3>
                 <ul className="space-y-2">
-                  {product.features.map((feature, index) => (
-                    <li key={index} className="flex items-center space-x-2">
-                      <div className="w-2 h-2 bg-primary-600 rounded-full"></div>
+                  {product.features.filter(f => f && f.trim()).map((feature, index) => (
+                    <li key={index} className="flex items-start space-x-2">
+                      <div className="w-2 h-2 bg-primary-600 rounded-full mt-2 flex-shrink-0"></div>
                       <span className="text-gray-700">{feature}</span>
                     </li>
                   ))}
@@ -484,23 +516,45 @@ Podem me dar mais informações sobre este produto?`)}`}
                   <span>Fazer Login para Comprar</span>
                 </Link>
               )}
-              <button className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2">
+              <button 
+                onClick={() => {
+                  if (navigator.share) {
+                    navigator.share({
+                      title: product.name,
+                      text: product.description || '',
+                      url: window.location.href
+                    }).catch(() => {
+                      // Fallback: copiar URL
+                      navigator.clipboard.writeText(window.location.href)
+                      alert('Link copiado para a área de transferência!')
+                    })
+                  } else {
+                    // Fallback: copiar URL
+                    navigator.clipboard.writeText(window.location.href)
+                    alert('Link copiado para a área de transferência!')
+                  }
+                }}
+                className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center justify-center space-x-2"
+                type="button"
+              >
                 <Share2 className="h-5 w-5" />
-                <span>Compartilhar</span>
+                <span className="hidden sm:inline">Compartilhar</span>
               </button>
             </div>
 
-            {/* Specifications */}
-            {product.specifications && (
-              <div className="bg-white rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Especificações:</h3>
+            {/* Specifications - só mostrar se existir e tiver itens */}
+            {product.specifications && typeof product.specifications === 'object' && Object.keys(product.specifications).length > 0 && (
+              <div className="bg-white rounded-xl p-6 border border-gray-200">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Especificações Técnicas:</h3>
                 <div className="space-y-3">
-                  {Object.entries(product.specifications).map(([key, value]) => (
-                    <div key={key} className="flex justify-between">
-                      <span className="text-gray-600">{key}:</span>
-                      <span className="text-gray-900 font-medium">{value}</span>
-                    </div>
-                  ))}
+                  {Object.entries(product.specifications)
+                    .filter(([key, value]) => key && value && String(value).trim())
+                    .map(([key, value]) => (
+                      <div key={key} className="flex justify-between items-start py-2 border-b border-gray-100 last:border-0">
+                        <span className="text-gray-600 font-medium pr-4">{key}:</span>
+                        <span className="text-gray-900 text-right flex-1">{String(value)}</span>
+                      </div>
+                    ))}
                 </div>
               </div>
             )}

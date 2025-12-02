@@ -2,13 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 
-// TESTE: ALTERAÇÃO NO COMPONENTE
-console.log('🚨 HERO CAROUSEL CARREGADO - TESTE DE FUNCIONAMENTO')
-
 export default function HeroCarousel() {
   const [banners, setBanners] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const currentSlide = 0 // Sempre mostrar apenas o primeiro banner
+  const [currentSlide, setCurrentSlide] = useState(0)
   
   // Refs para prevenir race conditions
   const isFetchingRef = useRef(false)
@@ -128,54 +125,45 @@ export default function HeroCarousel() {
 
   const activeBanners = banners.filter(b => b.active)
 
-  // Removido: auto-rotação de banners desabilitada
-  // O banner sempre mostrará apenas o primeiro item (índice 0)
+  // Funções de navegação
+  const goToNextSlide = () => {
+    if (activeBanners.length === 0) return
+    setCurrentSlide((prev) => (prev + 1) % activeBanners.length)
+  }
 
-  // Remover botões de navegação - MÉTODO DIRETO E SIMPLES
-  useEffect(() => {
-    const removeButtons = () => {
-      // Selecionar TODOS os botões na seção do banner
-      const section = document.getElementById('hero-carousel-section')
-      if (!section) return
-      
-      const buttons = section.querySelectorAll('button')
-      // REMOVER TODOS OS BOTÕES - SEM EXCEÇÃO
-      buttons.forEach((button) => {
-        const btn = button as HTMLElement
-        btn.style.display = 'none'
-        btn.style.visibility = 'hidden'
-        btn.style.opacity = '0'
-        btn.style.pointerEvents = 'none'
-        btn.style.width = '0'
-        btn.style.height = '0'
-        btn.style.position = 'fixed'
-        btn.style.left = '-9999px'
-        btn.style.top = '-9999px'
-        try {
-          btn.remove()
-        } catch (e) {
-          // Ignorar erro
-        }
-      })
+  const goToPrevSlide = () => {
+    if (activeBanners.length === 0) return
+    setCurrentSlide((prev) => (prev - 1 + activeBanners.length) % activeBanners.length)
+  }
+
+  // Suporte a touch para mobile
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+
+  const minSwipeDistance = 50
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe) {
+      goToNextSlide()
     }
-
-    // Executar múltiplas vezes para garantir
-    removeButtons()
-    setTimeout(removeButtons, 100)
-    setTimeout(removeButtons, 500)
-    setTimeout(removeButtons, 1000)
-    setTimeout(removeButtons, 2000)
-
-    // Observar mudanças no DOM
-    const observer = new MutationObserver(removeButtons)
-    const section = document.getElementById('hero-carousel-section')
-    if (section) {
-      observer.observe(section, { childList: true, subtree: true })
+    if (isRightSwipe) {
+      goToPrevSlide()
     }
-    observer.observe(document.body, { childList: true, subtree: true })
-
-    return () => observer.disconnect()
-  }, [activeBanners, loading])
+  }
 
 
   if (loading) {
@@ -227,26 +215,14 @@ export default function HeroCarousel() {
   }
 
   return (
-    <section className="relative bg-white" id="hero-carousel-section" style={{ position: 'relative' }}>
-      {/* CSS DIRETO E SIMPLES - REMOVE TODOS OS BOTÕES */}
-      <style>{`
-        #hero-carousel-section button,
-        #hero-carousel-section > div button,
-        section.relative button,
-        button[style*="absolute"],
-        button[style*="position: absolute"],
-        button[style*="position:absolute"] {
-          display: none !important;
-          visibility: hidden !important;
-          opacity: 0 !important;
-          pointer-events: none !important;
-          width: 0 !important;
-          height: 0 !important;
-          position: fixed !important;
-          left: -9999px !important;
-          top: -9999px !important;
-        }
-      `}</style>
+    <section 
+      className="relative bg-white" 
+      id="hero-carousel-section" 
+      style={{ position: 'relative' }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
       <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] lg:h-[70vh] min-h-[300px] sm:min-h-[400px] md:min-h-[500px] overflow-hidden" style={{ position: 'relative' }}>
         {/* Imagem Desktop */}
         <div 
@@ -259,6 +235,54 @@ export default function HeroCarousel() {
           style={{ backgroundImage: `url(${activeBanners[currentSlide]?.imageMobile || activeBanners[currentSlide]?.image})` }}
         />
         <div className="absolute inset-0 bg-black/30 transition-opacity duration-1000" />
+        
+        {/* Botões de navegação */}
+        {activeBanners.length > 1 && (
+          <>
+            {/* Botão Anterior */}
+            <button
+              onClick={goToPrevSlide}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-3 transition-all duration-300 hover:scale-110 active:scale-95 touch-manipulation"
+              aria-label="Banner anterior"
+              type="button"
+            >
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* Botão Próximo */}
+            <button
+              onClick={goToNextSlide}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-3 transition-all duration-300 hover:scale-110 active:scale-95 touch-manipulation"
+              aria-label="Próximo banner"
+              type="button"
+            >
+              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </>
+        )}
+
+        {/* Indicadores de slide */}
+        {activeBanners.length > 1 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+            {activeBanners.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentSlide(index)}
+                className={`transition-all duration-300 rounded-full touch-manipulation ${
+                  index === currentSlide 
+                    ? 'w-3 h-3 bg-white' 
+                    : 'w-2 h-2 bg-white/50 hover:bg-white/75'
+                }`}
+                aria-label={`Ir para slide ${index + 1}`}
+                type="button"
+              />
+            ))}
+          </div>
+        )}
         
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
           <div className="max-w-3xl w-full">
