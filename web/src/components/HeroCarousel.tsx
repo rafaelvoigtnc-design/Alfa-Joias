@@ -267,16 +267,29 @@ export default function HeroCarousel() {
 
         {/* Indicadores de slide */}
         {activeBanners.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-1">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-0.5 items-center">
             {activeBanners.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`transition-all duration-300 rounded-full touch-manipulation ${
-                  index === currentSlide 
-                    ? 'w-1 h-1 bg-white' 
-                    : 'w-0.5 h-0.5 bg-white/50 hover:bg-white/75'
-                }`}
+                className="transition-all duration-300 rounded-full touch-manipulation"
+                style={{
+                  width: index === currentSlide ? '6px' : '4px',
+                  height: index === currentSlide ? '6px' : '4px',
+                  backgroundColor: index === currentSlide ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                  minWidth: index === currentSlide ? '6px' : '4px',
+                  minHeight: index === currentSlide ? '6px' : '4px'
+                }}
+                onMouseEnter={(e) => {
+                  if (index !== currentSlide) {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.75)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (index !== currentSlide) {
+                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+                  }
+                }}
                 aria-label={`Ir para slide ${index + 1}`}
                 type="button"
               />
