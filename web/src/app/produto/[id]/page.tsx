@@ -123,6 +123,9 @@ export default function ProductPage() {
           }
         }
         
+        // Processar e garantir que additionalImages seja sempre um array
+        const processedAdditionalImages = (additionalImages || []).filter(img => img && img.trim())
+        
         // Mapear campos do banco para interface (com fallbacks seguros)
         const mappedProduct: Product = {
           id: data.id || '',
@@ -133,7 +136,7 @@ export default function ProductPage() {
           image: data.image || '',
           description: data.description || '',
           detailedDescription: data.detailed_description || data.description || '',
-          additionalImages: additionalImages.filter(img => img && img.trim()), // Filtrar imagens vazias
+          additionalImages: processedAdditionalImages, // Sempre um array, nunca undefined
           features: Array.isArray(data.features) ? data.features : [],
           specifications: data.specifications && typeof data.specifications === 'object' ? data.specifications : {},
           on_sale: data.on_sale || false,
@@ -145,8 +148,8 @@ export default function ProductPage() {
         
         console.log('📸 Imagens processadas:', {
           principal: mappedProduct.image,
-          adicionais: mappedProduct.additionalImages,
-          total: mappedProduct.additionalImages.length + (mappedProduct.image ? 1 : 0)
+          adicionais: processedAdditionalImages,
+          total: processedAdditionalImages.length + (mappedProduct.image ? 1 : 0)
         })
         
         console.log('✅ Produto mapeado com sucesso:', mappedProduct.name)
