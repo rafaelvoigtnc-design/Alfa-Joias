@@ -242,24 +242,24 @@ export default function HeroCarousel() {
             {/* Botão Anterior */}
             <button
               onClick={goToPrevSlide}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-3 transition-all duration-300 hover:scale-110 active:scale-95 touch-manipulation"
+              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 z-10 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
               aria-label="Banner anterior"
               type="button"
             >
-              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
 
             {/* Botão Próximo */}
             <button
               onClick={goToNextSlide}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-3 transition-all duration-300 hover:scale-110 active:scale-95 touch-manipulation"
+              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 z-10 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
               aria-label="Próximo banner"
               type="button"
             >
-              <svg className="w-6 h-6 sm:w-8 sm:h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
               </svg>
             </button>
           </>
@@ -267,15 +267,15 @@ export default function HeroCarousel() {
 
         {/* Indicadores de slide */}
         {activeBanners.length > 1 && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex gap-2">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2">
             {activeBanners.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
                 className={`transition-all duration-300 rounded-full touch-manipulation ${
                   index === currentSlide 
-                    ? 'w-3 h-3 bg-white' 
-                    : 'w-2 h-2 bg-white/50 hover:bg-white/75'
+                    ? 'w-2 h-2 sm:w-2.5 sm:h-2.5 bg-white' 
+                    : 'w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white/50 hover:bg-white/75'
                 }`}
                 aria-label={`Ir para slide ${index + 1}`}
                 type="button"
@@ -284,13 +284,13 @@ export default function HeroCarousel() {
           </div>
         )}
         
-        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
-          <div className="max-w-3xl w-full">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-7xl font-light tracking-wide text-white mb-3 sm:mb-4 md:mb-6 leading-tight transition-all duration-700 ease-in-out">
+        <div className="relative z-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
+          <div className="max-w-3xl w-full relative z-30">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-7xl font-light tracking-wide text-white mb-3 sm:mb-4 md:mb-6 leading-tight transition-all duration-700 ease-in-out drop-shadow-lg">
               {activeBanners[currentSlide]?.title}
             </h1>
-            <div className="w-16 sm:w-20 md:w-24 h-0.5 bg-white mb-4 sm:mb-6 md:mb-8 transition-all duration-700 ease-in-out"></div>
-            <p className="text-sm sm:text-base md:text-xl lg:text-2xl text-white/90 mb-6 sm:mb-8 md:mb-10 font-light leading-relaxed transition-all duration-700 ease-in-out">
+            <div className="w-16 sm:w-20 md:w-24 h-0.5 bg-white mb-4 sm:mb-6 md:mb-8 transition-all duration-700 ease-in-out drop-shadow"></div>
+            <p className="text-sm sm:text-base md:text-xl lg:text-2xl text-white/95 mb-6 sm:mb-8 md:mb-10 font-light leading-relaxed transition-all duration-700 ease-in-out drop-shadow-lg">
               {activeBanners[currentSlide]?.subtitle}
             </p>
             <a
