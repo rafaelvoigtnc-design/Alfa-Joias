@@ -221,7 +221,7 @@ export default function ProductPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Breadcrumb */}
         <div className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
           <Link href="/" className="hover:text-gray-600">Início</Link>
@@ -231,11 +231,13 @@ export default function ProductPage() {
           <span className="text-gray-900">{product.name}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12">
           {/* Images */}
           <div>
             {/* Imagem principal com navegação */}
-            <div className="relative bg-white rounded-xl overflow-hidden mb-4 group" style={{ aspectRatio: '1 / 1', minHeight: '400px' }}>
+            <div className="relative bg-white rounded-xl overflow-hidden mb-4 group w-full sm:max-w-md lg:max-w-full mx-auto" style={{ 
+              aspectRatio: '1 / 1'
+            }}>
               {(() => {
                 const allImages = product.image 
                   ? [product.image, ...(product.additionalImages || [])]
@@ -243,7 +245,9 @@ export default function ProductPage() {
                 
                 if (allImages.length === 0) {
                   return (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100" style={{ aspectRatio: '1 / 1', minHeight: '400px' }}>
+                    <div className="w-full h-full flex items-center justify-center bg-gray-100" style={{ 
+                      aspectRatio: '1 / 1'
+                    }}>
                       <span className="text-gray-400">Sem imagem</span>
                     </div>
                   )
@@ -255,7 +259,12 @@ export default function ProductPage() {
                       src={allImages[selectedImage] || allImages[0] || '/placeholder.jpg'}
                       alt={product.name}
                       className="w-full h-full object-contain bg-white"
-                      style={{ aspectRatio: '1 / 1', minHeight: '400px' }}
+                      style={{ 
+                        aspectRatio: '1 / 1',
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain'
+                      }}
                       onError={(e) => {
                         e.currentTarget.src = 'https://via.placeholder.com/600x600?text=Sem+Imagem'
                       }}
@@ -320,8 +329,11 @@ export default function ProductPage() {
                       <img
                         src={image}
                         alt={`${product.name} ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        style={{ aspectRatio: '1 / 1' }}
+                        className="w-full h-full object-contain bg-white"
+                        style={{ 
+                          aspectRatio: '1 / 1',
+                          objectFit: 'contain'
+                        }}
                         onError={(e) => {
                           e.currentTarget.src = 'https://via.placeholder.com/150?text=Erro'
                         }}

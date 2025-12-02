@@ -115,22 +115,13 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     const centerX = cropX + cropWidth / 2
     const centerY = cropY + cropHeight / 2
 
+    // Aplicar constraints de posição antes de desenhar
+    const constrained = constrainPosition(scale, position)
+    
     // Aplicar transformações
     ctx.translate(centerX, centerY)
     ctx.scale(scale, scale)
-    
-    // Limitar posição para que a imagem nunca saia dos limites
-    const imgWidth = img.width
-    const imgHeight = img.height
-    
-    // Calcular limites máximos de posição
-    const maxX = (imgWidth * scale) / 2 - cropWidth / 2
-    const maxY = (imgHeight * scale) / 2 - cropHeight / 2
-    
-    const constrainedX = Math.max(-maxX, Math.min(maxX, position.x))
-    const constrainedY = Math.max(-maxY, Math.min(maxY, position.y))
-    
-    ctx.translate(-imgWidth / 2 + constrainedX / scale, -imgHeight / 2 + constrainedY / scale)
+    ctx.translate(-img.width / 2 + constrained.x / scale, -img.height / 2 + constrained.y / scale)
     
     // Desenhar imagem
     ctx.drawImage(img, 0, 0)
@@ -164,8 +155,10 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   const handleZoomIn = () => {
     setScale(prev => {
       const newScale = Math.min(prev + 0.1, 5)
-      const constrained = constrainPosition(newScale, position)
-      setPosition(constrained)
+      // Aplicar constraints após atualizar a escala
+      setTimeout(() => {
+        setPosition(currentPos => constrainPosition(newScale, currentPos))
+      }, 0)
       return newScale
     })
   }
@@ -173,8 +166,10 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   const handleZoomOut = () => {
     setScale(prev => {
       const newScale = Math.max(prev - 0.1, 0.3)
-      const constrained = constrainPosition(newScale, position)
-      setPosition(constrained)
+      // Aplicar constraints após atualizar a escala
+      setTimeout(() => {
+        setPosition(currentPos => constrainPosition(newScale, currentPos))
+      }, 0)
       return newScale
     })
   }
@@ -191,24 +186,33 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   }
 
   const constrainPosition = (currentScale: number, currentPosition: { x: number; y: number }) => {
-    if (!imageRef.current) return currentPosition
+    if (!imageRef.current || !containerRef.current) return currentPosition
 
     const img = imageRef.current
     const imgWidth = img.width
     const imgHeight = img.height
     
-    // Calcular limites máximos de posição
-    const maxX = (imgWidth * currentScale) / 2 - cropWidth / 2
-    const maxY = (imgHeight * currentScale) / 2 - cropHeight / 2
+    // Calcular limites máximos de posição baseado na escala atual
+    // A imagem escalada deve sempre preencher a área de crop
+    const scaledImgWidth = imgWidth * currentScale
+    const scaledImgHeight = imgHeight * currentScale
+    
+    // Limites: a imagem não pode sair da área de crop
+    const maxX = Math.max(0, (scaledImgWidth - cropWidth) / 2)
+    const maxY = Math.max(0, (scaledImgHeight - cropHeight) / 2)
+    
+    // Se a imagem escalada é menor que a área de crop, centralizar
+    const minX = scaledImgWidth < cropWidth ? 0 : -maxX
+    const minY = scaledImgHeight < cropHeight ? 0 : -maxY
     
     return {
-      x: Math.max(-maxX, Math.min(maxX, currentPosition.x)),
-      y: Math.max(-maxY, Math.min(maxY, currentPosition.y))
+      x: Math.max(minX, Math.min(maxX, currentPosition.x)),
+      y: Math.max(minY, Math.min(maxY, currentPosition.y))
     }
   }
 
   const handleResetZoom = () => {
-    if (!imageRef.current) return
+    if (!imageRef.current || !containerRef.current) return
     
     const img = imageRef.current
     const scaleX = cropWidth / img.width
@@ -216,7 +220,9 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     const initialScale = Math.max(scaleX, scaleY) * 1.1
     
     setScale(initialScale)
-    setPosition({ x: 0, y: 0 })
+    // Resetar posição e aplicar constraints
+    const resetPosition = constrainPosition(initialScale, { x: 0, y: 0 })
+    setPosition(resetPosition)
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -246,9 +252,9 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     if (isDragging && imageRef.current) {
       e.preventDefault()
       e.stopPropagation()
-      // Calcular diferença do movimento do mouse
-      const deltaX = e.clientX - mouseStart.x
-      const deltaY = e.clientY - mouseStart.y
+      // Calcular diferença do movimento do mouse (ajustar pela escala)
+      const deltaX = (e.clientX - mouseStart.x) / scale
+      const deltaY = (e.clientY - mouseStart.y) / scale
       // Nova posição = posição inicial + diferença do movimento
       const newPosition = {
         x: dragStart.x + deltaX,
@@ -300,9 +306,9 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     e.stopPropagation()
     
     const touch = e.touches[0]
-    // Calcular diferença do movimento do touch
-    const deltaX = touch.clientX - mouseStart.x
-    const deltaY = touch.clientY - mouseStart.y
+    // Calcular diferença do movimento do touch (ajustar pela escala)
+    const deltaX = (touch.clientX - mouseStart.x) / scale
+    const deltaY = (touch.clientY - mouseStart.y) / scale
     // Nova posição = posição inicial + diferença do movimento
     const newPosition = {
       x: dragStart.x + deltaX,
@@ -339,19 +345,14 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     tempCanvas.width = finalWidth
     tempCanvas.height = finalHeight
 
-    // Calcular posição final com restrições
-    const imgWidth = img.width
-    const imgHeight = img.height
-    const maxX = (imgWidth * scale) / 2 - cropWidth / 2
-    const maxY = (imgHeight * scale) / 2 - cropHeight / 2
-    const constrainedX = Math.max(-maxX, Math.min(maxX, position.x))
-    const constrainedY = Math.max(-maxY, Math.min(maxY, position.y))
+    // Aplicar constraints de posição
+    const constrained = constrainPosition(scale, position)
 
     // Aplicar transformações
     tempCtx.save()
     tempCtx.translate(finalWidth / 2, finalHeight / 2)
     tempCtx.scale(scale * 2, scale * 2) // Escalar 2x para corresponder ao tamanho do canvas
-    tempCtx.translate(-imgWidth / 2 + constrainedX / scale, -imgHeight / 2 + constrainedY / scale)
+    tempCtx.translate(-img.width / 2 + constrained.x / scale, -img.height / 2 + constrained.y / scale)
     
     tempCtx.drawImage(img, 0, 0)
     tempCtx.restore()

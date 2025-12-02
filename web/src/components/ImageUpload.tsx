@@ -87,16 +87,34 @@ export default function ImageUpload({ onImageSelect, currentImage, placeholder =
     input.type = 'file'
     input.accept = 'image/*'
     // Usar capture para abrir câmera diretamente no mobile
-    if ('capture' in input) {
-      (input as any).capture = 'environment' // Câmera traseira
+    // Tentar diferentes formas de definir capture para compatibilidade
+    try {
+      (input as any).setAttribute('capture', 'environment') // Câmera traseira
+    } catch (e) {
+      try {
+        (input as any).capture = 'environment'
+      } catch (e2) {
+        // Se não funcionar, continuar sem capture
+      }
     }
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
         handleFile(file)
       }
+      // Limpar o input para permitir selecionar a mesma foto novamente
+      input.value = ''
     }
+    // Adicionar ao DOM temporariamente para garantir que funcione
+    input.style.display = 'none'
+    document.body.appendChild(input)
     input.click()
+    // Remover após um tempo
+    setTimeout(() => {
+      if (input.parentNode) {
+        input.parentNode.removeChild(input)
+      }
+    }, 1000)
   }
 
   const removeImage = () => {
