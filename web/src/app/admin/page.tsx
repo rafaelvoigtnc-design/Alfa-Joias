@@ -413,11 +413,17 @@ export default function Admin() {
       stock: stock,
     }
     
-    // Salvar imagens adicionais
-    if (additionalImages.length > 0) {
-      productData.additional_images = additionalImages
-    } else {
-      productData.additional_images = []
+    // Salvar imagens adicionais (só se a coluna existir no banco)
+    // Se a coluna não existir, será ignorado silenciosamente
+    try {
+      if (additionalImages.length > 0) {
+        productData.additional_images = additionalImages
+      } else {
+        productData.additional_images = []
+      }
+    } catch (e) {
+      console.warn('⚠️ Coluna additional_images pode não existir no banco. Execute o script SQL para adicioná-la.')
+      // Não adicionar ao productData se der erro
     }
 
     // Padronização: calcular preço promocional se necessário
@@ -447,16 +453,45 @@ export default function Admin() {
     }
 
     try {
-      if (editingProduct) {
-        // Atualizar produto APENAS no Supabase
-        await updateSupabaseProduct(editingProduct.id, productData)
-        console.log('✅ Produto atualizado no BANCO:', productData)
-        alert('✅ Produto atualizado com sucesso no banco de dados!')
-      } else {
-        // Adicionar produto APENAS no Supabase
-        await addSupabaseProduct(productData)
-        console.log('✅ Produto adicionado no BANCO:', productData)
-        alert('✅ Produto adicionado com sucesso ao banco de dados!')
+      // Tentar salvar com additional_images, mas se der erro, tentar sem
+      let saved = false
+      try {
+        if (editingProduct) {
+          // Atualizar produto APENAS no Supabase
+          await updateSupabaseProduct(editingProduct.id, productData)
+          console.log('✅ Produto atualizado no BANCO:', productData)
+          saved = true
+        } else {
+          // Adicionar produto APENAS no Supabase
+          await addSupabaseProduct(productData)
+          console.log('✅ Produto adicionado no BANCO:', productData)
+          saved = true
+        }
+      } catch (err: any) {
+        // Se o erro for sobre additional_images, tentar novamente sem essa coluna
+        if (err?.message?.includes('additional_images') || err?.code === 'PGRST116') {
+          console.warn('⚠️ Coluna additional_images não encontrada. Tentando salvar sem ela...')
+          const productDataWithoutAdditional = { ...productData }
+          delete productDataWithoutAdditional.additional_images
+          
+          if (editingProduct) {
+            await updateSupabaseProduct(editingProduct.id, productDataWithoutAdditional)
+            console.log('✅ Produto atualizado sem additional_images')
+            saved = true
+            alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
+          } else {
+            await addSupabaseProduct(productDataWithoutAdditional)
+            console.log('✅ Produto adicionado sem additional_images')
+            saved = true
+            alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
+          }
+        } else {
+          throw err // Re-lançar se não for erro de additional_images
+        }
+      }
+      
+      if (saved) {
+        alert('✅ Produto salvo com sucesso no banco de dados!')
       }
       
       setEditingProduct(null)
@@ -464,7 +499,6 @@ export default function Admin() {
       setSelectedBrand('')
       setProductImages([])
       setCoverImageIndex(0)
-      setAdditionalImageEditorKey(0)
       setAdditionalImageEditorKey(0)
       
     } catch (error: any) {
