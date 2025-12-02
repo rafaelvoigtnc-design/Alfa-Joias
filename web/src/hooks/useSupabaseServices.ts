@@ -12,6 +12,86 @@ interface Service {
   updated_at: string
 }
 
+// Cache local para fallback
+const CACHE_KEY = 'alfajoias-services-cache'
+const CACHE_EXPIRY = 5 * 60 * 1000 // 5 minutos
+
+interface CacheData {
+  services: Service[]
+  timestamp: number
+}
+
+function getCachedServices(): Service[] | null {
+  if (typeof window === 'undefined') return null
+  
+  try {
+    const cached = localStorage.getItem(CACHE_KEY)
+    if (!cached) return null
+    
+    const data: CacheData = JSON.parse(cached)
+    const now = Date.now()
+    
+    if (now - data.timestamp > CACHE_EXPIRY) {
+      localStorage.removeItem(CACHE_KEY)
+      return null
+    }
+    
+    return data.services
+  } catch {
+    return null
+  }
+}
+
+function setCachedServices(services: Service[]) {
+  if (typeof window === 'undefined') return
+  
+  try {
+    const data: CacheData = {
+      services,
+      timestamp: Date.now()
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data))
+  } catch {
+    // Ignorar erros de localStorage
+  }
+}
+
+// Função de retry com backoff exponencial
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<Response> {
+  let lastError: any
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options)
+      
+      if (response.status === 503 || response.status === 500) {
+        if (attempt < maxRetries) {
+          const waitTime = delayMs * Math.pow(2, attempt)
+          console.log(`⏳ Tentativa ${attempt + 1}/${maxRetries + 1} falhou (${response.status}). Aguardando ${waitTime}ms...`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+          continue
+        }
+      }
+      
+      return response
+    } catch (error) {
+      lastError = error
+      if (attempt < maxRetries) {
+        const waitTime = delayMs * Math.pow(2, attempt)
+        console.log(`⏳ Tentativa ${attempt + 1}/${maxRetries + 1} falhou. Aguardando ${waitTime}ms...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+      }
+    }
+  }
+  
+  throw lastError
+}
+
 export function useSupabaseServices() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,20 +129,33 @@ export function useSupabaseServices() {
       setLoading(true)
       console.log('🔄 Buscando serviços via API...', { requestId: currentRequestId })
       
+      // Carregar cache local primeiro para melhor UX
+      const cachedServices = getCachedServices()
+      if (cachedServices && cachedServices.length > 0) {
+        console.log('📦 Usando serviços do cache local enquanto busca atualização...', cachedServices.length)
+        setServices(cachedServices)
+        setLoading(false) // Mostrar dados do cache imediatamente
+      }
+      
       // Adicionar timestamp único para forçar bypass do cache do Cloudflare/CDN e navegador
       const timestamp = Date.now()
       const random = Math.random().toString(36).substring(7)
-      const response = await fetch(`/api/services?_t=${timestamp}&_r=${random}`, {
-        cache: 'no-store',
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-          'Pragma': 'no-cache',
-          'Expires': '0',
-          'X-Request-ID': `${timestamp}-${random}`
+      const response = await fetchWithRetry(
+        `/api/services?_t=${timestamp}&_r=${random}`,
+        {
+          cache: 'no-store',
+          method: 'GET',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+            'X-Request-ID': `${timestamp}-${random}`
+          },
+          signal: controller.signal
         },
-        signal: controller.signal
-      })
+        3, // 3 tentativas
+        1000 // delay inicial de 1 segundo
+      )
       
       // Verificar se esta requisição foi cancelada
       if (controller.signal.aborted) {
@@ -129,6 +222,10 @@ export function useSupabaseServices() {
       }
       
       console.log('✅ Serviços carregados via API:', data.services.length, { requestId: currentRequestId })
+      
+      // Salvar no cache local
+      setCachedServices(data.services)
+      
       setServices(data.services)
       setLoading(false)
       isFetchingRef.current = false
@@ -144,7 +241,14 @@ export function useSupabaseServices() {
       // Só atualizar estado se ainda for a requisição mais recente
       const latestRequestId = requestIdRef.current
       if (currentRequestId === latestRequestId) {
-        setServices([])
+        // Tentar usar cache local como fallback
+        const cachedServices = getCachedServices()
+        if (cachedServices && cachedServices.length > 0) {
+          console.log('📦 Usando serviços do cache local devido a erro:', cachedServices.length)
+          setServices(cachedServices)
+        } else {
+          setServices([])
+        }
         setLoading(false)
       }
       isFetchingRef.current = false

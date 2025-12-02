@@ -33,20 +33,30 @@ export function useBanners() {
 
   const addBanner = async (banner: Omit<Banner, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      console.log('💾 [useBanners] Adicionando banner:', banner)
+      
       const { data, error } = await supabase
         .from('banners')
         .insert([banner])
         .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ [useBanners] Erro do Supabase:', error)
+        throw error
+      }
+      
       if (!data || data.length === 0) {
+        console.warn('⚠️ [useBanners] Nenhum dado retornado, recarregando...')
         await fetchBanners()
         return null
       }
+      
       const created = data[0]
+      console.log('✅ [useBanners] Banner criado:', created)
       setBanners(prev => [created, ...prev])
       return created
-    } catch (err) {
+    } catch (err: any) {
+      console.error('❌ [useBanners] Erro ao adicionar:', err)
       setError(err instanceof Error ? err.message : 'Erro ao adicionar banner')
       throw err
     }
@@ -54,21 +64,31 @@ export function useBanners() {
 
   const updateBanner = async (id: string, updates: Partial<Banner>) => {
     try {
+      console.log('💾 [useBanners] Atualizando banner:', { id, updates })
+      
       const { data, error } = await supabase
         .from('banners')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ [useBanners] Erro do Supabase:', error)
+        throw error
+      }
+      
       if (!data || data.length === 0) {
+        console.warn('⚠️ [useBanners] Nenhum dado retornado, recarregando...')
         await fetchBanners()
         return null
       }
+      
       const updated = data[0]
+      console.log('✅ [useBanners] Banner atualizado:', updated)
       setBanners(prev => prev.map(b => (b.id === id ? updated : b)))
       return updated
-    } catch (err) {
+    } catch (err: any) {
+      console.error('❌ [useBanners] Erro ao atualizar:', err)
       setError(err instanceof Error ? err.message : 'Erro ao atualizar banner')
       throw err
     }

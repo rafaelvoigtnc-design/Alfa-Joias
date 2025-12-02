@@ -190,9 +190,9 @@ function ProdutosContent() {
           }
         }, 30000)
         
-        // Timeout reduzido para melhor UX (5s para erro)
+        // Timeout aumentado para 15 segundos
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 5000)
+          setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 15000)
         )
         
         // Otimizar query: selecionar apenas campos necessários e limitar

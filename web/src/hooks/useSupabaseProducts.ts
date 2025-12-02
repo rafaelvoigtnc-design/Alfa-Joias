@@ -1,6 +1,88 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase, Product } from '@/lib/supabase'
 
+// Cache local para fallback
+const CACHE_KEY = 'alfajoias-products-cache'
+const CACHE_EXPIRY = 5 * 60 * 1000 // 5 minutos
+
+interface CacheData {
+  products: Product[]
+  timestamp: number
+}
+
+function getCachedProducts(): Product[] | null {
+  if (typeof window === 'undefined') return null
+  
+  try {
+    const cached = localStorage.getItem(CACHE_KEY)
+    if (!cached) return null
+    
+    const data: CacheData = JSON.parse(cached)
+    const now = Date.now()
+    
+    // Se cache expirou, retornar null
+    if (now - data.timestamp > CACHE_EXPIRY) {
+      localStorage.removeItem(CACHE_KEY)
+      return null
+    }
+    
+    return data.products
+  } catch {
+    return null
+  }
+}
+
+function setCachedProducts(products: Product[]) {
+  if (typeof window === 'undefined') return
+  
+  try {
+    const data: CacheData = {
+      products,
+      timestamp: Date.now()
+    }
+    localStorage.setItem(CACHE_KEY, JSON.stringify(data))
+  } catch {
+    // Ignorar erros de localStorage
+  }
+}
+
+// Função de retry com backoff exponencial
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<Response> {
+  let lastError: any
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options)
+      
+      // Se for erro de servidor (503, 500), tentar novamente
+      if (response.status === 503 || response.status === 500) {
+        if (attempt < maxRetries) {
+          const waitTime = delayMs * Math.pow(2, attempt)
+          console.log(`⏳ Tentativa ${attempt + 1}/${maxRetries + 1} falhou (${response.status}). Aguardando ${waitTime}ms...`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+          continue
+        }
+      }
+      
+      return response
+    } catch (error) {
+      lastError = error
+      if (attempt < maxRetries) {
+        const waitTime = delayMs * Math.pow(2, attempt)
+        console.log(`⏳ Tentativa ${attempt + 1}/${maxRetries + 1} falhou. Aguardando ${waitTime}ms...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+      }
+    }
+  }
+  
+  throw lastError
+}
+
 export function useSupabaseProducts() {
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
@@ -36,21 +118,34 @@ export function useSupabaseProducts() {
       setError(null)
       console.log('🔄 Buscando produtos do banco de dados...', { requestId: currentRequestId })
       
-      // Timeout de 5 segundos para evitar carregamento infinito
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
+      // Carregar cache local primeiro para melhor UX
+      const cachedProducts = getCachedProducts()
+      if (cachedProducts && cachedProducts.length > 0) {
+        console.log('📦 Usando produtos do cache local enquanto busca atualização...', cachedProducts.length)
+        setProducts(cachedProducts)
+        setLoading(false) // Mostrar dados do cache imediatamente
+      }
+      
+      // Timeout aumentado para 15 segundos (mais tempo para retries)
+      const timeoutId = setTimeout(() => controller.abort(), 15000)
       
       // Desabilitar cache para sempre buscar dados atualizados
       // Adicionar timestamp para forçar bypass do cache do Cloudflare/CDN
       const timestamp = Date.now()
-      const response = await fetch(`/api/products?_t=${timestamp}`, { 
-        cache: 'no-store',
-        headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
+      const response = await fetchWithRetry(
+        `/api/products?_t=${timestamp}`,
+        { 
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0'
+          },
+          signal: controller.signal
         },
-        signal: controller.signal
-      })
+        3, // 3 tentativas
+        1000 // delay inicial de 1 segundo
+      )
       
       clearTimeout(timeoutId)
       
@@ -118,6 +213,10 @@ export function useSupabaseProducts() {
       }
       
       console.log('✅ Produtos carregados do BANCO:', data.length, 'produtos', { requestId: currentRequestId })
+      
+      // Salvar no cache local
+      setCachedProducts(data)
+      
       setProducts(data)
       setLoading(false)
       isFetchingRef.current = false
@@ -139,7 +238,15 @@ export function useSupabaseProducts() {
       // Só atualizar estado se ainda for a requisição mais recente
       const latestRequestId = requestIdRef.current
       if (currentRequestId === latestRequestId) {
-        setProducts([])
+        // Tentar usar cache local como fallback
+        const cachedProducts = getCachedProducts()
+        if (cachedProducts && cachedProducts.length > 0) {
+          console.log('📦 Usando produtos do cache local devido a erro:', cachedProducts.length)
+          setProducts(cachedProducts)
+          setError('Usando dados em cache. Alguns produtos podem estar desatualizados.')
+        } else {
+          setProducts([])
+        }
         setLoading(false)
       }
       isFetchingRef.current = false

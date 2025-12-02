@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { isConnectionError } from '@/lib/errorHandler'
+import { isConnectionError, withRetry } from '@/lib/errorHandler'
 
 // Edge Runtime para Cloudflare Pages
 export const runtime = 'edge'
@@ -11,30 +11,34 @@ export const revalidate = 0
 
 export async function GET() {
   try {
-    const { data, error } = await supabase
-      .from('services')
-      .select('*')
-      .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('❌ Erro ao buscar serviços:', error.message)
-      const connError = isConnectionError(error)
-      
-      return NextResponse.json({
-        success: false,
-        error: connError.friendlyMessage || error.message,
-        connectionError: connError.isConnectionError
-      }, { 
-        status: connError.isConnectionError ? 503 : 500,
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
+    // Usar retry automático com backoff exponencial para erros de conexão
+    const result = await withRetry(
+      async () => {
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (error) {
+          const connError = isConnectionError(error)
+          // Se for erro de conexão, lançar para que withRetry tente novamente
+          if (connError.isConnectionError) {
+            throw error
+          }
+          // Se não for erro de conexão, retornar erro direto
+          throw new Error(error.message)
         }
-      })
-    }
+
+        return data || []
+      },
+      3, // 3 tentativas
+      1000 // delay inicial de 1 segundo
+    )
 
     const response = NextResponse.json({
       success: true,
-      services: data || []
+      services: result
     }, {
       headers: {
         'Content-Type': 'application/json; charset=utf-8',
@@ -51,7 +55,7 @@ export async function GET() {
     return response
 
   } catch (error) {
-    console.error('❌ Erro na API de serviços:', error)
+    console.error('❌ Erro na API de serviços após retries:', error)
     const connError = isConnectionError(error)
     
     return NextResponse.json({

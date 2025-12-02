@@ -91,7 +91,7 @@ export default function Admin() {
   const [showCategoryForm, setShowCategoryForm] = useState(false)
   const [products, setProducts] = useState<Product[]>([])
   const { services, addService, updateService, deleteService, refresh: refreshServices } = useSupabaseServices()
-  const { banners, addBanner, updateBanner, deleteBanner } = useBanners()
+  const { banners, addBanner, updateBanner, deleteBanner, refetch: refetchBanners } = useBanners()
   const [categories, setCategories] = useState<any[]>([])
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [editingService, setEditingService] = useState<Service | null>(null)
@@ -111,8 +111,10 @@ export default function Admin() {
   // Inicializar bannerImage quando editar banner
   useEffect(() => {
     if (editingBanner && showBannerForm) {
+      console.log('🔄 Inicializando bannerImage para edição:', editingBanner.image)
       setBannerImage(editingBanner.image || '')
-    } else if (!showBannerForm) {
+    } else if (!showBannerForm && !editingBanner) {
+      // Limpar apenas quando o formulário for fechado completamente
       setBannerImage('')
     }
   }, [editingBanner, showBannerForm])
@@ -562,39 +564,103 @@ export default function Admin() {
 
   const handleBannerSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+    
     console.log('🔄 ========== SALVANDO BANNER ==========')
+    console.log('📋 Estado atual:', { editingBanner: editingBanner?.id, bannerImage })
     
     try {
-      const formData = new FormData(e.target as HTMLFormElement)
+      const form = e.target as HTMLFormElement
+      if (!form) {
+        alert('❌ Erro: Formulário não encontrado!')
+        return
+      }
+      
+      // Coletar valores diretamente dos inputs
+      const title = (form.querySelector('input[name="title"]') as HTMLInputElement)?.value?.trim() || ''
+      const subtitle = (form.querySelector('input[name="subtitle"]') as HTMLInputElement)?.value?.trim() || ''
+      const ctaText = (form.querySelector('input[name="ctaText"]') as HTMLInputElement)?.value?.trim() || ''
+      const ctaLink = (form.querySelector('input[name="ctaLink"]') as HTMLInputElement)?.value?.trim() || ''
+      const active = (form.querySelector('input[name="active"]') as HTMLInputElement)?.checked || false
+      
+      // Imagem: priorizar estado, depois input hidden
+      const imageInput = form.querySelector('input[name="image"]') as HTMLInputElement
+      const image = bannerImage || imageInput?.value || editingBanner?.image || ''
+      
+      console.log('📝 Valores coletados:', { title, subtitle, image, ctaText, ctaLink, active })
+      
+      // Validações básicas
+      if (!title) {
+        alert('❌ Título é obrigatório!')
+        return
+      }
+      if (!subtitle) {
+        alert('❌ Subtítulo é obrigatório!')
+        return
+      }
+      if (!image) {
+        alert('❌ Imagem é obrigatória!')
+        return
+      }
+      if (!ctaText) {
+        alert('❌ Texto do botão é obrigatório!')
+        return
+      }
+      if (!ctaLink) {
+        alert('❌ Link do botão é obrigatório!')
+        return
+      }
       
       const bannerData = {
-        title: formData.get('title') as string,
-        subtitle: formData.get('subtitle') as string,
-        image: formData.get('image') as string,
-        cta_text: formData.get('ctaText') as string,
-        cta_link: formData.get('ctaLink') as string,
-        active: formData.get('active') === 'on',
+        title,
+        subtitle,
+        image,
+        cta_text: ctaText,
+        cta_link: ctaLink,
+        active
       }
-
-      console.log('📝 Dados do banner:', bannerData)
-
+      
+      console.log('💾 Dados finais para salvar:', bannerData)
+      console.log('🔧 Modo:', editingBanner ? 'EDITAR' : 'CRIAR')
+      
+      // Salvar no banco
+      let result
       if (editingBanner) {
-        console.log('✏️ Modo: EDITAR banner')
-        await updateBanner(editingBanner.id, bannerData)
+        console.log('✏️ Atualizando banner ID:', editingBanner.id)
+        result = await updateBanner(editingBanner.id, bannerData)
+        console.log('✅ Resultado da atualização:', result)
       } else {
-        console.log('➕ Modo: ADICIONAR banner')
-        await addBanner(bannerData)
+        console.log('➕ Criando novo banner')
+        result = await addBanner(bannerData)
+        console.log('✅ Resultado da criação:', result)
       }
       
-      console.log('✅ Banner salvo com sucesso!')
+      console.log('🎉 SUCESSO! Banner salvo:', result)
       
+      // Limpar e fechar
       setEditingBanner(null)
       setShowBannerForm(false)
       setBannerImage('')
       
-    } catch (error) {
-      console.error('❌ Erro ao salvar banner:', error)
-      alert(`Erro ao salvar banner: ${error instanceof Error ? error.message : 'Erro desconhecido'}`)
+      // Recarregar lista
+      if (refetchBanners) {
+        console.log('🔄 Recarregando lista de banners...')
+        await refetchBanners()
+        console.log('✅ Lista recarregada')
+      }
+      
+      alert('✅ Banner salvo com sucesso!')
+      
+    } catch (error: any) {
+      console.error('❌ ERRO COMPLETO:', error)
+      console.error('❌ Tipo:', typeof error)
+      console.error('❌ Message:', error?.message)
+      console.error('❌ Code:', error?.code)
+      console.error('❌ Status:', error?.status)
+      console.error('❌ Stack:', error?.stack)
+      
+      const errorMsg = error?.message || error?.toString() || 'Erro desconhecido'
+      alert(`❌ ERRO AO SALVAR\n\n${errorMsg}\n\nVerifique o console para mais detalhes.`)
     }
   }
 
@@ -1342,7 +1408,11 @@ export default function Admin() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Banners do Hero</h2>
                 <button
-                  onClick={() => setShowBannerForm(true)}
+                  onClick={() => {
+                    setEditingBanner(null)
+                    setBannerImage('')
+                    setShowBannerForm(true)
+                  }}
                   className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -2297,9 +2367,9 @@ export default function Admin() {
 
       {/* Banner Form Modal */}
       {showBannerForm && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-0 sm:top-20 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-2xl shadow-lg rounded-none sm:rounded-md bg-white min-h-screen sm:min-h-0 mb-8 sm:mb-20">
-            <div className="flex justify-between items-center mb-4">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" style={{ maxHeight: '100vh' }}>
+          <div className="relative top-0 sm:top-10 mx-auto p-4 sm:p-5 border-0 sm:border w-full sm:w-11/12 max-w-2xl shadow-lg rounded-none sm:rounded-md bg-white my-4 sm:my-8" style={{ minHeight: 'auto', maxHeight: 'calc(100vh - 2rem)' }}>
+            <div className="flex justify-between items-center mb-4 sticky top-0 bg-white z-10 pb-2 border-b">
               <h3 className="text-lg font-bold text-gray-900">
                 {editingBanner ? 'Editar Banner' : 'Adicionar Banner'}
               </h3>
@@ -2307,6 +2377,7 @@ export default function Admin() {
                 onClick={() => {
                   setShowBannerForm(false)
                   setEditingBanner(null)
+                  setBannerImage('')
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -2314,7 +2385,12 @@ export default function Admin() {
               </button>
             </div>
 
-            <form onSubmit={handleBannerSubmit} className="space-y-4 pb-8 sm:pb-12">
+            <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 120px)' }}>
+              <form 
+                id="banner-form"
+                onSubmit={handleBannerSubmit} 
+                className="space-y-4 pb-8 sm:pb-16"
+              >
               <div>
                 <label className="block text-sm font-medium text-gray-700">Título</label>
                 <input
@@ -2338,14 +2414,25 @@ export default function Admin() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700">Imagem do Banner</label>
+                <label className="block text-sm font-medium text-gray-700">Imagem do Banner *</label>
                 <p className="text-xs text-gray-500 mb-2">Edite o enquadramento separadamente para desktop e mobile</p>
                 <BannerImageEditor
+                  key={editingBanner?.id || 'new'} // Force re-render quando mudar o banner sendo editado
                   imageUrl={bannerImage || editingBanner?.image || ''}
                   onImageSelect={(imageUrl) => {
+                    console.log('📸 BannerImageEditor onImageSelect chamado:', imageUrl)
                     setBannerImage(imageUrl)
-                    const input = document.querySelector('input[name="image"]') as HTMLInputElement
-                    if (input) input.value = imageUrl
+                    // Atualizar o input hidden dentro do formulário específico
+                    setTimeout(() => {
+                      const form = document.getElementById('banner-form') as HTMLFormElement
+                      if (form) {
+                        const input = form.querySelector('input[name="image"]') as HTMLInputElement
+                        if (input) {
+                          input.value = imageUrl
+                          console.log('✅ Input hidden atualizado:', input.value)
+                        }
+                      }
+                    }, 100)
                   }}
                   placeholder="Selecione uma imagem para o banner"
                 />
@@ -2392,26 +2479,29 @@ export default function Admin() {
                 </label>
               </div>
 
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowBannerForm(false)
-                    setEditingBanner(null)
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                >
-                  <Save className="h-4 w-4 mr-2 inline" />
-                  Salvar
-                </button>
-              </div>
-            </form>
+                <div className="flex justify-end space-x-3 sticky bottom-0 bg-white pt-4 border-t mt-6" id="banner-form-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowBannerForm(false)
+                      setEditingBanner(null)
+                      setBannerImage('')
+                    }}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    id="banner-save-button"
+                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                  >
+                    <Save className="h-4 w-4 mr-2 inline" />
+                    Salvar
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}

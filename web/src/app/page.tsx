@@ -16,6 +16,20 @@ const Contact = dynamic(() => import('@/components/Contact'), { ssr: false })
 export default function Home() {
   return (
     <div className="min-h-screen">
+      {/* TESTE VISÍVEL - TEXTO VERMELHO GIGANTE */}
+      <div style={{ 
+        width: '100%', 
+        backgroundColor: 'red', 
+        color: 'white', 
+        padding: '50px', 
+        textAlign: 'center', 
+        fontSize: '48px', 
+        fontWeight: 'bold',
+        position: 'relative',
+        zIndex: 999999
+      }}>
+        TESTE: ALTERAÇÕES FUNCIONANDO!
+      </div>
       <HeroCarousel />
       <Categories />
       <FeaturedProducts />

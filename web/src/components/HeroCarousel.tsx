@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+
+// TESTE: ALTERAÇÃO NO COMPONENTE
+console.log('🚨 HERO CAROUSEL CARREGADO - TESTE DE FUNCIONAMENTO')
 
 export default function HeroCarousel() {
   const [banners, setBanners] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [currentSlide, setCurrentSlide] = useState(0)
+  const currentSlide = 0 // Sempre mostrar apenas o primeiro banner
   
   // Refs para prevenir race conditions
   const isFetchingRef = useRef(false)
@@ -126,17 +128,55 @@ export default function HeroCarousel() {
 
   const activeBanners = banners.filter(b => b.active)
 
-  useEffect(() => {
-    if (activeBanners.length > 1) {
-      const interval = setInterval(() => {
-        setCurrentSlide((prev) => (prev + 1) % activeBanners.length)
-      }, 15000)
-      return () => clearInterval(interval)
-    }
-  }, [activeBanners])
+  // Removido: auto-rotação de banners desabilitada
+  // O banner sempre mostrará apenas o primeiro item (índice 0)
 
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % activeBanners.length)
-  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + activeBanners.length) % activeBanners.length)
+  // Remover botões de navegação - MÉTODO DIRETO E SIMPLES
+  useEffect(() => {
+    const removeButtons = () => {
+      // Selecionar TODOS os botões na seção do banner
+      const section = document.getElementById('hero-carousel-section')
+      if (!section) return
+      
+      const buttons = section.querySelectorAll('button')
+      // REMOVER TODOS OS BOTÕES - SEM EXCEÇÃO
+      buttons.forEach((button) => {
+        const btn = button as HTMLElement
+        btn.style.display = 'none'
+        btn.style.visibility = 'hidden'
+        btn.style.opacity = '0'
+        btn.style.pointerEvents = 'none'
+        btn.style.width = '0'
+        btn.style.height = '0'
+        btn.style.position = 'fixed'
+        btn.style.left = '-9999px'
+        btn.style.top = '-9999px'
+        try {
+          btn.remove()
+        } catch (e) {
+          // Ignorar erro
+        }
+      })
+    }
+
+    // Executar múltiplas vezes para garantir
+    removeButtons()
+    setTimeout(removeButtons, 100)
+    setTimeout(removeButtons, 500)
+    setTimeout(removeButtons, 1000)
+    setTimeout(removeButtons, 2000)
+
+    // Observar mudanças no DOM
+    const observer = new MutationObserver(removeButtons)
+    const section = document.getElementById('hero-carousel-section')
+    if (section) {
+      observer.observe(section, { childList: true, subtree: true })
+    }
+    observer.observe(document.body, { childList: true, subtree: true })
+
+    return () => observer.disconnect()
+  }, [activeBanners, loading])
+
 
   if (loading) {
     return (
@@ -187,8 +227,27 @@ export default function HeroCarousel() {
   }
 
   return (
-    <section className="relative bg-white">
-      <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] lg:h-[70vh] min-h-[300px] sm:min-h-[400px] md:min-h-[500px] overflow-hidden">
+    <section className="relative bg-white" id="hero-carousel-section" style={{ position: 'relative' }}>
+      {/* CSS DIRETO E SIMPLES - REMOVE TODOS OS BOTÕES */}
+      <style>{`
+        #hero-carousel-section button,
+        #hero-carousel-section > div button,
+        section.relative button,
+        button[style*="absolute"],
+        button[style*="position: absolute"],
+        button[style*="position:absolute"] {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+          width: 0 !important;
+          height: 0 !important;
+          position: fixed !important;
+          left: -9999px !important;
+          top: -9999px !important;
+        }
+      `}</style>
+      <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] lg:h-[70vh] min-h-[300px] sm:min-h-[400px] md:min-h-[500px] overflow-hidden" style={{ position: 'relative' }}>
         {/* Imagem Desktop */}
         <div 
           className="hidden md:block absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
@@ -202,7 +261,7 @@ export default function HeroCarousel() {
         <div className="absolute inset-0 bg-black/30 transition-opacity duration-1000" />
         
         <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
-          <div className="max-w-3xl">
+          <div className="max-w-3xl w-full">
             <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-7xl font-light tracking-wide text-white mb-3 sm:mb-4 md:mb-6 leading-tight transition-all duration-700 ease-in-out">
               {activeBanners[currentSlide]?.title}
             </h1>
@@ -221,57 +280,6 @@ export default function HeroCarousel() {
             </a>
           </div>
         </div>
-
-        {/* Navigation */}
-        {activeBanners.length > 1 && (
-          <>
-            <button
-              onClick={prevSlide}
-              onTouchStart={(e) => {
-                e.preventDefault()
-                prevSlide()
-              }}
-              className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white p-1.5 sm:p-2 rounded-full transition-all duration-300 backdrop-blur-sm active:scale-95 touch-manipulation z-20"
-              aria-label="Banner anterior"
-            >
-              <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 pointer-events-none" />
-            </button>
-            <button
-              onClick={nextSlide}
-              onTouchStart={(e) => {
-                e.preventDefault()
-                nextSlide()
-              }}
-              className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 bg-white/20 hover:bg-white/30 active:bg-white/40 text-white p-1.5 sm:p-2 rounded-full transition-all duration-300 backdrop-blur-sm active:scale-95 touch-manipulation z-20"
-              aria-label="Próximo banner"
-            >
-              <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 pointer-events-none" />
-            </button>
-          </>
-        )}
-
-        {/* Dots */}
-        {activeBanners.length > 1 && (
-          <div className="absolute bottom-2 sm:bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 sm:space-x-2.5">
-            {activeBanners.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentSlide(index)}
-                style={{
-                  width: '12px',
-                  height: '12px',
-                  minWidth: '12px',
-                  minHeight: '12px',
-                  padding: '0',
-                  margin: '0'
-                }}
-                className={`rounded-full transition-all duration-300 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 ${
-                  index === currentSlide ? 'bg-gray-600' : 'bg-gray-300'
-                }`}
-              />
-            ))}
-          </div>
-        )}
       </div>
     </section>
   )

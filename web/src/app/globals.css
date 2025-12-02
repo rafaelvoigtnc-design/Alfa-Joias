@@ -387,3 +387,133 @@ a:hover, a:focus {
     font-size: 16px !important;
   }
 }
+
+/* ============================================
+   REMOVER BOTÕES DE NAVEGAÇÃO DO BANNER
+   ============================================ */
+/* TESTE VISÍVEL - TEXTO VERMELHO NO TOPO */
+body::before {
+  content: "TESTE: CSS GLOBAL FUNCIONANDO!" !important;
+  display: block !important;
+  width: 100% !important;
+  background: red !important;
+  color: white !important;
+  padding: 20px !important;
+  text-align: center !important;
+  font-size: 24px !important;
+  font-weight: bold !important;
+  position: relative !important;
+  z-index: 999999 !important;
+}
+
+/* REMOVER TODOS OS BOTÕES DO BANNER */
+section.relative button,
+section.relative > div.relative button,
+section.relative > div button,
+section.relative .carousel-control-prev,
+section.relative .carousel-control-next,
+section.relative .carousel-control-prev-icon,
+section.relative .carousel-control-next-icon,
+section.relative [class*="carousel-control"],
+section.relative [class*="carousel-prev"],
+section.relative [class*="carousel-next"],
+button[style*="absolute"],
+button[style*="position: absolute"],
+button[style*="position:absolute"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  position: fixed !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  z-index: -9999 !important;
+}
+
+/* Remover TODOS os botões absolutos ou fixos */
+section.relative button[style*="position: absolute"],
+section.relative button[style*="position:absolute"],
+section.relative button[style*="position: fixed"],
+section.relative button[style*="position:fixed"],
+section.relative button[class*="absolute"],
+section.relative button[class*="fixed"],
+section.relative button[aria-label*="anterior"],
+section.relative button[aria-label*="próximo"],
+section.relative button[aria-label*="previous"],
+section.relative button[aria-label*="next"],
+section.relative .carousel-button,
+section.relative .swiper-button-prev,
+section.relative .swiper-button-next,
+section.relative [class*="navigation"],
+section.relative [class*="arrow"],
+section.relative [class*="chevron"],
+section.relative > div.relative button[class*="rounded-full"],
+section.relative > div.relative button[class*="circle"],
+section.relative > div.relative button:has(svg[class*="chevron"]),
+section.relative > div.relative button:has(svg[class*="arrow"]),
+section.relative > div.relative button[style*="left"],
+section.relative > div.relative button[style*="right"],
+section.relative > div.relative button[class*="left"],
+section.relative > div.relative button[class*="right"],
+section.relative button:has(svg path[d*="M15"]),
+section.relative button:has(svg path[d*="M9"]),
+section.relative button:has(svg path[d*="M8"]),
+section.relative button:has(svg path[d*="M16"]) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  overflow: hidden !important;
+  position: fixed !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  z-index: -9999 !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(100%) !important;
+}
+
+/* Regra específica para botões nos cantos (left: 0 ou right: 0) */
+section.relative button[style*="left: 0"],
+section.relative button[style*="left:0"],
+section.relative button[style*="right: 0"],
+section.relative button[style*="right:0"],
+section.relative button[style*="left: 0px"],
+section.relative button[style*="right: 0px"],
+/* Sobrescrever classes específicas do Bootstrap */
+section.relative .carousel-control-prev,
+section.relative .carousel-control-next,
+section.relative .carousel-control-prev-icon,
+section.relative .carousel-control-next-icon,
+section.relative [class*="carousel-control"],
+section.relative [class*="carousel-prev"],
+section.relative [class*="carousel-next"],
+section.relative button.carousel-control-prev,
+section.relative button.carousel-control-next,
+section.relative a.carousel-control-prev,
+section.relative a.carousel-control-next {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  position: fixed !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  z-index: -9999 !important;
+}

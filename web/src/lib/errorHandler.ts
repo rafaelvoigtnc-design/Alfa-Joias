@@ -76,9 +76,19 @@ export async function withRetry<T>(
       lastError = error
       const connError = isConnectionError(error)
       
-      // Se não for erro de conexão, não fazer retry
+      // Se não for erro de conexão e não for erro de servidor (500, 503), não fazer retry
       if (!connError.isConnectionError && attempt === 0) {
-        throw error
+        // Verificar se é erro de servidor que vale a pena tentar novamente
+        const isServerError = error instanceof Error && (
+          error.message.includes('503') || 
+          error.message.includes('500') ||
+          error.message.includes('502') ||
+          error.message.includes('504')
+        )
+        
+        if (!isServerError) {
+          throw error
+        }
       }
       
       // Se for a última tentativa, lançar o erro
@@ -95,6 +105,42 @@ export async function withRetry<T>(
   
   throw lastError
 }
+
+/**
+ * Verifica se há conexão com a internet
+ * Usa navigator.onLine como fallback para evitar problemas de CORS
+ */
+export async function checkInternetConnection(): Promise<boolean> {
+  if (typeof window === 'undefined') return true
+  
+  // Primeiro verificar o status do navegador
+  if (!navigator.onLine) {
+    return false
+  }
+  
+  try {
+    // Tentar fazer uma requisição simples para verificar conexão
+    // Usar um endpoint que não bloqueia CORS
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 2000)
+    
+    // Tentar verificar conexão fazendo uma requisição para o próprio site
+    const response = await fetch(window.location.origin + '/api/products?_health=true', {
+      method: 'HEAD',
+      signal: controller.signal,
+      cache: 'no-store'
+    }).catch(() => null)
+    
+    clearTimeout(timeoutId)
+    
+    // Se a requisição funcionou ou se foi bloqueada por CORS mas o navegador está online, considerar online
+    return response !== null || navigator.onLine
+  } catch {
+    // Se falhar, usar o status do navegador como fallback
+    return navigator.onLine
+  }
+}
+
 
 
 

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { Monitor, Smartphone, Upload, Edit2, X, Check, AlertCircle, Image as ImageIcon } from 'lucide-react'
 import ImageUpload from './ImageUpload'
 import ImageCropper from './ImageCropper'
 
@@ -13,21 +14,20 @@ interface BannerImageEditorProps {
 interface BannerImages {
   desktop?: string
   mobile?: string
-  original?: string // Imagem original antes dos crops
+  original?: string
 }
 
-// Função para parsear a imagem (pode ser string simples ou JSON)
+// Parsear imagem (pode ser string simples ou JSON)
 function parseImageData(imageUrl: string): BannerImages {
   if (!imageUrl) return {}
   
-  // Tentar parsear como JSON primeiro
   try {
     const parsed = JSON.parse(imageUrl)
     if (typeof parsed === 'object' && (parsed.desktop || parsed.mobile || parsed.original)) {
       return parsed
     }
   } catch {
-    // Não é JSON, tratar como string simples (compatibilidade com banners antigos)
+    // Não é JSON, tratar como string simples
     return {
       desktop: imageUrl,
       mobile: imageUrl,
@@ -42,9 +42,9 @@ function parseImageData(imageUrl: string): BannerImages {
   }
 }
 
-// Função para serializar as imagens
+// Serializar imagens
 function serializeImageData(images: BannerImages): string {
-  // Se só tem uma imagem (original), retornar string simples para compatibilidade
+  // Se só tem original, retornar string simples
   if (images.original && !images.desktop && !images.mobile) {
     return images.original
   }
@@ -64,66 +64,82 @@ export default function BannerImageEditor({
 }: BannerImageEditorProps) {
   const [images, setImages] = useState<BannerImages>(() => parseImageData(imageUrl))
   const [showCropper, setShowCropper] = useState(false)
+  const [croppingMode, setCroppingMode] = useState<'desktop' | 'mobile' | null>(null)
   const [tempImageUrl, setTempImageUrl] = useState<string>('')
-  const [cropMode, setCropMode] = useState<'desktop' | 'mobile'>('desktop')
+  const isInternalUpdate = useRef(false)
   
-  // Aspect ratios: desktop é mais largo (2.4:1), mobile é mais vertical (1.2:1)
-  const desktopAspectRatio = 2.4
-  const mobileAspectRatio = 1.2
+  const desktopAspectRatio = 2.4 // 12:5
+  const mobileAspectRatio = 1.2 // 6:5
 
-  // Atualizar imagens quando imageUrl mudar
+  // Atualizar quando imageUrl mudar externamente
   useEffect(() => {
-    setImages(parseImageData(imageUrl))
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false
+      return
+    }
+    
+    if (imageUrl) {
+      const parsed = parseImageData(imageUrl)
+      setImages(parsed)
+    } else if (!imageUrl && !images.original) {
+      setImages({})
+    }
   }, [imageUrl])
 
   const handleImageSelect = (url: string) => {
-    if (url) {
-      // Quando uma nova imagem é selecionada, salvar como original e abrir editor para desktop
+    if (url && url.trim()) {
       const newImages = {
-        ...images,
-        original: url
+        original: url,
+        desktop: images.desktop,
+        mobile: images.mobile
       }
       setImages(newImages)
-      setTempImageUrl(url)
-      setCropMode('desktop')
-      setShowCropper(true)
+      isInternalUpdate.current = true
+      const serialized = serializeImageData(newImages)
+      onImageSelect(serialized)
     } else {
       setImages({})
+      isInternalUpdate.current = true
       onImageSelect('')
     }
   }
 
-  const handleCrop = (croppedUrl: string) => {
-    // Salvar o crop no modo atual (desktop ou mobile)
+  const handleCropComplete = (croppedUrl: string) => {
+    if (!croppingMode) return
+    
     const newImages = {
       ...images,
-      [cropMode]: croppedUrl
+      [croppingMode]: croppedUrl
     }
     setImages(newImages)
-    
-    // Serializar e enviar para o parent
+    isInternalUpdate.current = true
     const serialized = serializeImageData(newImages)
     onImageSelect(serialized)
     
     setShowCropper(false)
+    setCroppingMode(null)
+    setTempImageUrl('')
+  }
+
+  const handleStartCrop = (mode: 'desktop' | 'mobile') => {
+    const baseImage = images.original || images.desktop || images.mobile || imageUrl
+    if (baseImage) {
+      setTempImageUrl(baseImage)
+      setCroppingMode(mode)
+      setShowCropper(true)
+    }
   }
 
   const handleCancelCrop = () => {
     setShowCropper(false)
+    setCroppingMode(null)
+    setTempImageUrl('')
   }
 
-  const switchCropMode = (mode: 'desktop' | 'mobile') => {
-    setCropMode(mode)
-  }
-
-  const handleEditCrop = (mode: 'desktop' | 'mobile') => {
-    // Usar a imagem original ou a do modo oposto como base para editar
-    const baseImage = images.original || images.desktop || images.mobile || ''
-    if (baseImage) {
-      setTempImageUrl(baseImage)
-      setCropMode(mode)
-      setShowCropper(true)
-    }
+  const handleRemoveImage = () => {
+    setImages({})
+    isInternalUpdate.current = true
+    onImageSelect('')
   }
 
   const displayImage = images.original || imageUrl || ''
@@ -132,195 +148,231 @@ export default function BannerImageEditor({
 
   return (
     <>
-      <div className="space-y-3">
-        <ImageUpload
-          onImageSelect={handleImageSelect}
-          currentImage={displayImage}
-          placeholder={placeholder}
-        />
-        
-        {(displayImage || imageUrl) && (
+      <div className="space-y-4">
+        {/* Upload Section */}
+        {!displayImage ? (
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+            <ImageUpload
+              onImageSelect={handleImageSelect}
+              currentImage=""
+              placeholder={placeholder}
+            />
+          </div>
+        ) : (
           <div className="space-y-4">
-            <div className="text-xs text-gray-500 mb-2">Preview das imagens:</div>
-            
-            {/* Preview Desktop */}
-            <div className="border border-gray-300 rounded-lg p-3 bg-gray-50">
-              <div className="flex justify-between items-center mb-2">
-                <div className="text-xs font-medium text-gray-700">🖥️ Desktop (2.4:1)</div>
+            {/* Image Upload with Current Preview */}
+            <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div className="flex items-center justify-between mb-3">
+                <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Imagem Original
+                </label>
                 <button
                   type="button"
-                  onClick={() => handleEditCrop('desktop')}
-                  className="text-xs px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                  onClick={handleRemoveImage}
+                  className="text-xs text-red-600 hover:text-red-700 font-medium flex items-center gap-1"
                 >
-                  Editar
+                  <X className="h-3 w-3" />
+                  Remover
                 </button>
               </div>
-              <div className="relative w-full overflow-hidden rounded border border-gray-200 bg-white">
-                <img
-                  src={desktopImage}
-                  alt="Preview Desktop"
-                  className="w-full h-32 object-cover"
-                  style={{
-                    aspectRatio: desktopAspectRatio.toString(),
-                    objectPosition: 'center'
-                  }}
-                />
-              </div>
-              {!images.desktop && (
-                <p className="text-xs text-yellow-600 mt-1">⚠️ Crop não configurado - usando imagem original</p>
+              <ImageUpload
+                onImageSelect={handleImageSelect}
+                currentImage={displayImage}
+                placeholder="Trocar imagem"
+              />
+              {displayImage && (
+                <div className="mt-3 rounded-lg overflow-hidden border border-gray-300">
+                  <img
+                    src={displayImage}
+                    alt="Original"
+                    className="w-full h-auto max-h-40 object-contain bg-white"
+                  />
+                </div>
               )}
             </div>
 
-            {/* Preview Mobile */}
-            <div className="border-2 border-gray-300 rounded-lg p-4 bg-gray-50">
-              <div className="flex justify-between items-center mb-3">
-                <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-                  <span>📱</span>
-                  <span>Preview Mobile (1.2:1)</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleEditCrop('mobile')}
-                  className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-medium shadow-sm"
-                >
-                  Editar Crop
-                </button>
-              </div>
-              {/* Simulação de celular */}
-              <div className="relative mx-auto bg-gray-800 rounded-lg p-2 shadow-lg" style={{ maxWidth: '280px' }}>
-                <div className="bg-white rounded overflow-hidden">
-                  <div className="relative w-full overflow-hidden" style={{ aspectRatio: mobileAspectRatio.toString() }}>
-                    <img
-                      src={mobileImage}
-                      alt="Preview Mobile"
-                      className="w-full h-full object-cover"
-                    />
+            {/* Desktop and Mobile Previews */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Desktop Preview */}
+              <div className="border-2 border-gray-200 rounded-lg p-4 bg-white">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Monitor className="h-5 w-5 text-blue-600" />
+                    <span className="font-semibold text-gray-800">Desktop</span>
+                    <span className="text-xs text-gray-500">(2.4:1)</span>
                   </div>
-                  {/* Simulação de botão CTA no mobile */}
-                  <div className="p-3 bg-white">
-                    <div className="h-8 bg-gray-200 rounded animate-pulse"></div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleStartCrop('desktop')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs rounded-md hover:bg-blue-700 active:bg-blue-800 transition-colors font-medium shadow-sm"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    {images.desktop ? 'Editar' : 'Configurar'}
+                  </button>
+                </div>
+                
+                <div className="relative bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-300">
+                  {desktopImage ? (
+                    <>
+                      <img
+                        src={desktopImage}
+                        alt="Desktop Preview"
+                        className="w-full object-cover"
+                        style={{
+                          aspectRatio: desktopAspectRatio.toString(),
+                          minHeight: '120px'
+                        }}
+                        draggable={false}
+                      />
+                      {!images.desktop && (
+                        <div className="absolute top-2 right-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Não configurado
+                        </div>
+                      )}
+                      {images.desktop && (
+                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                          <Check className="h-3 w-3" />
+                          Configurado
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center p-8 text-gray-400" style={{ aspectRatio: desktopAspectRatio.toString(), minHeight: '120px' }}>
+                      <div className="text-center">
+                        <Monitor className="h-8 w-8 mx-auto mb-2" />
+                        <p className="text-xs">Sem imagem</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-              {!images.mobile && (
-                <p className="text-xs text-yellow-600 mt-2 text-center">⚠️ Crop não configurado - usando imagem original</p>
-              )}
+
+              {/* Mobile Preview */}
+              <div className="border-2 border-gray-200 rounded-lg p-4 bg-white">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="h-5 w-5 text-purple-600" />
+                    <span className="font-semibold text-gray-800">Mobile</span>
+                    <span className="text-xs text-gray-500">(1.2:1)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleStartCrop('mobile')}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 text-white text-xs rounded-md hover:bg-purple-700 active:bg-purple-800 transition-colors font-medium shadow-sm"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    {images.mobile ? 'Editar' : 'Configurar'}
+                  </button>
+                </div>
+                
+                <div className="relative bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-300">
+                  {mobileImage ? (
+                    <>
+                      <img
+                        src={mobileImage}
+                        alt="Mobile Preview"
+                        className="w-full object-cover"
+                        style={{
+                          aspectRatio: mobileAspectRatio.toString(),
+                          minHeight: '120px'
+                        }}
+                        draggable={false}
+                      />
+                      {!images.mobile && (
+                        <div className="absolute top-2 right-2 bg-yellow-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          Não configurado
+                        </div>
+                      )}
+                      {images.mobile && (
+                        <div className="absolute top-2 right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                          <Check className="h-3 w-3" />
+                          Configurado
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex items-center justify-center p-8 text-gray-400" style={{ aspectRatio: mobileAspectRatio.toString(), minHeight: '120px' }}>
+                      <div className="text-center">
+                        <Smartphone className="h-8 w-8 mx-auto mb-2" />
+                        <p className="text-xs">Sem imagem</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
+
+            {/* Info Message */}
+            {(!images.desktop || !images.mobile) && displayImage && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-blue-800">
+                    <p className="font-semibold mb-1">💡 Dica:</p>
+                    <p>Configure os enquadramentos separados para desktop e mobile para garantir a melhor exibição em cada dispositivo. Se não configurar, a imagem original será usada automaticamente.</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {showCropper && tempImageUrl && (
-        <BannerCropperModal
-          imageUrl={tempImageUrl}
-          cropMode={cropMode}
-          onCropModeChange={switchCropMode}
-          onCrop={handleCrop}
-          onCancel={handleCancelCrop}
-          desktopAspectRatio={desktopAspectRatio}
-          mobileAspectRatio={mobileAspectRatio}
-        />
+      {/* Crop Modal */}
+      {showCropper && tempImageUrl && croppingMode && (
+        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b flex-shrink-0 bg-gradient-to-r from-blue-600 to-purple-600">
+              <div className="flex items-center gap-3">
+                {croppingMode === 'desktop' ? (
+                  <Monitor className="h-5 w-5 text-white" />
+                ) : (
+                  <Smartphone className="h-5 w-5 text-white" />
+                )}
+                <h3 className="text-lg font-bold text-white">
+                  Configurar Enquadramento - {croppingMode === 'desktop' ? 'Desktop' : 'Mobile'}
+                </h3>
+                <span className="text-sm text-white/90">
+                  ({croppingMode === 'desktop' ? '2.4:1' : '1.2:1'})
+                </span>
+              </div>
+              <button
+                onClick={handleCancelCrop}
+                className="text-white/90 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/20"
+                type="button"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            {/* Info Bar */}
+            <div className="p-3 bg-blue-50 border-b flex-shrink-0">
+              <p className="text-sm text-gray-700 text-center">
+                <span className="font-semibold">💡</span> Ajuste o zoom e posição da imagem para o melhor enquadramento. 
+                O retângulo mostra como será exibido no {croppingMode === 'desktop' ? 'desktop' : 'mobile'}.
+              </p>
+            </div>
+
+            {/* Cropper */}
+            <div 
+              className="flex-1 overflow-hidden relative bg-white"
+              style={{ touchAction: 'none', minHeight: '500px' }}
+            >
+              <ImageCropper
+                imageUrl={tempImageUrl}
+                onCrop={handleCropComplete}
+                onCancel={handleCancelCrop}
+                aspectRatio={croppingMode === 'desktop' ? desktopAspectRatio : mobileAspectRatio}
+                noModal={true}
+              />
+            </div>
+          </div>
+        </div>
       )}
     </>
   )
 }
-
-// Componente modal separado para o cropper de banner
-function BannerCropperModal({
-  imageUrl,
-  cropMode,
-  onCropModeChange,
-  onCrop,
-  onCancel,
-  desktopAspectRatio,
-  mobileAspectRatio
-}: {
-  imageUrl: string
-  cropMode: 'desktop' | 'mobile'
-  onCropModeChange: (mode: 'desktop' | 'mobile') => void
-  onCrop: (url: string) => void
-  onCancel: () => void
-  desktopAspectRatio: number
-  mobileAspectRatio: number
-}) {
-  const [currentMode, setCurrentMode] = useState(cropMode)
-  const [key, setKey] = useState(0) // Key para forçar remontagem do ImageCropper
-  
-  const handleModeChange = (mode: 'desktop' | 'mobile') => {
-    setCurrentMode(mode)
-    onCropModeChange(mode)
-    setKey(prev => prev + 1) // Força remontagem do cropper com novo aspect ratio
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] flex flex-col">
-        <div className="flex justify-between items-center p-4 border-b flex-shrink-0">
-          <h3 className="text-lg font-semibold text-gray-900">Editar Enquadramento do Banner</h3>
-          <button
-            onClick={onCancel}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            type="button"
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Seletor de modo */}
-        <div className="p-4 border-b bg-gray-50 flex-shrink-0">
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleModeChange('desktop')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                currentMode === 'desktop'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-              type="button"
-            >
-              🖥️ Desktop (2.4:1)
-            </button>
-            <button
-              onClick={() => handleModeChange('mobile')}
-              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                currentMode === 'mobile'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-              }`}
-              type="button"
-            >
-              📱 Mobile (1.2:1)
-            </button>
-          </div>
-          <p className="mt-2 text-xs text-gray-600 text-center">
-            Edite o enquadramento separadamente para cada dispositivo. A imagem será otimizada para o formato selecionado.
-          </p>
-        </div>
-
-        {/* Cropper com aspect ratio baseado no modo */}
-        <div className="flex-1 overflow-hidden relative min-h-[500px]">
-          <ImageCropper
-            key={key}
-            imageUrl={imageUrl}
-            onCrop={(croppedUrl) => {
-              onCrop(croppedUrl)
-              // Não fechar - permitir continuar editando
-              const nextMode = currentMode === 'desktop' ? 'mobile' : 'desktop'
-              // Perguntar se quer continuar editando o outro modo
-              const continueEditing = window.confirm(`Crop ${currentMode === 'desktop' ? 'desktop' : 'mobile'} salvo! Deseja editar o modo ${nextMode} agora?`)
-              if (!continueEditing) {
-                onCancel()
-              } else {
-                handleModeChange(nextMode)
-              }
-            }}
-            onCancel={onCancel}
-            aspectRatio={currentMode === 'desktop' ? desktopAspectRatio : mobileAspectRatio}
-            noModal={true}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
-

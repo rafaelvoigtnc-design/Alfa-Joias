@@ -19,7 +19,8 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 }) // Posição inicial da imagem
+  const [mouseStart, setMouseStart] = useState({ x: 0, y: 0 }) // Posição inicial do mouse/touch
   const [cropWidth, setCropWidth] = useState(400)
   const [cropHeight, setCropHeight] = useState(400)
 
@@ -219,6 +220,8 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     const canvas = canvasRef.current
     if (!canvas) return
     
@@ -232,15 +235,24 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     
     if (x >= cropX && x <= cropX + cropWidth && y >= cropY && y <= cropY + cropHeight) {
       setIsDragging(true)
-      setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y })
+      // Guardar posição inicial da imagem
+      setDragStart({ x: position.x, y: position.y })
+      // Guardar posição inicial do mouse
+      setMouseStart({ x: e.clientX, y: e.clientY })
     }
   }
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && imageRef.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      // Calcular diferença do movimento do mouse
+      const deltaX = e.clientX - mouseStart.x
+      const deltaY = e.clientY - mouseStart.y
+      // Nova posição = posição inicial + diferença do movimento
       const newPosition = {
-        x: e.clientX - dragStart.x,
-        y: e.clientY - dragStart.y
+        x: dragStart.x + deltaX,
+        y: dragStart.y + deltaY
       }
       
       // Aplicar restrições de posição
@@ -249,7 +261,62 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
     }
   }
 
-  const handleMouseUp = () => {
+  const handleMouseUp = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    setIsDragging(false)
+  }
+
+  // Handlers para touch (mobile)
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const canvas = canvasRef.current
+    if (!canvas || e.touches.length !== 1) return
+    
+    const rect = canvas.getBoundingClientRect()
+    const touch = e.touches[0]
+    const x = touch.clientX - rect.left
+    const y = touch.clientY - rect.top
+    
+    // Verificar se o toque está dentro da área de crop
+    const cropX = (canvas.width - cropWidth) / 2
+    const cropY = (canvas.height - cropHeight) / 2
+    
+    if (x >= cropX && x <= cropX + cropWidth && y >= cropY && y <= cropY + cropHeight) {
+      setIsDragging(true)
+      // Guardar posição inicial da imagem
+      setDragStart({ x: position.x, y: position.y })
+      // Guardar posição inicial do touch
+      setMouseStart({ x: touch.clientX, y: touch.clientY })
+    }
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !imageRef.current || e.touches.length !== 1) return
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const touch = e.touches[0]
+    // Calcular diferença do movimento do touch
+    const deltaX = touch.clientX - mouseStart.x
+    const deltaY = touch.clientY - mouseStart.y
+    // Nova posição = posição inicial + diferença do movimento
+    const newPosition = {
+      x: dragStart.x + deltaX,
+      y: dragStart.y + deltaY
+    }
+    
+    // Aplicar restrições de posição
+    const constrained = constrainPosition(scale, newPosition)
+    setPosition(constrained)
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
     setIsDragging(false)
   }
 
@@ -323,12 +390,19 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onWheel={handleWheel}
-        style={{ maxHeight: noModal ? '100%' : 'calc(100vh - 400px)' }}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{ 
+          maxHeight: noModal ? '100%' : 'calc(100vh - 400px)',
+          touchAction: 'none'
+        }}
       >
         <canvas
           ref={canvasRef}
           className="border border-gray-300 bg-white shadow-lg cursor-move"
           onMouseDown={handleMouseDown}
+          onTouchStart={handleTouchStart}
+          style={{ touchAction: 'none' }}
         />
       </div>
 
