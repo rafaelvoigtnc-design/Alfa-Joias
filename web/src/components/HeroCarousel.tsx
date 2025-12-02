@@ -143,15 +143,32 @@ export default function HeroCarousel() {
   const minSwipeDistance = 50
 
   const onTouchStart = (e: React.TouchEvent) => {
+    // Ignorar se o toque foi em um botão
+    const target = e.target as HTMLElement
+    if (target.closest('button')) {
+      return
+    }
     setTouchEnd(null)
     setTouchStart(e.targetTouches[0].clientX)
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
+    // Ignorar se o toque foi em um botão
+    const target = e.target as HTMLElement
+    if (target.closest('button')) {
+      return
+    }
     setTouchEnd(e.targetTouches[0].clientX)
   }
 
-  const onTouchEnd = () => {
+  const onTouchEnd = (e?: React.TouchEvent) => {
+    // Ignorar se o toque foi em um botão
+    if (e) {
+      const target = e.target as HTMLElement
+      if (target.closest('button')) {
+        return
+      }
+    }
     if (!touchStart || !touchEnd) return
     const distance = touchStart - touchEnd
     const isLeftSwipe = distance > minSwipeDistance
@@ -241,8 +258,20 @@ export default function HeroCarousel() {
           <>
             {/* Botão Anterior */}
             <button
-              onClick={goToPrevSlide}
-              className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 z-10 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                goToPrevSlide()
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation()
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                goToPrevSlide()
+              }}
+              className="absolute left-1 sm:left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
               aria-label="Banner anterior"
               type="button"
             >
@@ -253,8 +282,20 @@ export default function HeroCarousel() {
 
             {/* Botão Próximo */}
             <button
-              onClick={goToNextSlide}
-              className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 z-10 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                goToNextSlide()
+              }}
+              onTouchStart={(e) => {
+                e.stopPropagation()
+              }}
+              onTouchEnd={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                goToNextSlide()
+              }}
+              className="absolute right-1 sm:right-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 backdrop-blur-sm rounded-full p-1.5 sm:p-2 transition-all duration-300 hover:scale-105 active:scale-95 touch-manipulation"
               aria-label="Próximo banner"
               type="button"
             >
