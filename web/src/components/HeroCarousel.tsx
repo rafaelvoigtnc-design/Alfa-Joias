@@ -274,8 +274,8 @@ export default function HeroCarousel() {
                 onClick={() => setCurrentSlide(index)}
                 className={`transition-all duration-300 rounded-full touch-manipulation ${
                   index === currentSlide 
-                    ? 'w-1.5 h-1.5 sm:w-2 sm:h-2 bg-white' 
-                    : 'w-1 h-1 sm:w-1.5 sm:h-1.5 bg-white/50 hover:bg-white/75'
+                    ? 'w-1.5 h-1.5 bg-white' 
+                    : 'w-1 h-1 bg-white/50 hover:bg-white/75'
                 }`}
                 aria-label={`Ir para slide ${index + 1}`}
                 type="button"
