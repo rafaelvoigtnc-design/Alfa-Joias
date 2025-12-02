@@ -267,15 +267,15 @@ export default function HeroCarousel() {
 
         {/* Indicadores de slide */}
         {activeBanners.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-1.5">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10 flex gap-1">
             {activeBanners.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
                 className={`transition-all duration-300 rounded-full touch-manipulation ${
                   index === currentSlide 
-                    ? 'w-1.5 h-1.5 bg-white' 
-                    : 'w-1 h-1 bg-white/50 hover:bg-white/75'
+                    ? 'w-1 h-1 bg-white' 
+                    : 'w-0.5 h-0.5 bg-white/50 hover:bg-white/75'
                 }`}
                 aria-label={`Ir para slide ${index + 1}`}
                 type="button"

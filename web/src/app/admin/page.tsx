@@ -106,6 +106,7 @@ export default function Admin() {
   const [selectedBrand, setSelectedBrand] = useState('')
   const [productImages, setProductImages] = useState<string[]>([])
   const [coverImageIndex, setCoverImageIndex] = useState(0)
+  const [additionalImageEditorKey, setAdditionalImageEditorKey] = useState(0)
   const [selectedServiceIcon, setSelectedServiceIcon] = useState<string>('wrench')
   
   // Inicializar bannerImage quando editar banner
@@ -148,9 +149,11 @@ export default function Admin() {
       }
       setProductImages(allImages)
       setCoverImageIndex(0)
+      setAdditionalImageEditorKey(0)
     } else {
       setProductImages([])
       setCoverImageIndex(0)
+      setAdditionalImageEditorKey(0)
     }
   }, [editingProduct])
   
@@ -461,6 +464,8 @@ export default function Admin() {
       setSelectedBrand('')
       setProductImages([])
       setCoverImageIndex(0)
+      setAdditionalImageEditorKey(0)
+      setAdditionalImageEditorKey(0)
       
     } catch (error: any) {
       console.error('❌ Erro ao salvar produto no banco:', error)
@@ -2166,10 +2171,13 @@ export default function Admin() {
                         ))}
                         <div className="border-2 border-dashed border-gray-300 rounded-lg p-3">
                           <ImageEditor
+                            key={`additional-image-${additionalImageEditorKey}`}
                             imageUrl=""
                             onImageSelect={(imageUrl) => {
                               if (imageUrl && !productImages.includes(imageUrl)) {
                                 setProductImages([...productImages, imageUrl])
+                                // Resetar o ImageEditor forçando re-render com nova key
+                                setAdditionalImageEditorKey(prev => prev + 1)
                               }
                             }}
                             placeholder="Adicionar nova imagem adicional"
