@@ -7,9 +7,10 @@ interface ImageUploadProps {
   onImageSelect: (imageUrl: string) => void
   currentImage?: string
   placeholder?: string
+  showCameraButton?: boolean // Mostrar botão de tirar foto (apenas para produtos)
 }
 
-export default function ImageUpload({ onImageSelect, currentImage, placeholder = "Selecione uma imagem" }: ImageUploadProps) {
+export default function ImageUpload({ onImageSelect, currentImage, placeholder = "Selecione uma imagem", showCameraButton = false }: ImageUploadProps) {
   const [dragActive, setDragActive] = useState(false)
   const [preview, setPreview] = useState<string | null>(null)
 
@@ -78,6 +79,24 @@ export default function ImageUpload({ onImageSelect, currentImage, placeholder =
     if (e.target.files && e.target.files[0]) {
       handleFile(e.target.files[0])
     }
+  }
+
+  const handleCameraCapture = () => {
+    // Criar input com captura de câmera
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = 'image/*'
+    // Usar capture para abrir câmera diretamente no mobile
+    if ('capture' in input) {
+      (input as any).capture = 'environment' // Câmera traseira
+    }
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0]
+      if (file) {
+        handleFile(file)
+      }
+    }
+    input.click()
   }
 
   const removeImage = () => {
@@ -203,9 +222,23 @@ export default function ImageUpload({ onImageSelect, currentImage, placeholder =
               <p className="text-sm text-gray-600 mb-2">
                 {placeholder}
               </p>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-500 mb-3">
                 Arraste e solte uma imagem ou clique para selecionar
               </p>
+              {/* Botão para capturar foto no mobile - apenas para produtos */}
+              {showCameraButton && (
+                <button
+                  type="button"
+                  onClick={handleCameraCapture}
+                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Tirar Foto
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -49,6 +49,7 @@ export default function ImageEditor({
           onImageSelect={handleImageSelect}
           currentImage={imageUrl}
           placeholder={placeholder}
+          showCameraButton={true}
         />
         
         {imageUrl && (

@@ -33,6 +33,7 @@ export interface Product {
   price: string
   image: string
   description: string
+  additional_images?: string[]
   featured?: boolean
   on_sale?: boolean
   original_price?: string
@@ -40,6 +41,7 @@ export interface Product {
   sale_price?: string
   gender?: string
   model?: string
+  stock?: number
   created_at: string
   updated_at: string
 }

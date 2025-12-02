@@ -410,9 +410,12 @@ export default function Admin() {
       stock: stock,
     }
     
-    // Armazenar imagens adicionais em JSON na descrição ou não salvar por enquanto
-    // TODO: Adicionar coluna additional_images na tabela products no Supabase
-    // Por enquanto, não salvamos additionalImages para evitar erro
+    // Salvar imagens adicionais
+    if (additionalImages.length > 0) {
+      productData.additional_images = additionalImages
+    } else {
+      productData.additional_images = []
+    }
 
     // Padronização: calcular preço promocional se necessário
     if (productData.on_sale) {
