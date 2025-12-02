@@ -82,21 +82,25 @@ export default function ImageUpload({ onImageSelect, currentImage, placeholder =
   }
 
   const handleCameraCapture = () => {
-    // Criar input com captura de câmera
+    // Criar input com captura de câmera diretamente no HTML
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = 'image/*'
+    input.style.cssText = 'display: none; position: absolute; opacity: 0; pointer-events: none;'
+    
     // Usar capture para abrir câmera diretamente no mobile
     // Tentar diferentes formas de definir capture para compatibilidade
     try {
-      (input as any).setAttribute('capture', 'environment') // Câmera traseira
+      input.setAttribute('capture', 'environment') // Câmera traseira
     } catch (e) {
       try {
         (input as any).capture = 'environment'
       } catch (e2) {
         // Se não funcionar, continuar sem capture
+        console.warn('Não foi possível definir capture:', e2)
       }
     }
+    
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
@@ -104,17 +108,41 @@ export default function ImageUpload({ onImageSelect, currentImage, placeholder =
       }
       // Limpar o input para permitir selecionar a mesma foto novamente
       input.value = ''
+      // Remover do DOM
+      setTimeout(() => {
+        if (input.parentNode) {
+          input.parentNode.removeChild(input)
+        }
+      }, 100)
     }
-    // Adicionar ao DOM temporariamente para garantir que funcione
-    input.style.display = 'none'
+    
+    // Adicionar ao body
     document.body.appendChild(input)
-    input.click()
-    // Remover após um tempo
+    
+    // Trigger do click
+    try {
+      input.click()
+    } catch (err) {
+      console.error('Erro ao abrir câmera:', err)
+      // Fallback: tentar abrir normalmente
+      const fallbackInput = document.createElement('input')
+      fallbackInput.type = 'file'
+      fallbackInput.accept = 'image/*'
+      fallbackInput.onchange = (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0]
+        if (file) {
+          handleFile(file)
+        }
+      }
+      fallbackInput.click()
+    }
+    
+    // Remover após um tempo se ainda estiver lá
     setTimeout(() => {
       if (input.parentNode) {
         input.parentNode.removeChild(input)
       }
-    }, 1000)
+    }, 5000)
   }
 
   const removeImage = () => {
@@ -171,12 +199,15 @@ export default function ImageUpload({ onImageSelect, currentImage, placeholder =
         style={preview ? { pointerEvents: 'none' } : {}}
       >
         {!preview && (
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleFileInput}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          />
+          <>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileInput}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+              id={`file-input-${Math.random().toString(36).substr(2, 9)}`}
+            />
+          </>
         )}
         
         <div className="text-center">
@@ -243,20 +274,6 @@ export default function ImageUpload({ onImageSelect, currentImage, placeholder =
               <p className="text-xs text-gray-500 mb-3">
                 Arraste e solte uma imagem ou clique para selecionar
               </p>
-              {/* Botão para capturar foto no mobile - apenas para produtos */}
-              {showCameraButton && (
-                <button
-                  type="button"
-                  onClick={handleCameraCapture}
-                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors font-medium flex items-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Tirar Foto
-                </button>
-              )}
             </div>
           )}
         </div>
@@ -266,6 +283,27 @@ export default function ImageUpload({ onImageSelect, currentImage, placeholder =
         <div className="flex items-center space-x-2 text-sm text-gray-600">
           <ImageIcon className="h-4 w-4" />
           <span>Imagem selecionada</span>
+        </div>
+      )}
+
+      {/* Botão separado para capturar foto no mobile - apenas para produtos */}
+      {showCameraButton && !preview && (
+        <div className="mt-2">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleCameraCapture()
+            }}
+            className="w-full px-4 py-3 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 active:bg-green-800 transition-colors font-medium flex items-center justify-center gap-2 touch-manipulation"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span>Tirar Foto com Câmera</span>
+          </button>
         </div>
       )}
     </div>

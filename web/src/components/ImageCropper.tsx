@@ -153,23 +153,23 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   }
 
   const handleZoomIn = () => {
+    if (!imageRef.current) return
     setScale(prev => {
       const newScale = Math.min(prev + 0.1, 5)
-      // Aplicar constraints após atualizar a escala
-      setTimeout(() => {
-        setPosition(currentPos => constrainPosition(newScale, currentPos))
-      }, 0)
+      // Aplicar constraints imediatamente
+      const constrained = constrainPosition(newScale, position)
+      setPosition(constrained)
       return newScale
     })
   }
 
   const handleZoomOut = () => {
+    if (!imageRef.current) return
     setScale(prev => {
       const newScale = Math.max(prev - 0.1, 0.3)
-      // Aplicar constraints após atualizar a escala
-      setTimeout(() => {
-        setPosition(currentPos => constrainPosition(newScale, currentPos))
-      }, 0)
+      // Aplicar constraints imediatamente
+      const constrained = constrainPosition(newScale, position)
+      setPosition(constrained)
       return newScale
     })
   }
@@ -277,10 +277,11 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
 
   // Handlers para touch (mobile)
   const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
     const canvas = canvasRef.current
     if (!canvas || e.touches.length !== 1) return
+    
+    e.preventDefault()
+    e.stopPropagation()
     
     const rect = canvas.getBoundingClientRect()
     const touch = e.touches[0]
@@ -301,7 +302,13 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   }
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || !imageRef.current || e.touches.length !== 1) return
+    if (!isDragging || !imageRef.current || e.touches.length !== 1) {
+      if (isDragging) {
+        setIsDragging(false)
+      }
+      return
+    }
+    
     e.preventDefault()
     e.stopPropagation()
     
@@ -321,8 +328,10 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
   }
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
+    if (isDragging) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
     setIsDragging(false)
   }
 
@@ -393,17 +402,23 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
         onWheel={handleWheel}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         style={{ 
           maxHeight: noModal ? '100%' : 'calc(100vh - 400px)',
-          touchAction: 'none'
+          touchAction: 'manipulation'
         }}
       >
         <canvas
           ref={canvasRef}
-          className="border border-gray-300 bg-white shadow-lg cursor-move"
+          className="border border-gray-300 bg-white shadow-lg cursor-move select-none"
           onMouseDown={handleMouseDown}
           onTouchStart={handleTouchStart}
-          style={{ touchAction: 'none' }}
+          style={{ 
+            touchAction: 'none',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+            WebkitTouchCallout: 'none'
+          }}
         />
       </div>
 
@@ -416,24 +431,51 @@ export default function ImageCropper({ imageUrl, onCrop, onCancel, aspectRatio =
         
         <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
           <button
-            onClick={handleZoomOut}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleZoomOut()
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleZoomOut()
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
             type="button"
           >
             <ZoomOut className="h-4 w-4" />
             <span className="text-sm">Diminuir</span>
           </button>
           <button
-            onClick={handleZoomIn}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleZoomIn()
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleZoomIn()
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation"
             type="button"
           >
             <ZoomIn className="h-4 w-4" />
             <span className="text-sm">Aumentar</span>
           </button>
           <button
-            onClick={handleResetZoom}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-300 rounded-md hover:bg-blue-50 transition-colors text-blue-600"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleResetZoom()
+            }}
+            onTouchStart={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              handleResetZoom()
+            }}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-300 rounded-md hover:bg-blue-50 active:bg-blue-100 transition-colors text-blue-600 touch-manipulation"
             type="button"
           >
             <ZoomOut className="h-4 w-4" />
