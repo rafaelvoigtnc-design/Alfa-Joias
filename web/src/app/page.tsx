@@ -17,6 +17,8 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       <HeroCarousel />
+      {/* Faixa vermelha abaixo do banner */}
+      <div className="w-full bg-red-600 h-2"></div>
       <Categories />
       <FeaturedProducts />
       <Promotions />
