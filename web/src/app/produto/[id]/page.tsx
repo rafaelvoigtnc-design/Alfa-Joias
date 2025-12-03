@@ -235,7 +235,7 @@ export default function ProductPage() {
           {/* Images */}
           <div>
             {/* Imagem principal com navegação */}
-            <div className="relative bg-white rounded-xl overflow-hidden mb-4 group w-full sm:max-w-md lg:max-w-full mx-auto" style={{ 
+            <div className="relative bg-white rounded-xl overflow-hidden mb-4 group w-full sm:max-w-md lg:max-w-lg mx-auto" style={{ 
               aspectRatio: '1 / 1'
             }}>
               {(() => {

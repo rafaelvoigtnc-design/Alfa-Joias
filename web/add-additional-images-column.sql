@@ -21,3 +21,4 @@ END $$;
 -- Criar índice para melhor performance nas consultas
 CREATE INDEX IF NOT EXISTS idx_products_additional_images ON products USING GIN (additional_images) WHERE additional_images IS NOT NULL;
 
+
