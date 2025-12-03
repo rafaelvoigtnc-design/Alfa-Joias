@@ -255,20 +255,25 @@ export default function ProductPage() {
                 
                 return (
                   <>
-                    <img
-                      src={allImages[selectedImage] || allImages[0] || '/placeholder.jpg'}
-                      alt={product.name}
-                      className="w-full h-full object-contain bg-white"
-                      style={{ 
-                        aspectRatio: '1 / 1',
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'contain'
-                      }}
-                      onError={(e) => {
-                        e.currentTarget.src = 'https://via.placeholder.com/600x600?text=Sem+Imagem'
-                      }}
-                    />
+                    <div className="relative w-full h-full">
+                      {allImages.map((image, index) => (
+                        <img
+                          key={index}
+                          src={image || '/placeholder.jpg'}
+                          alt={product.name}
+                          className={`absolute inset-0 w-full h-full object-contain bg-white transition-opacity duration-500 ease-in-out ${
+                            selectedImage === index ? 'opacity-100' : 'opacity-0'
+                          }`}
+                          style={{ 
+                            aspectRatio: '1 / 1',
+                            objectFit: 'contain'
+                          }}
+                          onError={(e) => {
+                            e.currentTarget.src = 'https://via.placeholder.com/600x600?text=Sem+Imagem'
+                          }}
+                        />
+                      ))}
+                    </div>
                     
                     {/* Botões de navegação (anterior/próximo) - sempre visíveis no mobile */}
                     {allImages.length > 1 && (

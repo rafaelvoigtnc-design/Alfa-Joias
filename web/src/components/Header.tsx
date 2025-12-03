@@ -35,7 +35,7 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-        <div className="relative flex justify-between items-center h-14 sm:h-16 py-0">
+        <div className="relative flex justify-between items-center h-14 sm:h-16">
           {/* Logo - menor no mobile */}
           <Link href="/" className="flex items-center space-x-1 sm:space-x-2 no-underline hover:no-underline z-10">
             <span className="text-lg sm:text-xl font-semibold tracking-tight text-gray-800">
@@ -44,7 +44,7 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation - Centralizado */}
-          <nav className="hidden lg:flex items-center space-x-6 xl:space-x-8 absolute left-1/2 transform -translate-x-1/2">
+          <nav className="hidden lg:flex items-center justify-center space-x-6 xl:space-x-8 absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
             {navigation.map((item) => (
               <Link
                 key={item.name}
