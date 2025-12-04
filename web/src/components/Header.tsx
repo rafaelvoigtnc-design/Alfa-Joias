@@ -35,16 +35,18 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-        <div className="relative flex justify-between items-center h-14 sm:h-16">
+        <div className="grid grid-cols-3 items-center h-14 sm:h-16">
           {/* Logo - menor no mobile */}
-          <Link href="/" className="flex items-center space-x-1 sm:space-x-2 no-underline hover:no-underline z-10">
-            <span className="text-lg sm:text-xl font-semibold tracking-tight text-gray-800">
-              Alf<span className="alpha-symbol">α</span> Jóias
-            </span>
-          </Link>
+          <div className="flex items-center">
+            <Link href="/" className="flex items-center space-x-1 sm:space-x-2 no-underline hover:no-underline">
+              <span className="text-lg sm:text-xl font-semibold tracking-tight text-gray-800">
+                Alf<span className="alpha-symbol">α</span> Jóias
+              </span>
+            </Link>
+          </div>
 
           {/* Desktop Navigation - Centralizado */}
-          <nav className="hidden lg:flex items-center justify-center space-x-6 xl:space-x-8 absolute left-1/2 transform -translate-x-1/2 h-full">
+          <nav className="hidden lg:flex items-center justify-center space-x-6 xl:space-x-8">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -64,7 +66,7 @@ export default function Header() {
           </nav>
 
           {/* Actions - sempre visível */}
-          <div className="flex items-center space-x-2 sm:space-x-3 z-10">
+          <div className="flex items-center justify-end space-x-2 sm:space-x-3">
             {/* Cart - sempre visível no mobile */}
             <Link href="/carrinho" className="relative flex items-center justify-center p-1.5 sm:p-2 text-gray-700 hover:text-gray-800 smooth-hover transition-all duration-300 active:scale-95">
               <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6" />
