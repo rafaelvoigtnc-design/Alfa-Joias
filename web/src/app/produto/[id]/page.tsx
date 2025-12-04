@@ -403,19 +403,19 @@ export default function ProductPage() {
               {(product.onSale || product.on_sale) ? (
                 <div className="flex flex-col">
                   <div className="flex items-center space-x-3">
-                    <span className="text-lg text-gray-500 line-through">
+                    <span className="text-xl sm:text-lg text-gray-500 line-through">
                       R$ {formatPriceForDisplay(product.originalPrice || product.original_price || product.price)}
                     </span>
                     <span className="bg-red-500 text-white text-sm px-3 py-1 rounded-full font-bold">
                       -{product.discountPercentage || product.discount_percentage || 0}%
                     </span>
                   </div>
-                  <span className="text-3xl font-bold text-red-600" style={{whiteSpace: 'nowrap'}}>
+                  <span className="text-5xl sm:text-3xl font-bold text-red-600" style={{whiteSpace: 'nowrap'}}>
                     R$ {formatPriceForDisplay(product.salePrice || product.sale_price || product.price)}
                   </span>
                 </div>
               ) : (
-                <span className="text-3xl font-bold text-gray-600" style={{whiteSpace: 'nowrap'}}>
+                <span className="text-5xl sm:text-3xl font-bold text-gray-600" style={{whiteSpace: 'nowrap'}}>
                   R$ {formatPriceForDisplay(product.price)}
                 </span>
               )}
