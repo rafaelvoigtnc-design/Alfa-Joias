@@ -396,10 +396,15 @@ export default function Admin() {
     }
     
     // Preparar dados do produto (remover additionalImages se não existe no banco)
+    // Garantir que a marca seja capturada corretamente (priorizar selectedBrand que é atualizado pelo BrandSelector)
+    const brandValue = (selectedBrand || formData.get('brand') as string || editingProduct?.brand || '').trim()
+    
+    console.log('🔍 Debug marca:', { selectedBrand, formBrand: formData.get('brand'), editingBrand: editingProduct?.brand, finalBrand: brandValue })
+    
     const productData: any = {
       name: formData.get('name') as string,
       category: formData.get('category') as string,
-      brand: (selectedBrand || formData.get('brand') as string || '').trim() || '',
+      brand: brandValue || '',
       price: normalizePrice(formData.get('price') as string),
       image: coverImage,
       description: formData.get('description') as string,
@@ -1081,7 +1086,11 @@ export default function Admin() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Produtos</h2>
                 <button
-                  onClick={() => setShowProductForm(true)}
+                  onClick={() => {
+                    setEditingProduct(null)
+                    setSelectedBrand('')
+                    setShowProductForm(true)
+                  }}
                   className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -1103,7 +1112,11 @@ export default function Admin() {
                     Comece adicionando seu primeiro produto no banco de dados clicando no botão abaixo.
                   </p>
                   <button
-                    onClick={() => setShowProductForm(true)}
+                    onClick={() => {
+                      setEditingProduct(null)
+                      setSelectedBrand('')
+                      setShowProductForm(true)
+                    }}
                     className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                   >
                     <Plus className="h-5 w-5 mr-2" />
@@ -2001,11 +2014,13 @@ export default function Admin() {
                   <label className="block text-sm font-medium text-gray-700">Marca</label>
                   <BrandSelector
                     value={editingProduct?.brand || selectedBrand}
-                    onChange={setSelectedBrand}
+                    onChange={(brandName) => {
+                      setSelectedBrand(brandName)
+                    }}
                     brands={brands}
                     placeholder="Selecione uma marca (opcional)"
                   />
-                  <input type="hidden" name="brand" value={selectedBrand} />
+                  <input type="hidden" name="brand" value={selectedBrand || editingProduct?.brand || ''} />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Preço</label>

@@ -1,0 +1,5 @@
+name,category,brand,price,image,description,stock,gender,model,featured,on_sale,original_price,discount_percentage,sale_price
+Relógio Rolex Submariner,Relógios,Rolex,45000,https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop,Relógio submariner original Rolex com resistência à água até 300m,3,Masculino,Submariner,true,false,,,
+Relógio Omega Seamaster,Relógios,Omega,25000,https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop,Relógio Omega Seamaster elegante e sofisticado,5,Masculino,Seamaster,false,true,30000,17,25000
+Relógio Feminino Cartier,Relógios,Cartier,18000,https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=800&fit=crop,Relógio feminino Cartier com design clássico,8,Feminino,Cartier Classic,true,false,,,
+
