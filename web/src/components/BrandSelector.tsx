@@ -80,12 +80,14 @@ export default function BrandSelector({
               <img 
                 src={selectedBrand.image} 
                 alt={`${selectedBrand.name} marca`}
-                className="w-5 h-5 object-contain"
+                className="w-5 h-5"
                 style={{ 
                   backgroundColor: 'transparent',
                   background: 'transparent',
+                  backgroundImage: 'none',
                   filter: 'grayscale(100%)',
-                  mixBlendMode: 'normal'
+                  objectFit: 'contain',
+                  display: 'block'
                 }}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none'
@@ -143,12 +145,14 @@ export default function BrandSelector({
                     <img 
                       src={brand.image} 
                       alt={`${brand.name} marca`}
-                      className="w-5 h-5 object-contain"
+                      className="w-5 h-5"
                       style={{ 
                         backgroundColor: 'transparent',
                         background: 'transparent',
+                        backgroundImage: 'none',
                         filter: 'grayscale(100%)',
-                        mixBlendMode: 'normal'
+                        objectFit: 'contain',
+                        display: 'block'
                       }}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'
