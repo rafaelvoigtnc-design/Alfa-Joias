@@ -113,7 +113,8 @@ export default function Brands() {
                         <img 
                           src={brand.image} 
                           alt={brand.name}
-                          className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain mx-auto rounded-lg"
+                          className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain mx-auto"
+                          style={{ background: 'transparent' }}
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'
                           }}

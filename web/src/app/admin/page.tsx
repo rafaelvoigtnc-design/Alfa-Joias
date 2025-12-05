@@ -1540,7 +1540,12 @@ export default function Admin() {
                 {brands.map((brand) => (
                   <div key={brand.id} className="border border-gray-200 rounded-lg p-4">
                     {brand.image && (
-                      <img src={brand.image} alt={brand.name} className="w-full h-32 object-contain mb-4" />
+                      <img 
+                        src={brand.image} 
+                        alt={brand.name} 
+                        className="w-full h-32 object-contain mb-4" 
+                        style={{ background: 'transparent' }}
+                      />
                     )}
                     <h3 className="font-semibold text-gray-900 mb-2">{brand.name}</h3>
                     <div className="flex space-x-2">
