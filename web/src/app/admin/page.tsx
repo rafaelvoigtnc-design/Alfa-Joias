@@ -1564,7 +1564,11 @@ export default function Admin() {
                         src={brand.image} 
                         alt={brand.name} 
                         className="w-full h-32 object-contain mb-4" 
-                        style={{ background: 'transparent' }}
+                        style={{ 
+                          background: 'transparent',
+                          filter: 'grayscale(100%)',
+                          opacity: 0.8
+                        }}
                       />
                     )}
                     <h3 className="font-semibold text-gray-900 mb-2">{brand.name}</h3>

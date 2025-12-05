@@ -81,7 +81,11 @@ export default function BrandSelector({
                 src={selectedBrand.image} 
                 alt={selectedBrand.name}
                 className="w-5 h-5 object-contain"
-                style={{ background: 'transparent' }}
+                style={{ 
+                  background: 'transparent',
+                  filter: 'grayscale(100%)',
+                  opacity: 0.8
+                }}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none'
                 }}
@@ -139,7 +143,11 @@ export default function BrandSelector({
                       src={brand.image} 
                       alt={brand.name}
                       className="w-5 h-5 object-contain"
-                      style={{ background: 'transparent' }}
+                      style={{ 
+                        background: 'transparent',
+                        filter: 'grayscale(100%)',
+                        mixBlendMode: 'multiply'
+                      }}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'
                       }}
