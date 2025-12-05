@@ -109,15 +109,16 @@ export default function Brands() {
                     style={{ width: `${100 / itemsPerView}%` }}
                   >
                     <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 text-center hover:bg-gray-50 transition-all duration-300 md:hover:shadow-lg md:hover:-translate-y-1">
-                      <div className="mb-2 sm:mb-3">
+                      <div className="mb-2 sm:mb-3 brand-image-container" style={{ backgroundColor: 'transparent', background: 'transparent' }}>
                         <img 
                           src={brand.image} 
-                          alt={brand.name}
+                          alt={`${brand.name} marca`}
                           className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 object-contain mx-auto"
                           style={{ 
+                            backgroundColor: 'transparent',
                             background: 'transparent',
                             filter: 'grayscale(100%)',
-                            opacity: 0.8
+                            mixBlendMode: 'normal'
                           }}
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'

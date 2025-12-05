@@ -46,6 +46,23 @@ a:hover, a:focus {
 @tailwind components;
 @tailwind utilities;
 
+/* Estilos para imagens de marca - garantir transparência PNG */
+img[alt*="marca"],
+img[alt*="Marca"],
+img[alt*="brand"],
+img[alt*="Brand"] {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+/* Garantir que containers de imagens de marca também sejam transparentes */
+.brand-image-container,
+[class*="brand"] img {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
 /* Bootstrap CSS - Carregado via CDN no layout.tsx */
 /* Não duplicar estilos aqui para evitar conflitos */
 

@@ -79,12 +79,13 @@ export default function BrandSelector({
             {selectedBrand && selectedBrand.image && (
               <img 
                 src={selectedBrand.image} 
-                alt={selectedBrand.name}
+                alt={`${selectedBrand.name} marca`}
                 className="w-5 h-5 object-contain"
                 style={{ 
+                  backgroundColor: 'transparent',
                   background: 'transparent',
                   filter: 'grayscale(100%)',
-                  opacity: 0.8
+                  mixBlendMode: 'normal'
                 }}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none'
@@ -141,12 +142,13 @@ export default function BrandSelector({
                   {brand.image && (
                     <img 
                       src={brand.image} 
-                      alt={brand.name}
+                      alt={`${brand.name} marca`}
                       className="w-5 h-5 object-contain"
                       style={{ 
+                        backgroundColor: 'transparent',
                         background: 'transparent',
                         filter: 'grayscale(100%)',
-                        mixBlendMode: 'multiply'
+                        mixBlendMode: 'normal'
                       }}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'
