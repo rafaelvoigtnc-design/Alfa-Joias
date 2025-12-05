@@ -410,12 +410,12 @@ export default function ProductPage() {
                       -{product.discountPercentage || product.discount_percentage || 0}%
                     </span>
                   </div>
-                  <span className="text-8xl sm:text-3xl font-bold text-red-600" style={{whiteSpace: 'nowrap'}}>
+                  <span className="text-[5rem] sm:text-3xl font-bold text-red-600 leading-none" style={{whiteSpace: 'nowrap', fontSize: '5rem'}}>
                     R$ {formatPriceForDisplay(product.salePrice || product.sale_price || product.price)}
                   </span>
                 </div>
               ) : (
-                <span className="text-8xl sm:text-3xl font-bold text-gray-600" style={{whiteSpace: 'nowrap'}}>
+                <span className="text-[5rem] sm:text-3xl font-bold text-gray-600 leading-none" style={{whiteSpace: 'nowrap', fontSize: '5rem'}}>
                   R$ {formatPriceForDisplay(product.price)}
                 </span>
               )}
