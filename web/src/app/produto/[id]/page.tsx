@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Phone, Eye, Clock, Gem, Share2, ShoppingCart } from 'lucide-react'
 import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
@@ -35,6 +35,7 @@ interface Product {
 
 export default function ProductPage() {
   const params = useParams()
+  const router = useRouter()
   const { addToCart, isLoggedIn } = useUnifiedAuth()
   const [product, setProduct] = useState<Product | null>(null)
   const [loading, setLoading] = useState(true)
@@ -222,6 +223,16 @@ export default function ProductPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {/* Botão Voltar */}
+        <button
+          onClick={() => router.back()}
+          className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-4 transition-colors"
+          type="button"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span>Voltar</span>
+        </button>
+        
         {/* Breadcrumb */}
         <div className="flex items-center space-x-2 text-sm text-gray-600 mb-8">
           <Link href="/" className="hover:text-gray-600">Início</Link>
@@ -357,7 +368,7 @@ export default function ProductPage() {
               <span className="text-sm text-gray-600">{product.category}</span>
             </div>
 
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">
+            <h1 className="text-4xl sm:text-3xl font-bold text-gray-900 mb-4">
               {product.name}
             </h1>
 
@@ -410,12 +421,12 @@ export default function ProductPage() {
                       -{product.discountPercentage || product.discount_percentage || 0}%
                     </span>
                   </div>
-                  <span className="text-[5rem] sm:text-3xl font-bold text-red-600 leading-none" style={{whiteSpace: 'nowrap', fontSize: '5rem'}}>
+                  <span className="text-[4rem] sm:text-3xl font-bold text-red-600 leading-none" style={{whiteSpace: 'nowrap', fontSize: '4rem'}}>
                     R$ {formatPriceForDisplay(product.salePrice || product.sale_price || product.price)}
                   </span>
                 </div>
               ) : (
-                <span className="text-[5rem] sm:text-3xl font-bold text-gray-600 leading-none" style={{whiteSpace: 'nowrap', fontSize: '5rem'}}>
+                <span className="text-[4rem] sm:text-3xl font-bold text-gray-600 leading-none" style={{whiteSpace: 'nowrap', fontSize: '4rem'}}>
                   R$ {formatPriceForDisplay(product.price)}
                 </span>
               )}
