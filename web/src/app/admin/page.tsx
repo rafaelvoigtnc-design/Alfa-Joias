@@ -120,6 +120,17 @@ export default function Admin() {
     }
   }, [editingBanner, showBannerForm])
 
+  // Inicializar brandImage quando editar marca
+  useEffect(() => {
+    if (editingBrand && showBrandForm) {
+      console.log('🔄 Inicializando brandImage para edição:', editingBrand.image)
+      setBrandImage(editingBrand.image || '')
+    } else if (!showBrandForm && !editingBrand) {
+      // Limpar apenas quando o formulário for fechado completamente
+      setBrandImage('')
+    }
+  }, [editingBrand, showBrandForm])
+
   // Log quando o formulário de serviço é aberto/fechado
   useEffect(() => {
     if (showServiceForm && editingService) {
@@ -732,11 +743,16 @@ export default function Admin() {
     try {
       const formData = new FormData(e.target as HTMLFormElement)
       
+      // Garantir que a imagem seja capturada corretamente (priorizar brandImage que é atualizado pelo ImageEditor)
+      const imageValue = brandImage || formData.get('image') as string || editingBrand?.image || ''
+      
       const brandData = {
         name: formData.get('name') as string,
-        image: formData.get('image') as string || brandImage,
+        image: imageValue,
         // Removido 'active' - coluna não existe no banco
       }
+      
+      console.log('🔍 Debug imagem marca:', { brandImage, formImage: formData.get('image'), editingImage: editingBrand?.image, finalImage: imageValue })
 
       console.log('📝 Dados extraídos do formulário:', brandData)
       
@@ -1528,7 +1544,11 @@ export default function Admin() {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Marcas</h2>
                 <button
-                  onClick={() => setShowBrandForm(true)}
+                  onClick={() => {
+                    setEditingBrand(null)
+                    setBrandImage('')
+                    setShowBrandForm(true)
+                  }}
                   className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -1552,6 +1572,7 @@ export default function Admin() {
                       <button
                         onClick={() => {
                           setEditingBrand(brand)
+                          setBrandImage(brand.image || '')
                           setShowBrandForm(true)
                         }}
                         className="flex-1 inline-flex items-center justify-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -3086,6 +3107,7 @@ export default function Admin() {
                 onClick={() => {
                   setShowBrandForm(false)
                   setEditingBrand(null)
+                  setBrandImage('')
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -3116,7 +3138,7 @@ export default function Admin() {
                   aspectRatio={2} // Logo horizontal
                   cropSize={400}
                 />
-                <input type="hidden" name="image" value={brandImage} />
+                <input type="hidden" name="image" value={brandImage || editingBrand?.image || ''} />
               </div>
 
               <div className="flex items-center">
@@ -3129,6 +3151,7 @@ export default function Admin() {
                   onClick={() => {
                     setShowBrandForm(false)
                     setEditingBrand(null)
+                    setBrandImage('')
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
