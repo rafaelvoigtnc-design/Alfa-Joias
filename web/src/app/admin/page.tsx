@@ -1565,22 +1565,12 @@ export default function Admin() {
                           src={brand.image} 
                           alt={`${brand.name} marca`} 
                           className="max-w-full max-h-32" 
-                          onLoad={(e) => {
-                            const img = e.currentTarget;
-                            img.style.background = 'none';
-                            img.style.backgroundColor = 'transparent';
-                            img.style.backgroundImage = 'none';
-                          }}
                           style={{ 
-                            background: 'none',
-                            backgroundColor: 'transparent',
-                            backgroundImage: 'none',
                             width: 'auto',
                             height: 'auto',
                             maxWidth: '100%',
                             maxHeight: '128px',
-                            display: 'block',
-                            imageRendering: 'auto'
+                            display: 'block'
                           }}
                         />
                       </div>

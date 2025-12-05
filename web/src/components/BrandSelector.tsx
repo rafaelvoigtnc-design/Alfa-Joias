@@ -81,22 +81,12 @@ export default function BrandSelector({
                 src={selectedBrand.image} 
                 alt={`${selectedBrand.name} marca`}
                 className="max-w-5 max-h-5"
-                onLoad={(e) => {
-                  const img = e.currentTarget;
-                  img.style.background = 'none';
-                  img.style.backgroundColor = 'transparent';
-                  img.style.backgroundImage = 'none';
-                }}
                 style={{ 
-                  background: 'none',
-                  backgroundColor: 'transparent',
-                  backgroundImage: 'none',
                   width: 'auto',
                   height: 'auto',
                   maxWidth: '20px',
                   maxHeight: '20px',
-                  display: 'block',
-                  imageRendering: 'auto'
+                  display: 'block'
                 }}
                 onError={(e) => {
                   e.currentTarget.style.display = 'none'
@@ -155,22 +145,12 @@ export default function BrandSelector({
                       src={brand.image} 
                       alt={`${brand.name} marca`}
                       className="max-w-5 max-h-5"
-                      onLoad={(e) => {
-                        const img = e.currentTarget;
-                        img.style.background = 'none';
-                        img.style.backgroundColor = 'transparent';
-                        img.style.backgroundImage = 'none';
-                      }}
                       style={{ 
-                        background: 'none',
-                        backgroundColor: 'transparent',
-                        backgroundImage: 'none',
                         width: 'auto',
                         height: 'auto',
                         maxWidth: '20px',
                         maxHeight: '20px',
-                        display: 'block',
-                        imageRendering: 'auto'
+                        display: 'block'
                       }}
                       onError={(e) => {
                         e.currentTarget.style.display = 'none'

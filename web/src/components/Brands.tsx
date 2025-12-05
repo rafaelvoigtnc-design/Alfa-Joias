@@ -114,26 +114,12 @@ export default function Brands() {
                           src={brand.image} 
                           alt={`${brand.name} marca`}
                           className="max-w-full max-h-12 sm:max-h-14 md:max-h-16"
-                          onLoad={(e) => {
-                            const img = e.currentTarget;
-                            img.style.background = 'none';
-                            img.style.backgroundColor = 'transparent';
-                            img.style.backgroundImage = 'none';
-                            // Forçar remoção de qualquer fundo aplicado
-                            if (img.style.background !== 'none') {
-                              img.setAttribute('style', img.getAttribute('style') + '; background: none !important; background-color: transparent !important;');
-                            }
-                          }}
                           style={{ 
-                            background: 'none',
-                            backgroundColor: 'transparent',
-                            backgroundImage: 'none',
                             width: 'auto',
                             height: 'auto',
                             maxWidth: '100%',
                             maxHeight: '64px',
-                            display: 'block',
-                            imageRendering: 'auto'
+                            display: 'block'
                           }}
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'
