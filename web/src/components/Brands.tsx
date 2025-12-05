@@ -109,18 +109,22 @@ export default function Brands() {
                     style={{ width: `${100 / itemsPerView}%` }}
                   >
                     <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 text-center hover:bg-gray-50 transition-all duration-300 md:hover:shadow-lg md:hover:-translate-y-1">
-                      <div className="mb-2 sm:mb-3" style={{ backgroundColor: 'transparent', background: 'transparent', backgroundImage: 'none' }}>
+                      <div className="mb-2 sm:mb-3 flex items-center justify-center" style={{ backgroundColor: 'transparent !important', background: 'transparent !important', backgroundImage: 'none !important', minHeight: '48px' }}>
                         <img 
                           src={brand.image} 
                           alt={`${brand.name} marca`}
-                          className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto"
+                          className="max-w-full max-h-12 sm:max-h-14 md:max-h-16"
                           style={{ 
-                            backgroundColor: 'transparent',
-                            background: 'transparent',
-                            backgroundImage: 'none',
+                            backgroundColor: 'transparent !important',
+                            background: 'transparent !important',
+                            backgroundImage: 'none !important',
                             filter: 'grayscale(100%)',
-                            objectFit: 'contain',
-                            display: 'block'
+                            width: 'auto',
+                            height: 'auto',
+                            maxWidth: '100%',
+                            maxHeight: '64px',
+                            display: 'block',
+                            margin: '0 auto'
                           }}
                           onError={(e) => {
                             e.currentTarget.style.display = 'none'

@@ -1560,18 +1560,22 @@ export default function Admin() {
                 {brands.map((brand) => (
                   <div key={brand.id} className="border border-gray-200 rounded-lg p-4">
                     {brand.image && (
-                      <div className="mb-4" style={{ backgroundColor: 'transparent', background: 'transparent', backgroundImage: 'none' }}>
+                      <div className="mb-4 flex items-center justify-center" style={{ backgroundColor: 'transparent !important', background: 'transparent !important', backgroundImage: 'none !important', minHeight: '128px' }}>
                         <img 
                           src={brand.image} 
                           alt={`${brand.name} marca`} 
-                          className="w-full h-32" 
+                          className="max-w-full max-h-32" 
                           style={{ 
-                            backgroundColor: 'transparent',
-                            background: 'transparent',
-                            backgroundImage: 'none',
+                            backgroundColor: 'transparent !important',
+                            background: 'transparent !important',
+                            backgroundImage: 'none !important',
                             filter: 'grayscale(100%)',
-                            objectFit: 'contain',
-                            display: 'block'
+                            width: 'auto',
+                            height: 'auto',
+                            maxWidth: '100%',
+                            maxHeight: '128px',
+                            display: 'block',
+                            margin: '0 auto'
                           }}
                         />
                       </div>

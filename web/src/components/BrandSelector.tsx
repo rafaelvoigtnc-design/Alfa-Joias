@@ -80,13 +80,16 @@ export default function BrandSelector({
               <img 
                 src={selectedBrand.image} 
                 alt={`${selectedBrand.name} marca`}
-                className="w-5 h-5"
+                className="max-w-5 max-h-5"
                 style={{ 
-                  backgroundColor: 'transparent',
-                  background: 'transparent',
-                  backgroundImage: 'none',
+                  backgroundColor: 'transparent !important',
+                  background: 'transparent !important',
+                  backgroundImage: 'none !important',
                   filter: 'grayscale(100%)',
-                  objectFit: 'contain',
+                  width: 'auto',
+                  height: 'auto',
+                  maxWidth: '20px',
+                  maxHeight: '20px',
                   display: 'block'
                 }}
                 onError={(e) => {
@@ -145,13 +148,16 @@ export default function BrandSelector({
                     <img 
                       src={brand.image} 
                       alt={`${brand.name} marca`}
-                      className="w-5 h-5"
+                      className="max-w-5 max-h-5"
                       style={{ 
-                        backgroundColor: 'transparent',
-                        background: 'transparent',
-                        backgroundImage: 'none',
+                        backgroundColor: 'transparent !important',
+                        background: 'transparent !important',
+                        backgroundImage: 'none !important',
                         filter: 'grayscale(100%)',
-                        objectFit: 'contain',
+                        width: 'auto',
+                        height: 'auto',
+                        maxWidth: '20px',
+                        maxHeight: '20px',
                         display: 'block'
                       }}
                       onError={(e) => {
