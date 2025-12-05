@@ -112,8 +112,9 @@ async function importRelogios() {
 
     // Mapear e preparar produtos
     const products = relogios.map(relogio => {
-      const nome = `Relógio ${relogio.marca} ${relogio.codigo}`
-      const descricao = generateDescription(relogio.marca, relogio.cor, relogio.codigo)
+      const nome = `Relógio ${relogio.marca}` // Sem código no nome
+      const descricaoBase = generateDescription(relogio.marca, relogio.cor, relogio.codigo)
+      const descricao = `[${relogio.codigo}] ${descricaoBase}` // Código entre colchetes no início da descrição
       
       return {
         name: nome,
