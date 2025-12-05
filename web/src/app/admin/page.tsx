@@ -227,7 +227,7 @@ export default function Admin() {
   const { products: supabaseProducts, loading: supabaseLoading, addProduct: addSupabaseProduct, updateProduct: updateSupabaseProduct, deleteProduct: deleteSupabaseProduct } = useSupabaseProducts()
   
   // Hook para marcas do Supabase
-  const { brands, loading: brandsLoading, addBrand, updateBrand, deleteBrand } = useBrands()
+  const { brands, loading: brandsLoading, addBrand, updateBrand, deleteBrand, refetch: refetchBrands } = useBrands()
   
   // Hook para categorias do Supabase
   const { categories: supabaseCategories, loading: categoriesLoading, addCategory, updateCategory, deleteCategory, refetch: refetchCategories } = useSupabaseCategories()
@@ -762,13 +762,31 @@ export default function Admin() {
         return
       }
 
+      let result
       if (editingBrand) {
         console.log('✏️ Modo: EDITAR marca existente')
-        await updateBrand(editingBrand.id, brandData)
+        console.log('📦 Dados sendo enviados:', brandData)
+        result = await updateBrand(editingBrand.id, brandData)
+        console.log('✅ Resultado da atualização:', result)
+        if (result) {
+          alert('✅ Marca atualizada com sucesso!')
+        } else {
+          alert('⚠️ Marca pode não ter sido atualizada. Verifique o console.')
+        }
       } else {
         console.log('➕ Modo: ADICIONAR nova marca')
-        await addBrand(brandData)
+        console.log('📦 Dados sendo enviados:', brandData)
+        result = await addBrand(brandData)
+        console.log('✅ Resultado da adição:', result)
+        if (result) {
+          alert('✅ Marca adicionada com sucesso!')
+        } else {
+          alert('⚠️ Marca pode não ter sido adicionada. Verifique o console.')
+        }
       }
+      
+      // Recarregar lista de marcas
+      await refetchBrands()
       
       console.log('✅ Operação concluída com sucesso!')
       
@@ -3123,7 +3141,7 @@ export default function Admin() {
               </button>
             </div>
 
-            <form onSubmit={handleBrandSubmit} className="space-y-4">
+            <form name="brand-form" onSubmit={handleBrandSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Nome da Marca</label>
                 <input
@@ -3141,7 +3159,19 @@ export default function Admin() {
                 <p className="text-xs text-gray-500 mb-2">Recomendado: logo horizontal (aspect ratio 2:1)</p>
                 <ImageEditor
                   imageUrl={editingBrand?.image || brandImage}
-                  onImageSelect={(image) => setBrandImage(image)}
+                  onImageSelect={(image) => {
+                    console.log('🖼️ Imagem selecionada no ImageEditor:', image)
+                    setBrandImage(image)
+                    // Atualizar input hidden também
+                    setTimeout(() => {
+                      const form = document.querySelector('form[name="brand-form"]') as HTMLFormElement
+                      const hiddenInput = form?.querySelector('input[name="image"]') as HTMLInputElement
+                      if (hiddenInput) {
+                        hiddenInput.value = image
+                        console.log('✅ Input hidden atualizado:', hiddenInput.value)
+                      }
+                    }, 100)
+                  }}
                   placeholder="Selecione o logo da marca"
                   aspectRatio={2} // Logo horizontal
                   cropSize={400}
