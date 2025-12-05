@@ -46,7 +46,7 @@ a:hover, a:focus {
 @tailwind components;
 @tailwind utilities;
 
-/* Estilos para imagens de marca - garantir transparência PNG */
+/* Estilos para imagens de marca - FORÇAR transparência PNG - SEM FUNDO */
 img[alt*="marca"],
 img[alt*="Marca"],
 img[alt*="brand"],
@@ -57,11 +57,18 @@ img[alt*="Brand"] {
   background-clip: padding-box !important;
   -webkit-background-clip: padding-box !important;
   image-rendering: auto !important;
+  /* Remover qualquer fundo que possa ser aplicado */
+  box-shadow: none !important;
+  border: none !important;
 }
 
 /* Garantir que containers de imagens de marca também sejam transparentes */
 .brand-image-container,
-[class*="brand"] img {
+[class*="brand"] img,
+div:has(img[alt*="marca"]),
+div:has(img[alt*="Marca"]),
+div:has(img[alt*="brand"]),
+div:has(img[alt*="Brand"]) {
   background: none !important;
   background-color: transparent !important;
   background-image: none !important;
@@ -73,6 +80,16 @@ img[alt*="Brand"] {
   background: none !important;
   background-color: transparent !important;
   background-image: none !important;
+}
+
+/* Remover qualquer estilo do Bootstrap que possa estar interferindo */
+img[alt*="marca"]::before,
+img[alt*="marca"]::after,
+img[alt*="Marca"]::before,
+img[alt*="Marca"]::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
 }
 
 /* Bootstrap CSS - Carregado via CDN no layout.tsx */

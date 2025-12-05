@@ -110,33 +110,35 @@ export default function Brands() {
                   >
                     <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 text-center hover:bg-gray-50 transition-all duration-300 md:hover:shadow-lg md:hover:-translate-y-1">
                       <div className="mb-2 sm:mb-3 flex items-center justify-center" style={{ minHeight: '48px' }}>
-                        <div 
+                        <img 
+                          src={brand.image} 
+                          alt={`${brand.name} marca`}
+                          className="max-w-full max-h-12 sm:max-h-14 md:max-h-16"
+                          onLoad={(e) => {
+                            const img = e.currentTarget;
+                            img.style.background = 'none';
+                            img.style.backgroundColor = 'transparent';
+                            img.style.backgroundImage = 'none';
+                            // Forçar remoção de qualquer fundo aplicado
+                            if (img.style.background !== 'none') {
+                              img.setAttribute('style', img.getAttribute('style') + '; background: none !important; background-color: transparent !important;');
+                            }
+                          }}
                           style={{ 
                             background: 'none',
                             backgroundColor: 'transparent',
-                            display: 'inline-block',
-                            lineHeight: 0
+                            backgroundImage: 'none',
+                            width: 'auto',
+                            height: 'auto',
+                            maxWidth: '100%',
+                            maxHeight: '64px',
+                            display: 'block',
+                            imageRendering: 'auto'
                           }}
-                        >
-                          <img 
-                            src={brand.image} 
-                            alt={`${brand.name} marca`}
-                            className="max-w-full max-h-12 sm:max-h-14 md:max-h-16"
-                            style={{ 
-                              background: 'none',
-                              backgroundColor: 'transparent',
-                              width: 'auto',
-                              height: 'auto',
-                              maxWidth: '100%',
-                              maxHeight: '64px',
-                              display: 'block',
-                              verticalAlign: 'middle'
-                            }}
-                            onError={(e) => {
-                              e.currentTarget.style.display = 'none'
-                            }}
-                          />
-                        </div>
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
                       </div>
                       <div className="text-xs sm:text-sm font-medium text-gray-700 line-clamp-2">
                         {brand.name}

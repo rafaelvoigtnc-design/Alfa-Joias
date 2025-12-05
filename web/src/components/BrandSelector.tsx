@@ -77,26 +77,31 @@ export default function BrandSelector({
         <div className="flex items-center justify-between w-full border border-gray-300 rounded-md px-3 py-2 bg-white">
           <div className="flex items-center space-x-2">
             {selectedBrand && selectedBrand.image && (
-              <div style={{ background: 'none', backgroundColor: 'transparent', display: 'inline-block', lineHeight: 0 }}>
-                <img 
-                  src={selectedBrand.image} 
-                  alt={`${selectedBrand.name} marca`}
-                  className="max-w-5 max-h-5"
-                  style={{ 
-                    background: 'none',
-                    backgroundColor: 'transparent',
-                    width: 'auto',
-                    height: 'auto',
-                    maxWidth: '20px',
-                    maxHeight: '20px',
-                    display: 'block',
-                    verticalAlign: 'middle'
-                  }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none'
-                  }}
-                />
-              </div>
+              <img 
+                src={selectedBrand.image} 
+                alt={`${selectedBrand.name} marca`}
+                className="max-w-5 max-h-5"
+                onLoad={(e) => {
+                  const img = e.currentTarget;
+                  img.style.background = 'none';
+                  img.style.backgroundColor = 'transparent';
+                  img.style.backgroundImage = 'none';
+                }}
+                style={{ 
+                  background: 'none',
+                  backgroundColor: 'transparent',
+                  backgroundImage: 'none',
+                  width: 'auto',
+                  height: 'auto',
+                  maxWidth: '20px',
+                  maxHeight: '20px',
+                  display: 'block',
+                  imageRendering: 'auto'
+                }}
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none'
+                }}
+              />
             )}
             <span className={selectedBrand ? 'text-gray-900' : 'text-gray-500'}>
               {selectedBrand ? selectedBrand.name : placeholder}
@@ -146,26 +151,31 @@ export default function BrandSelector({
                   className="w-full flex items-center space-x-3 px-3 py-2 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
                 >
                   {brand.image && (
-                    <div style={{ background: 'none', backgroundColor: 'transparent', display: 'inline-block', lineHeight: 0 }}>
-                      <img 
-                        src={brand.image} 
-                        alt={`${brand.name} marca`}
-                        className="max-w-5 max-h-5"
-                        style={{ 
-                          background: 'none',
-                          backgroundColor: 'transparent',
-                          width: 'auto',
-                          height: 'auto',
-                          maxWidth: '20px',
-                          maxHeight: '20px',
-                          display: 'block',
-                          verticalAlign: 'middle'
-                        }}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none'
-                        }}
-                      />
-                    </div>
+                    <img 
+                      src={brand.image} 
+                      alt={`${brand.name} marca`}
+                      className="max-w-5 max-h-5"
+                      onLoad={(e) => {
+                        const img = e.currentTarget;
+                        img.style.background = 'none';
+                        img.style.backgroundColor = 'transparent';
+                        img.style.backgroundImage = 'none';
+                      }}
+                      style={{ 
+                        background: 'none',
+                        backgroundColor: 'transparent',
+                        backgroundImage: 'none',
+                        width: 'auto',
+                        height: 'auto',
+                        maxWidth: '20px',
+                        maxHeight: '20px',
+                        display: 'block',
+                        imageRendering: 'auto'
+                      }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
                   )}
                   <span className="text-sm text-gray-900">{brand.name}</span>
                 </button>
