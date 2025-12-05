@@ -51,17 +51,18 @@ img[alt*="marca"],
 img[alt*="Marca"],
 img[alt*="brand"],
 img[alt*="Brand"] {
-  background: transparent !important;
+  background: none !important;
   background-color: transparent !important;
   background-image: none !important;
   background-clip: padding-box !important;
   -webkit-background-clip: padding-box !important;
+  image-rendering: auto !important;
 }
 
 /* Garantir que containers de imagens de marca também sejam transparentes */
 .brand-image-container,
 [class*="brand"] img {
-  background: transparent !important;
+  background: none !important;
   background-color: transparent !important;
   background-image: none !important;
 }
@@ -69,10 +70,9 @@ img[alt*="Brand"] {
 /* Forçar transparência em todas as imagens dentro de containers de marca */
 [class*="brand"] img,
 .brand-image-container img {
-  background: transparent !important;
+  background: none !important;
   background-color: transparent !important;
   background-image: none !important;
-  mix-blend-mode: normal !important;
 }
 
 /* Bootstrap CSS - Carregado via CDN no layout.tsx */
