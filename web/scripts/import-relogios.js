@@ -26,21 +26,22 @@ function normalizePrice(price) {
   return isNaN(num) ? '0' : num.toString()
 }
 
-// Função para gerar descrição simples
+// Função para gerar descrição simples (código no final entre colchetes)
 function generateDescription(marca, cor, codigo) {
   const descricoes = [
-    `Relógio ${marca} em ${cor.toLowerCase()}, modelo ${codigo}. Design elegante e moderno.`,
-    `Relógio ${marca} ${cor.toLowerCase()}, referência ${codigo}. Qualidade e estilo em um só produto.`,
-    `${marca} ${cor.toLowerCase()} modelo ${codigo}. Relógio com acabamento refinado e durabilidade.`,
-    `Relógio ${marca} em ${cor.toLowerCase()}, código ${codigo}. Perfeito para o dia a dia.`,
-    `${marca} ${cor.toLowerCase()} referência ${codigo}. Design clássico e atemporal.`,
-    `Relógio ${marca} modelo ${codigo} na cor ${cor.toLowerCase()}. Estilo e funcionalidade.`,
-    `${marca} ${cor.toLowerCase()} código ${codigo}. Relógio com excelente acabamento.`,
-    `Relógio ${marca} ${cor.toLowerCase()}, modelo ${codigo}. Ideal para quem busca qualidade.`
+    `Relógio ${marca} em ${cor.toLowerCase()}. Design elegante e moderno.`,
+    `Relógio ${marca} ${cor.toLowerCase()}. Qualidade e estilo em um só produto.`,
+    `${marca} ${cor.toLowerCase()}. Relógio com acabamento refinado e durabilidade.`,
+    `Relógio ${marca} em ${cor.toLowerCase()}. Perfeito para o dia a dia.`,
+    `${marca} ${cor.toLowerCase()}. Design clássico e atemporal.`,
+    `Relógio ${marca} na cor ${cor.toLowerCase()}. Estilo e funcionalidade.`,
+    `${marca} ${cor.toLowerCase()}. Relógio com excelente acabamento.`,
+    `Relógio ${marca} ${cor.toLowerCase()}. Ideal para quem busca qualidade.`
   ]
   // Usar código para escolher descrição de forma consistente
   const index = codigo.length % descricoes.length
-  return descricoes[index]
+  // Adicionar código no final entre colchetes
+  return `${descricoes[index]} [${codigo}]`
 }
 
 // Dados dos relógios
@@ -113,8 +114,7 @@ async function importRelogios() {
     // Mapear e preparar produtos
     const products = relogios.map(relogio => {
       const nome = `Relógio ${relogio.marca}` // Sem código no nome
-      const descricaoBase = generateDescription(relogio.marca, relogio.cor, relogio.codigo)
-      const descricao = `[${relogio.codigo}] ${descricaoBase}` // Código entre colchetes no início da descrição
+      const descricao = generateDescription(relogio.marca, relogio.cor, relogio.codigo) // Código já vem no final da função
       
       return {
         name: nome,
