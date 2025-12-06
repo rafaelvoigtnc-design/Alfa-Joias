@@ -20,14 +20,14 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 function generateNewDescription(marca, cor, codigo) {
   const descricoes = [
-    `Relógio ${marca} em ${cor.toLowerCase()}. Design elegante e moderno.`,
-    `Relógio ${marca} ${cor.toLowerCase()}. Qualidade e estilo em um só produto.`,
-    `${marca} ${cor.toLowerCase()}. Relógio com acabamento refinado e durabilidade.`,
-    `Relógio ${marca} em ${cor.toLowerCase()}. Perfeito para o dia a dia.`,
-    `${marca} ${cor.toLowerCase()}. Design clássico e atemporal.`,
-    `Relógio ${marca} na cor ${cor.toLowerCase()}. Estilo e funcionalidade.`,
-    `${marca} ${cor.toLowerCase()}. Relógio com excelente acabamento.`,
-    `Relógio ${marca} ${cor.toLowerCase()}. Ideal para quem busca qualidade.`
+    `Descubra o relógio ${marca} em ${cor.toLowerCase()} que combina elegância e sofisticação. Perfeito para quem valoriza qualidade e estilo, este modelo oferece durabilidade excepcional e um design atemporal que complementa qualquer look. Garanta já o seu e eleve seu estilo pessoal.`,
+    `O relógio ${marca} ${cor.toLowerCase()} é a escolha ideal para quem busca excelência em cada detalhe. Com acabamento impecável e design refinado, este modelo se destaca pela sua versatilidade e resistência. Não perca a oportunidade de adquirir um produto de alta qualidade.`,
+    `Apresentamos o ${marca} ${cor.toLowerCase()}, um relógio que une tradição e modernidade em um único acessório. Seu acabamento premium e design sofisticado fazem dele a peça perfeita para momentos especiais e uso diário. Invista em qualidade e estilo duradouro.`,
+    `Eleve seu estilo com o relógio ${marca} em ${cor.toLowerCase()}. Este modelo exclusivo combina funcionalidade e elegância, sendo perfeito para quem busca um acessório que reflita personalidade e bom gosto. Adquira agora e transforme seu visual.`,
+    `O ${marca} ${cor.toLowerCase()} representa o equilíbrio perfeito entre clássico e contemporâneo. Com design atemporal e qualidade superior, este relógio é um investimento em estilo e durabilidade. Garanta o seu e destaque-se com sofisticação.`,
+    `Descubra a excelência do relógio ${marca} na cor ${cor.toLowerCase()}. Projetado para impressionar, este modelo oferece estilo único e funcionalidade excepcional. Ideal para quem busca um acessório que combine elegância e praticidade no dia a dia.`,
+    `O ${marca} ${cor.toLowerCase()} é mais que um relógio, é uma declaração de estilo. Com acabamento impecável e design refinado, este modelo se adapta perfeitamente a diferentes ocasiões. Não deixe passar esta oportunidade de adquirir qualidade superior.`,
+    `Apresentamos o relógio ${marca} ${cor.toLowerCase()}, a escolha perfeita para quem valoriza qualidade e bom gosto. Este modelo exclusivo combina sofisticação e resistência, sendo ideal para quem busca um acessório que reflita personalidade e elegância.`
   ]
   const index = codigo.length % descricoes.length
   return `${descricoes[index]} [${codigo}]`
@@ -83,14 +83,26 @@ async function fixProductDescriptions() {
           continue
         }
 
-        // Extrair cor da descrição atual (se possível)
+        // Extrair cor da descrição atual (se possível) - melhorar lógica
         let cor = 'prata' // padrão
         if (product.description) {
-          const corMatch = product.description.match(/em\s+(\w+)|(\w+),/i)
-          if (corMatch) {
-            const corEncontrada = corMatch[1] || corMatch[2]
-            if (corEncontrada && !corEncontrada.match(/^(Relógio|modelo|Design|Qualidade|Ideal|Perfeito|Design|Estilo)$/i)) {
-              cor = corEncontrada.toLowerCase()
+          // Tentar encontrar cor após "em" ou "na cor" ou no início
+          const patterns = [
+            /em\s+([a-záê]+)/i,
+            /na cor\s+([a-záê]+)/i,
+            /^([A-Z][a-z]+)\s+([a-záê]+)/i,
+            /\b(prata|dourado|preto|grafite|titânio|ouro|rosa|azul)\b/i
+          ]
+          
+          for (const pattern of patterns) {
+            const match = product.description.match(pattern)
+            if (match) {
+              const corEncontrada = (match[1] || match[2] || '').toLowerCase()
+              const coresValidas = ['prata', 'dourado', 'preto', 'grafite', 'titânio', 'ouro', 'rosa', 'azul']
+              if (coresValidas.includes(corEncontrada)) {
+                cor = corEncontrada
+                break
+              }
             }
           }
         }

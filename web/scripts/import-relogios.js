@@ -26,17 +26,18 @@ function normalizePrice(price) {
   return isNaN(num) ? '0' : num.toString()
 }
 
-// Função para gerar descrição simples (código no final entre colchetes)
+// Função para gerar descrição persuasiva (código no final entre colchetes)
 function generateDescription(marca, cor, codigo) {
+  const corLower = cor.toLowerCase()
   const descricoes = [
-    `Relógio ${marca} em ${cor.toLowerCase()}. Design elegante e moderno.`,
-    `Relógio ${marca} ${cor.toLowerCase()}. Qualidade e estilo em um só produto.`,
-    `${marca} ${cor.toLowerCase()}. Relógio com acabamento refinado e durabilidade.`,
-    `Relógio ${marca} em ${cor.toLowerCase()}. Perfeito para o dia a dia.`,
-    `${marca} ${cor.toLowerCase()}. Design clássico e atemporal.`,
-    `Relógio ${marca} na cor ${cor.toLowerCase()}. Estilo e funcionalidade.`,
-    `${marca} ${cor.toLowerCase()}. Relógio com excelente acabamento.`,
-    `Relógio ${marca} ${cor.toLowerCase()}. Ideal para quem busca qualidade.`
+    `Descubra o relógio ${marca} em ${corLower} que combina elegância e sofisticação. Perfeito para quem valoriza qualidade e estilo, este modelo oferece durabilidade excepcional e um design atemporal que complementa qualquer look. Garanta já o seu e eleve seu estilo pessoal.`,
+    `O relógio ${marca} ${corLower} é a escolha ideal para quem busca excelência em cada detalhe. Com acabamento impecável e design refinado, este modelo se destaca pela sua versatilidade e resistência. Não perca a oportunidade de adquirir um produto de alta qualidade.`,
+    `Apresentamos o ${marca} ${corLower}, um relógio que une tradição e modernidade em um único acessório. Seu acabamento premium e design sofisticado fazem dele a peça perfeita para momentos especiais e uso diário. Invista em qualidade e estilo duradouro.`,
+    `Eleve seu estilo com o relógio ${marca} em ${corLower}. Este modelo exclusivo combina funcionalidade e elegância, sendo perfeito para quem busca um acessório que reflita personalidade e bom gosto. Adquira agora e transforme seu visual.`,
+    `O ${marca} ${corLower} representa o equilíbrio perfeito entre clássico e contemporâneo. Com design atemporal e qualidade superior, este relógio é um investimento em estilo e durabilidade. Garanta o seu e destaque-se com sofisticação.`,
+    `Descubra a excelência do relógio ${marca} na cor ${corLower}. Projetado para impressionar, este modelo oferece estilo único e funcionalidade excepcional. Ideal para quem busca um acessório que combine elegância e praticidade no dia a dia.`,
+    `O ${marca} ${corLower} é mais que um relógio, é uma declaração de estilo. Com acabamento impecável e design refinado, este modelo se adapta perfeitamente a diferentes ocasiões. Não deixe passar esta oportunidade de adquirir qualidade superior.`,
+    `Apresentamos o relógio ${marca} ${corLower}, a escolha perfeita para quem valoriza qualidade e bom gosto. Este modelo exclusivo combina sofisticação e resistência, sendo ideal para quem busca um acessório que reflita personalidade e elegância.`
   ]
   // Usar código para escolher descrição de forma consistente
   const index = codigo.length % descricoes.length

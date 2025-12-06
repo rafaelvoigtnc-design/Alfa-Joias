@@ -36,7 +36,7 @@ export default function Header() {
     <header className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
         {/* Mobile: flex justify-between | Desktop: grid grid-cols-3 */}
-        <div className="flex lg:grid lg:grid-cols-3 justify-between lg:justify-start items-center h-14 sm:h-16">
+        <div className="flex lg:grid lg:grid-cols-3 justify-between lg:justify-start items-center h-14 sm:h-16 py-2">
           {/* Logo - menor no mobile */}
           <div className="flex items-center">
             <Link href="/" className="flex items-center space-x-1 sm:space-x-2 no-underline hover:no-underline">
@@ -47,7 +47,7 @@ export default function Header() {
           </div>
 
           {/* Desktop Navigation - Centralizado */}
-          <nav className="hidden lg:flex items-center justify-center space-x-6 xl:space-x-8">
+          <nav className="hidden lg:flex items-center justify-center space-x-6 xl:space-x-8 h-full">
             {navigation.map((item) => (
               <Link
                 key={item.name}
