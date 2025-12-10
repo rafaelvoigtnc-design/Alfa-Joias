@@ -224,7 +224,7 @@ export default function Admin() {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([])
   
   // Hook para produtos do Supabase
-  const { products: supabaseProducts, loading: supabaseLoading, addProduct: addSupabaseProduct, updateProduct: updateSupabaseProduct, deleteProduct: deleteSupabaseProduct } = useSupabaseProducts()
+  const { products: supabaseProducts, loading: supabaseLoading, addProduct: addSupabaseProduct, updateProduct: updateSupabaseProduct, deleteProduct: deleteSupabaseProduct, refetch: refetchProducts } = useSupabaseProducts()
   
   // Hook para marcas do Supabase
   const { brands, loading: brandsLoading, addBrand, updateBrand, deleteBrand, refetch: refetchBrands } = useBrands()
@@ -389,8 +389,27 @@ export default function Admin() {
     
     const stock = Math.max(1, parseInt(formData.get('stock') as string) || 1)
     
-    // Processar imagens
-    const coverImage = formData.get('image') as string || productImages[coverImageIndex] || ''
+    // Processar imagens - PRIORIZAR ESTADO SOBRE FORMDATA
+    // O estado productImages é a fonte de verdade, pois é atualizado diretamente pelo ImageEditor
+    const coverImageFromState = productImages[coverImageIndex] || ''
+    const coverImageFromForm = formData.get('image') as string || ''
+    const coverImage = coverImageFromState || coverImageFromForm || editingProduct?.image || ''
+    
+    console.log('📸 Debug imagem:', {
+      'productImages.length': productImages.length,
+      'coverImageIndex': coverImageIndex,
+      'coverImageFromState': coverImageFromState ? `${coverImageFromState.substring(0, 50)}...` : 'vazio',
+      'coverImageFromForm': coverImageFromForm ? `${coverImageFromForm.substring(0, 50)}...` : 'vazio',
+      'editingProduct?.image': editingProduct?.image ? `${editingProduct.image.substring(0, 50)}...` : 'vazio',
+      'coverImage final': coverImage ? `${coverImage.substring(0, 50)}...` : 'vazio'
+    })
+    
+    // Validar que há pelo menos uma imagem
+    if (!coverImage || coverImage.trim() === '') {
+      alert('❌ É obrigatório adicionar pelo menos uma imagem para o produto!\n\nPor favor, faça upload de uma imagem antes de salvar.')
+      return
+    }
+    
     const additionalImagesJson = formData.get('additionalImages') as string
     let additionalImages: string[] = []
     
@@ -467,6 +486,35 @@ export default function Admin() {
       alert('Erros de validação:\n' + validation.errors.join('\n'))
       return
     }
+    
+    // Validação adicional de imagem (garantir que não está vazia após normalização)
+    if (!productData.image || productData.image.trim() === '') {
+      alert('❌ Erro: A imagem do produto está vazia!\n\nPor favor, faça upload de uma imagem antes de salvar.')
+      return
+    }
+    
+    // Verificar tamanho da imagem (base64 pode ser muito grande)
+    // Supabase TEXT tem limite de ~1GB, mas imagens base64 muito grandes podem causar problemas
+    // Limite recomendado: 10MB em base64 (~13.3MB de dados base64)
+    const imageSizeInBytes = productData.image.length * 0.75 // Aproximação: base64 é ~33% maior que binário
+    const maxSizeInBytes = 10 * 1024 * 1024 // 10MB
+    
+    if (imageSizeInBytes > maxSizeInBytes) {
+      const sizeInMB = (imageSizeInBytes / (1024 * 1024)).toFixed(2)
+      const maxSizeInMB = (maxSizeInBytes / (1024 * 1024)).toFixed(2)
+      alert(`⚠️ A imagem é muito grande (${sizeInMB}MB)!\n\nO tamanho máximo recomendado é ${maxSizeInMB}MB.\n\nPor favor, use uma imagem menor ou comprima a imagem antes de fazer upload.`)
+      // Não bloquear, apenas avisar - o usuário pode tentar salvar mesmo assim
+    }
+    
+    console.log('💾 Dados do produto que serão salvos:', {
+      name: productData.name,
+      category: productData.category,
+      brand: productData.brand,
+      price: productData.price,
+      image: productData.image ? `${productData.image.substring(0, 50)}... (${productData.image.length} chars, ~${(imageSizeInBytes / (1024 * 1024)).toFixed(2)}MB)` : 'vazio',
+      hasAdditionalImages: additionalImages.length > 0,
+      stock: productData.stock
+    })
 
     try {
       // Tentar salvar com additional_images, mas se der erro, tentar sem
@@ -508,6 +556,13 @@ export default function Admin() {
       
       if (saved) {
         alert('✅ Produto salvo com sucesso no banco de dados!')
+        
+        // Recarregar lista de produtos para mostrar as mudanças
+        if (refetchProducts) {
+          console.log('🔄 Recarregando lista de produtos...')
+          await refetchProducts()
+          console.log('✅ Lista de produtos recarregada')
+        }
       }
       
       setEditingProduct(null)
@@ -2294,11 +2349,13 @@ export default function Admin() {
                     type="hidden"
                     name="image"
                     value={productImages[coverImageIndex] || ''}
+                    key={`image-input-${productImages[coverImageIndex] ? 'has-image' : 'no-image'}-${coverImageIndex}`}
                   />
                   <input
                     type="hidden"
                     name="additionalImages"
                     value={JSON.stringify(productImages.filter((_, i) => i !== coverImageIndex))}
+                    key={`additional-images-${productImages.length}`}
                   />
                 </div>
                 

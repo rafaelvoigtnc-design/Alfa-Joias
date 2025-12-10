@@ -23,3 +23,4 @@ CREATE INDEX IF NOT EXISTS idx_products_additional_images ON products USING GIN 
 
 
 
+

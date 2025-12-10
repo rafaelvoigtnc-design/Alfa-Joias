@@ -32,3 +32,4 @@ CREATE INDEX IF NOT EXISTS idx_products_stock ON products(stock) WHERE stock IS 
 
 
 
+
