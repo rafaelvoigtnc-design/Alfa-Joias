@@ -392,6 +392,17 @@ export default function Admin() {
     e.preventDefault()
     console.log('🚀 ========== INICIANDO SALVAMENTO DE PRODUTO ==========')
     
+    // Preservar o ID do produto que está sendo editado ANTES de qualquer processamento
+    const currentEditingProductId = editingProduct?.id
+    const isEditing = !!editingProduct && !!currentEditingProductId
+    
+    console.log('🔍 Estado de edição:', { 
+      isEditing, 
+      editingProductId: currentEditingProductId,
+      editingProductName: editingProduct?.name,
+      editingProduct: editingProduct
+    })
+    
     const formData = new FormData(e.target as HTMLFormElement)
     
     // Debug: mostrar todos os campos do formulário
@@ -569,12 +580,31 @@ export default function Admin() {
       let savedProduct: any = null
       
       try {
-        console.log('💾 Tentando salvar produto no banco...', { isEditing: !!editingProduct, productId: editingProduct?.id })
+        console.log('💾 Tentando salvar produto no banco...', { 
+          isEditing, 
+          productId: currentEditingProductId,
+          productName: editingProduct?.name,
+          productDataKeys: Object.keys(productData)
+        })
         
-        if (editingProduct) {
+        if (isEditing && currentEditingProductId) {
           // Atualizar produto APENAS no Supabase
-          console.log('✏️ Atualizando produto existente...')
-          savedProduct = await updateSupabaseProduct(editingProduct.id, productData)
+          console.log('✏️ Atualizando produto existente...', {
+            id: currentEditingProductId,
+            name: editingProduct?.name,
+            newData: {
+              name: productData.name,
+              category: productData.category,
+              price: productData.price
+            }
+          })
+          
+          // Garantir que o ID está presente
+          if (!currentEditingProductId) {
+            throw new Error('ID do produto não encontrado. Não é possível atualizar.')
+          }
+          
+          savedProduct = await updateSupabaseProduct(currentEditingProductId, productData)
           console.log('✅ Produto atualizado no BANCO:', savedProduct)
           saved = true
         } else {
@@ -601,8 +631,14 @@ export default function Admin() {
           delete productDataWithoutAdditional.additional_images
           
           try {
-            if (editingProduct) {
-              savedProduct = await updateSupabaseProduct(editingProduct.id, productDataWithoutAdditional)
+            if (isEditing && currentEditingProductId) {
+              console.log('✏️ Tentando atualizar produto sem additional_images...', { id: currentEditingProductId })
+              
+              if (!currentEditingProductId) {
+                throw new Error('ID do produto não encontrado. Não é possível atualizar.')
+              }
+              
+              savedProduct = await updateSupabaseProduct(currentEditingProductId, productDataWithoutAdditional)
               console.log('✅ Produto atualizado sem additional_images')
               saved = true
               alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
@@ -1000,6 +1036,13 @@ export default function Admin() {
           // Deletar APENAS do Supabase
           await deleteSupabaseProduct(id)
           console.log('✅ Produto deletado do BANCO:', id)
+          
+          // Recarregar lista de produtos
+          if (refetchProducts) {
+            await refetchProducts()
+            console.log('✅ Lista de produtos recarregada após exclusão')
+          }
+          
           alert('✅ Produto excluído com sucesso do banco de dados!')
         } catch (error: any) {
           console.error('❌ Erro ao deletar produto do banco:', error)
@@ -1009,6 +1052,13 @@ export default function Admin() {
       case 'service':
         try {
           await deleteService(id)
+          
+          // Recarregar lista de serviços
+          if (refreshServices) {
+            await refreshServices()
+            console.log('✅ Lista de serviços recarregada após exclusão')
+          }
+          
           alert('✅ Serviço excluído com sucesso!')
         } catch (error) {
           console.error('Erro ao deletar serviço:', error)
@@ -1019,6 +1069,13 @@ export default function Admin() {
         try {
           await deleteBanner(id)
           console.log('✅ Banner deletado do banco:', id)
+          
+          // Recarregar lista de banners
+          if (refetchBanners) {
+            await refetchBanners()
+            console.log('✅ Lista de banners recarregada após exclusão')
+          }
+          
           alert('✅ Banner excluído com sucesso do banco de dados!')
         } catch (error) {
           console.error('❌ Erro ao deletar banner:', error)
@@ -1029,6 +1086,13 @@ export default function Admin() {
         try {
           await deleteBrand(id)
           console.log('✅ Marca deletada do banco:', id)
+          
+          // Recarregar lista de marcas
+          if (refetchBrands) {
+            await refetchBrands()
+            console.log('✅ Lista de marcas recarregada após exclusão')
+          }
+          
           alert('✅ Marca excluída com sucesso do banco de dados!')
         } catch (error) {
           console.error('❌ Erro ao deletar marca:', error)
@@ -1039,6 +1103,13 @@ export default function Admin() {
         try {
           await deleteCategory(id)
           console.log('✅ Categoria deletada do banco:', id)
+          
+          // Recarregar lista de categorias
+          if (refetchCategories) {
+            await refetchCategories()
+            console.log('✅ Lista de categorias recarregada após exclusão')
+          }
+          
           alert('✅ Categoria excluída com sucesso do banco de dados!')
         } catch (error) {
           console.error('❌ Erro ao deletar categoria do banco:', error)
