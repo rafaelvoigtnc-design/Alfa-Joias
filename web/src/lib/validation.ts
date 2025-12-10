@@ -28,13 +28,17 @@ export const validateProductData = (data: any): { valid: boolean; errors: string
   }
 
   // Preço
-  const price = parseFloat(data.price)
-  if (isNaN(price)) {
-    errors.push('Preço inválido')
-  } else if (price < 0) {
-    errors.push('Preço não pode ser negativo')
-  } else if (price > 999999) {
-    errors.push('Preço muito alto')
+  if (!data.price || data.price.trim() === '' || data.price === '0') {
+    errors.push('Preço é obrigatório e deve ser maior que zero')
+  } else {
+    const price = parseFloat(data.price)
+    if (isNaN(price)) {
+      errors.push('Preço inválido (deve ser um número)')
+    } else if (price <= 0) {
+      errors.push('Preço deve ser maior que zero')
+    } else if (price > 999999) {
+      errors.push('Preço muito alto (máximo R$ 999.999,00)')
+    }
   }
 
   // Categoria

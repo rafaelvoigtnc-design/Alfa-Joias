@@ -385,27 +385,47 @@ export default function Admin() {
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('🚀 ========== INICIANDO SALVAMENTO DE PRODUTO ==========')
+    
     const formData = new FormData(e.target as HTMLFormElement)
+    
+    // Debug: mostrar todos os campos do formulário
+    console.log('📋 Campos do formulário:', {
+      name: formData.get('name'),
+      category: formData.get('category'),
+      brand: formData.get('brand'),
+      price: formData.get('price'),
+      description: formData.get('description'),
+      stock: formData.get('stock')
+    })
     
     const stock = Math.max(1, parseInt(formData.get('stock') as string) || 1)
     
     // Processar imagens - PRIORIZAR ESTADO SOBRE FORMDATA
     // O estado productImages é a fonte de verdade, pois é atualizado diretamente pelo ImageEditor
-    const coverImageFromState = productImages[coverImageIndex] || ''
+    // Se coverImageIndex está fora do range, usar a primeira imagem disponível
+    const validCoverIndex = (coverImageIndex >= 0 && coverImageIndex < productImages.length) 
+      ? coverImageIndex 
+      : (productImages.length > 0 ? 0 : -1)
+    
+    const coverImageFromState = validCoverIndex >= 0 ? productImages[validCoverIndex] || '' : ''
     const coverImageFromForm = formData.get('image') as string || ''
     const coverImage = coverImageFromState || coverImageFromForm || editingProduct?.image || ''
     
     console.log('📸 Debug imagem:', {
       'productImages.length': productImages.length,
-      'coverImageIndex': coverImageIndex,
-      'coverImageFromState': coverImageFromState ? `${coverImageFromState.substring(0, 50)}...` : 'vazio',
-      'coverImageFromForm': coverImageFromForm ? `${coverImageFromForm.substring(0, 50)}...` : 'vazio',
-      'editingProduct?.image': editingProduct?.image ? `${editingProduct.image.substring(0, 50)}...` : 'vazio',
-      'coverImage final': coverImage ? `${coverImage.substring(0, 50)}...` : 'vazio'
+      'coverImageIndex original': coverImageIndex,
+      'validCoverIndex': validCoverIndex,
+      'coverImageFromState': coverImageFromState ? `${coverImageFromState.substring(0, 50)}... (${coverImageFromState.length} chars)` : 'vazio',
+      'coverImageFromForm': coverImageFromForm ? `${coverImageFromForm.substring(0, 50)}... (${coverImageFromForm.length} chars)` : 'vazio',
+      'editingProduct?.image': editingProduct?.image ? `${editingProduct.image.substring(0, 50)}... (${editingProduct.image.length} chars)` : 'vazio',
+      'coverImage final': coverImage ? `${coverImage.substring(0, 50)}... (${coverImage.length} chars)` : 'vazio',
+      'productImages array': productImages.map((img, i) => ({ index: i, hasImage: !!img, length: img?.length || 0 }))
     })
     
     // Validar que há pelo menos uma imagem
     if (!coverImage || coverImage.trim() === '') {
+      console.error('❌ VALIDAÇÃO FALHOU: Imagem vazia')
       alert('❌ É obrigatório adicionar pelo menos uma imagem para o produto!\n\nPor favor, faça upload de uma imagem antes de salvar.')
       return
     }
@@ -431,22 +451,36 @@ export default function Admin() {
     
     console.log('🔍 Debug marca:', { selectedBrand, formBrand: formData.get('brand'), editingBrand: editingProduct?.brand, finalBrand: brandValue })
     
+    // Coletar e normalizar dados
+    const rawName = (formData.get('name') as string) || ''
+    const rawCategory = (formData.get('category') as string) || ''
+    const rawPrice = (formData.get('price') as string) || ''
+    const normalizedPrice = normalizePrice(rawPrice)
+    
+    console.log('💰 Debug preço:', {
+      rawPrice,
+      normalizedPrice,
+      isValid: !isNaN(parseFloat(normalizedPrice)) && parseFloat(normalizedPrice) > 0
+    })
+    
     const productData: any = {
-      name: formData.get('name') as string,
-      category: formData.get('category') as string,
+      name: rawName.trim(),
+      category: rawCategory.trim(),
       brand: brandValue || '',
-      price: normalizePrice(formData.get('price') as string),
+      price: normalizedPrice,
       image: coverImage,
-      description: formData.get('description') as string,
+      description: (formData.get('description') as string) || '',
       featured: formData.get('featured') === 'on',
       on_sale: formData.get('on_sale') === 'on',
       original_price: normalizePrice(formData.get('original_price') as string || ''),
       discount_percentage: parseInt(formData.get('discount_percentage') as string) || 0,
       sale_price: normalizePrice(formData.get('sale_price') as string || ''),
-      gender: formData.get('gender') as string || '',
-      model: formData.get('model') as string || '',
+      gender: (formData.get('gender') as string) || '',
+      model: (formData.get('model') as string) || '',
       stock: stock,
     }
+    
+    console.log('📦 Dados coletados do formulário:', productData)
     
     // Salvar imagens adicionais (só se a coluna existir no banco)
     // Se a coluna não existir, será ignorado silenciosamente
@@ -481,9 +515,13 @@ export default function Admin() {
     }
 
     // Validação de dados
+    console.log('🔍 Iniciando validação...')
     const validation = await import('@/lib/validation').then(m => m.validateProductData(productData))
+    console.log('✅ Resultado da validação:', validation)
+    
     if (!validation.valid) {
-      alert('Erros de validação:\n' + validation.errors.join('\n'))
+      console.error('❌ VALIDAÇÃO FALHOU:', validation.errors)
+      alert('❌ Erros de validação:\n\n' + validation.errors.join('\n') + '\n\nPor favor, corrija os erros e tente novamente.')
       return
     }
     
@@ -2252,17 +2290,46 @@ export default function Admin() {
                   {/* Upload de nova imagem com editor */}
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
                     <ImageEditor
-                      imageUrl={productImages[coverImageIndex] || ''}
+                      imageUrl={productImages.length > 0 && coverImageIndex >= 0 && coverImageIndex < productImages.length 
+                        ? productImages[coverImageIndex] 
+                        : ''}
                       onImageSelect={(imageUrl) => {
-                        if (imageUrl) {
+                        console.log('📸 ImageEditor onImageSelect chamado:', {
+                          imageUrl: imageUrl ? `${imageUrl.substring(0, 50)}... (${imageUrl.length} chars)` : 'vazio',
+                          productImagesLength: productImages.length,
+                          coverImageIndex,
+                          hasImage: !!imageUrl
+                        })
+                        
+                        if (imageUrl && imageUrl.trim() !== '') {
                           const newImages = [...productImages]
-                          if (coverImageIndex < newImages.length) {
+                          
+                          // Se não há imagens, adicionar como primeira
+                          if (newImages.length === 0) {
+                            newImages.push(imageUrl)
+                            setCoverImageIndex(0)
+                            console.log('✅ Primeira imagem adicionada ao array')
+                          } 
+                          // Se há imagens e o índice é válido, atualizar
+                          else if (coverImageIndex >= 0 && coverImageIndex < newImages.length) {
                             newImages[coverImageIndex] = imageUrl
-                          } else {
+                            console.log('✅ Imagem atualizada no índice', coverImageIndex)
+                          } 
+                          // Se o índice está fora do range, adicionar no final
+                          else {
                             newImages.push(imageUrl)
                             setCoverImageIndex(newImages.length - 1)
+                            console.log('✅ Imagem adicionada no final do array')
                           }
+                          
                           setProductImages(newImages)
+                          console.log('✅ Estado atualizado. Novo array:', {
+                            length: newImages.length,
+                            coverIndex: coverImageIndex,
+                            hasImages: newImages.every(img => !!img && img.trim() !== '')
+                          })
+                        } else if (!imageUrl || imageUrl.trim() === '') {
+                          console.warn('⚠️ ImageEditor retornou imagem vazia')
                         }
                       }}
                       placeholder="Adicionar/editar imagem principal"
