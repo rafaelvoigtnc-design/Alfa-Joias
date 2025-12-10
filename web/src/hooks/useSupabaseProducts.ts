@@ -255,37 +255,79 @@ export function useSupabaseProducts() {
 
   const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      console.log('💾 [useSupabaseProducts] Adicionando produto ao banco...', { name: product.name, category: product.category })
+      
       const { data, error } = await supabase
         .from('products')
         .insert([product])
         .select()
 
-      if (error) throw error
-      if (data) {
-        setProducts(prev => [data[0], ...prev])
+      if (error) {
+        console.error('❌ [useSupabaseProducts] Erro do Supabase:', error)
+        throw error
       }
-      return data?.[0]
+      
+      if (data && data[0]) {
+        console.log('✅ [useSupabaseProducts] Produto adicionado com sucesso:', data[0])
+        const newProduct = data[0]
+        
+        // Atualizar estado local
+        setProducts(prev => {
+          const updated = [newProduct, ...prev]
+          // Atualizar cache também
+          setCachedProducts(updated)
+          return updated
+        })
+        
+        return newProduct
+      } else {
+        console.error('❌ [useSupabaseProducts] Nenhum dado retornado do Supabase')
+        throw new Error('Nenhum dado retornado ao adicionar produto')
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao adicionar produto')
+      console.error('❌ [useSupabaseProducts] Erro ao adicionar produto:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao adicionar produto'
+      setError(errorMessage)
       throw err
     }
   }
 
   const updateProduct = async (id: string, updates: Partial<Product>) => {
     try {
+      console.log('💾 [useSupabaseProducts] Atualizando produto no banco...', { id, updates: { name: updates.name, category: updates.category } })
+      
       const { data, error } = await supabase
         .from('products')
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
 
-      if (error) throw error
-      if (data) {
-        setProducts(prev => prev.map(p => p.id === id ? data[0] : p))
+      if (error) {
+        console.error('❌ [useSupabaseProducts] Erro do Supabase:', error)
+        throw error
       }
-      return data?.[0]
+      
+      if (data && data[0]) {
+        console.log('✅ [useSupabaseProducts] Produto atualizado com sucesso:', data[0])
+        const updatedProduct = data[0]
+        
+        // Atualizar estado local
+        setProducts(prev => {
+          const updated = prev.map(p => p.id === id ? updatedProduct : p)
+          // Atualizar cache também
+          setCachedProducts(updated)
+          return updated
+        })
+        
+        return updatedProduct
+      } else {
+        console.error('❌ [useSupabaseProducts] Nenhum dado retornado do Supabase')
+        throw new Error('Nenhum dado retornado ao atualizar produto')
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao atualizar produto')
+      console.error('❌ [useSupabaseProducts] Erro ao atualizar produto:', err)
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao atualizar produto'
+      setError(errorMessage)
       throw err
     }
   }

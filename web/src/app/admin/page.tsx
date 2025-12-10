@@ -566,62 +566,104 @@ export default function Admin() {
     try {
       // Tentar salvar com additional_images, mas se der erro, tentar sem
       let saved = false
+      let savedProduct: any = null
+      
       try {
+        console.log('💾 Tentando salvar produto no banco...', { isEditing: !!editingProduct, productId: editingProduct?.id })
+        
         if (editingProduct) {
           // Atualizar produto APENAS no Supabase
-          await updateSupabaseProduct(editingProduct.id, productData)
-          console.log('✅ Produto atualizado no BANCO:', productData)
+          console.log('✏️ Atualizando produto existente...')
+          savedProduct = await updateSupabaseProduct(editingProduct.id, productData)
+          console.log('✅ Produto atualizado no BANCO:', savedProduct)
           saved = true
         } else {
           // Adicionar produto APENAS no Supabase
-          await addSupabaseProduct(productData)
-          console.log('✅ Produto adicionado no BANCO:', productData)
+          console.log('➕ Adicionando novo produto...')
+          savedProduct = await addSupabaseProduct(productData)
+          console.log('✅ Produto adicionado no BANCO:', savedProduct)
           saved = true
         }
       } catch (err: any) {
+        console.error('❌ Erro ao salvar produto (primeira tentativa):', err)
+        console.error('❌ Detalhes do erro:', {
+          message: err?.message,
+          code: err?.code,
+          details: err?.details,
+          hint: err?.hint,
+          error: err
+        })
+        
         // Se o erro for sobre additional_images, tentar novamente sem essa coluna
-        if (err?.message?.includes('additional_images') || err?.code === 'PGRST116') {
+        if (err?.message?.includes('additional_images') || err?.code === 'PGRST116' || err?.details?.includes('additional_images')) {
           console.warn('⚠️ Coluna additional_images não encontrada. Tentando salvar sem ela...')
           const productDataWithoutAdditional = { ...productData }
           delete productDataWithoutAdditional.additional_images
           
-          if (editingProduct) {
-            await updateSupabaseProduct(editingProduct.id, productDataWithoutAdditional)
-            console.log('✅ Produto atualizado sem additional_images')
-            saved = true
-            alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
-          } else {
-            await addSupabaseProduct(productDataWithoutAdditional)
-            console.log('✅ Produto adicionado sem additional_images')
-            saved = true
-            alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
+          try {
+            if (editingProduct) {
+              savedProduct = await updateSupabaseProduct(editingProduct.id, productDataWithoutAdditional)
+              console.log('✅ Produto atualizado sem additional_images')
+              saved = true
+              alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
+            } else {
+              savedProduct = await addSupabaseProduct(productDataWithoutAdditional)
+              console.log('✅ Produto adicionado sem additional_images')
+              saved = true
+              alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
+            }
+          } catch (retryErr: any) {
+            console.error('❌ Erro ao salvar produto (segunda tentativa, sem additional_images):', retryErr)
+            throw retryErr
           }
         } else {
           throw err // Re-lançar se não for erro de additional_images
         }
       }
       
-      if (saved) {
+      if (saved && savedProduct) {
+        console.log('✅ Produto salvo com sucesso!', savedProduct)
         alert('✅ Produto salvo com sucesso no banco de dados!')
         
         // Recarregar lista de produtos para mostrar as mudanças
         if (refetchProducts) {
           console.log('🔄 Recarregando lista de produtos...')
-          await refetchProducts()
-          console.log('✅ Lista de produtos recarregada')
+          try {
+            await refetchProducts()
+            console.log('✅ Lista de produtos recarregada')
+          } catch (refetchErr) {
+            console.error('⚠️ Erro ao recarregar lista de produtos:', refetchErr)
+            // Não bloquear o fluxo se o refetch falhar
+          }
         }
+        
+        // Limpar formulário apenas se salvou com sucesso
+        setEditingProduct(null)
+        setShowProductForm(false)
+        setSelectedBrand('')
+        setProductImages([])
+        setCoverImageIndex(0)
+        setAdditionalImageEditorKey(0)
+      } else {
+        console.error('❌ Produto não foi salvo!', { saved, savedProduct })
+        alert('❌ Erro: Produto não foi salvo. Verifique o console para mais detalhes.')
       }
-      
-      setEditingProduct(null)
-      setShowProductForm(false)
-      setSelectedBrand('')
-      setProductImages([])
-      setCoverImageIndex(0)
-      setAdditionalImageEditorKey(0)
       
     } catch (error: any) {
       console.error('❌ Erro ao salvar produto no banco:', error)
-      alert(`❌ ERRO AO SALVAR NO BANCO DE DADOS\n\n${error?.message || 'Erro desconhecido'}\n\n💡 Verifique:\n• Configuração do Supabase\n• Conexão com a internet\n• Permissões no banco`)
+      console.error('❌ Detalhes completos do erro:', {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        stack: error?.stack,
+        error: error
+      })
+      
+      const errorMessage = error?.message || error?.details || 'Erro desconhecido'
+      const errorHint = error?.hint ? `\n\n💡 Dica: ${error.hint}` : ''
+      
+      alert(`❌ ERRO AO SALVAR NO BANCO DE DADOS\n\n${errorMessage}${errorHint}\n\n💡 Verifique:\n• Configuração do Supabase\n• Conexão com a internet\n• Permissões no banco\n• Console do navegador para mais detalhes`)
     }
   }
 
