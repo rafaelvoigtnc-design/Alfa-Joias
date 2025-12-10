@@ -602,40 +602,61 @@ export default function Admin() {
         let savedProduct: any = null
         
         try {
-        console.log('💾 Tentando salvar produto no banco...', { 
-          isEditing, 
-          productId: currentEditingProductId,
-          productName: editingProduct?.name,
-          productDataKeys: Object.keys(productData)
-        })
-        
-        if (isEditing && currentEditingProductId) {
-          // Atualizar produto APENAS no Supabase
-          console.log('✏️ Atualizando produto existente...', {
-            id: currentEditingProductId,
-            name: editingProduct?.name,
-            newData: {
+          console.log('💾 Tentando salvar produto no banco...', { 
+            isEditing, 
+            productId: currentEditingProductId,
+            productName: editingProduct?.name,
+            editingProductFull: editingProduct,
+            productDataKeys: Object.keys(productData),
+            productDataSample: {
               name: productData.name,
               category: productData.category,
               price: productData.price
             }
           })
           
-          // Garantir que o ID está presente
-          if (!currentEditingProductId) {
-            throw new Error('ID do produto não encontrado. Não é possível atualizar.')
+          if (isEditing && currentEditingProductId) {
+            // Atualizar produto APENAS no Supabase
+            console.log('✏️ MODO EDIÇÃO: Atualizando produto existente...', {
+              id: currentEditingProductId,
+              originalName: editingProduct?.name,
+              newData: {
+                name: productData.name,
+                category: productData.category,
+                price: productData.price,
+                brand: productData.brand
+              },
+              allUpdates: productData
+            })
+            
+            // Garantir que o ID está presente
+            if (!currentEditingProductId) {
+              console.error('❌ ERRO CRÍTICO: currentEditingProductId está vazio!', {
+                editingProduct,
+                currentEditingProductId,
+                isEditing
+              })
+              throw new Error('ID do produto não encontrado. Não é possível atualizar.')
+            }
+            
+            console.log('🔄 Chamando updateSupabaseProduct com:', {
+              id: currentEditingProductId,
+              updatesCount: Object.keys(productData).length
+            })
+            savedProduct = await updateSupabaseProduct(currentEditingProductId, productData)
+            console.log('✅ Produto atualizado no BANCO:', savedProduct)
+            saved = true
+          } else {
+            // Adicionar produto APENAS no Supabase
+            console.log('➕ MODO CRIAÇÃO: Adicionando novo produto...', {
+              reason: !isEditing ? 'isEditing é false' : !currentEditingProductId ? 'ID não encontrado' : 'desconhecido',
+              isEditing,
+              currentEditingProductId
+            })
+            savedProduct = await addSupabaseProduct(productData)
+            console.log('✅ Produto adicionado no BANCO:', savedProduct)
+            saved = true
           }
-          
-          savedProduct = await updateSupabaseProduct(currentEditingProductId, productData)
-          console.log('✅ Produto atualizado no BANCO:', savedProduct)
-          saved = true
-        } else {
-          // Adicionar produto APENAS no Supabase
-          console.log('➕ Adicionando novo produto...')
-          savedProduct = await addSupabaseProduct(productData)
-          console.log('✅ Produto adicionado no BANCO:', savedProduct)
-          saved = true
-        }
         } catch (err: any) {
           console.error('❌ Erro ao salvar produto (primeira tentativa):', err)
           console.error('❌ Detalhes do erro:', {
@@ -681,6 +702,12 @@ export default function Admin() {
         
         if (saved && savedProduct) {
           console.log('✅ Produto salvo com sucesso!', savedProduct)
+          console.log('📊 Resumo da operação:', {
+            wasEditing: isEditing,
+            productId: currentEditingProductId,
+            operation: isEditing ? 'ATUALIZAÇÃO' : 'CRIAÇÃO',
+            savedProductId: savedProduct?.id
+          })
           alert('✅ Produto salvo com sucesso no banco de dados!')
           
           // Recarregar lista de produtos para mostrar as mudanças
@@ -703,7 +730,7 @@ export default function Admin() {
           setCoverImageIndex(0)
           setAdditionalImageEditorKey(0)
         } else {
-          console.error('❌ Produto não foi salvo!', { saved, savedProduct })
+          console.error('❌ Produto não foi salvo!', { saved, savedProduct, isEditing, currentEditingProductId })
           alert('❌ Erro: Produto não foi salvo. Verifique o console para mais detalhes.')
         }
       } catch (error: any) {
@@ -1564,9 +1591,16 @@ export default function Admin() {
                             <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
                               <button
                                 onClick={() => {
+                                  console.log('✏️ Botão Editar clicado para produto:', {
+                                    id: product.id,
+                                    name: product.name,
+                                    brand: product.brand,
+                                    fullProduct: product
+                                  })
                                   setEditingProduct(product)
                                   setSelectedBrand(product.brand || '')
                                   setShowProductForm(true)
+                                  console.log('✅ Estado atualizado: editingProduct definido, formulário aberto')
                                 }}
                                 className="flex-1 inline-flex items-center justify-center px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 text-xs sm:text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                               >
