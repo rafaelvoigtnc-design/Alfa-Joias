@@ -1223,6 +1223,7 @@ export default function Admin() {
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Produto
                 </button>
+                </button>
               </div>
               {/* Botão "Sincronizar Dados" removido */}
 
