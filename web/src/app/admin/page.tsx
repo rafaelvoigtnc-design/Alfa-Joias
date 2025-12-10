@@ -190,6 +190,11 @@ export default function Admin() {
       }
     }
   }, [showProductForm, editingProduct])
+  
+  // Categorias de produtos disponíveis
+  // Categorias que realmente aparecem no site (baseado em Categories.tsx)
+  const productCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins', 'Serviços']
+  
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [showOrderDetails, setShowOrderDetails] = useState(false)
   const [showWhatsAppNotification, setShowWhatsAppNotification] = useState(false)
@@ -998,96 +1003,11 @@ export default function Admin() {
           alert('❌ Erro ao deletar categoria. Tente novamente.')
         }
         break
+      default:
+        console.warn('Tipo de item desconhecido:', type)
+        break
     }
   }
-
-  // Categorias de produtos disponíveis
-  // Categorias que realmente aparecem no site (baseado em Categories.tsx)
-  const productCategories = ['Joias', 'Relógios', 'Óculos', 'Semi-Joias', 'Afins', 'Serviços']
-  
-  // Função para categorias iniciais
-  const initialCategoriesData = () => [
-    {
-      id: '1',
-      name: 'Joias',
-      description: 'Anéis, colares, brincos e pulseiras em ouro e prata',
-      image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&h=600&fit=crop',
-      icon: 'gem',
-      href: '/produtos?categoria=Joias'
-    },
-    {
-      id: '2',
-      name: 'Relógios',
-      description: 'Relógios masculinos e femininos das melhores marcas',
-      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=600&fit=crop',
-      icon: 'clock',
-      href: '/produtos?categoria=Relógios'
-    },
-    {
-      id: '3',
-      name: 'Óculos',
-      description: 'Óculos de sol e grau com tecnologia avançada',
-      image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&h=600&fit=crop',
-      icon: 'eye',
-      href: '/produtos?categoria=Óculos'
-    },
-    {
-      id: '4',
-      name: 'Semi-Joias',
-      description: 'Bijuterias elegantes e acessórios modernos',
-      image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&h=600&fit=crop',
-      icon: 'diamond',
-      href: '/produtos?categoria=Semi-Joias'
-    },
-    {
-      id: '5',
-      name: 'Carteiras',
-      description: 'Carteiras masculinas e femininas de qualidade',
-      image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=800&h=600&fit=crop',
-      icon: 'package',
-      href: '/produtos?categoria=Carteiras'
-    },
-    {
-      id: '6',
-      name: 'Cintos',
-      description: 'Cintos de couro e sintético para todos os estilos',
-      image: 'https://images.unsplash.com/photo-1624378515194-962d17c79896?w=800&h=600&fit=crop',
-      icon: 'package',
-      href: '/produtos?categoria=Cintos'
-    },
-    {
-      id: '7',
-      name: 'Bebidas',
-      description: 'Bebidas premium e especiais',
-      image: 'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=800&h=600&fit=crop',
-      icon: 'package',
-      href: '/produtos?categoria=Bebidas'
-    },
-    {
-      id: '8',
-      name: 'Acessórios',
-      description: 'Diversos acessórios e produtos variados',
-      image: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=800&h=600&fit=crop',
-      icon: 'package',
-      href: '/produtos?categoria=Acessórios'
-    },
-    {
-      id: '9',
-      name: 'Outros',
-      description: 'Outros produtos diversos',
-      image: 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&h=600&fit=crop',
-      icon: 'package',
-      href: '/produtos?categoria=Outros'
-    },
-    {
-      id: '10',
-      name: 'Afins',
-      description: 'Produtos variados e categorias relacionadas',
-      image: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=800&h=600&fit=crop',
-      icon: 'package',
-      href: '/produtos?categoria=Afins'
-    }
-  ]
 
   // Mostrar loading enquanto verifica autenticação
   if (authLoading) {
@@ -1146,7 +1066,6 @@ export default function Admin() {
     )
   }
 
-  // Render principal do componente
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -1228,7 +1147,6 @@ export default function Admin() {
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Adicionar Produto
-                </button>
                 </button>
               </div>
               {/* Botão "Sincronizar Dados" removido */}
