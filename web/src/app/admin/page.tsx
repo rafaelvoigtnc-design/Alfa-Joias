@@ -544,12 +544,16 @@ export default function Admin() {
       // Não bloquear, apenas avisar - o usuário pode tentar salvar mesmo assim
     }
     
+    const imageInfo = productData.image 
+      ? `${productData.image.substring(0, 50)}... (${productData.image.length} chars, ~${(imageSizeInBytes / (1024 * 1024)).toFixed(2)}MB)` 
+      : 'vazio'
+    
     console.log('💾 Dados do produto que serão salvos:', {
       name: productData.name,
       category: productData.category,
       brand: productData.brand,
       price: productData.price,
-      image: productData.image ? `${productData.image.substring(0, 50)}... (${productData.image.length} chars, ~${(imageSizeInBytes / (1024 * 1024)).toFixed(2)}MB)` : 'vazio',
+      image: imageInfo,
       hasAdditionalImages: additionalImages.length > 0,
       stock: productData.stock
     })
@@ -761,12 +765,13 @@ export default function Admin() {
           alert('❌ É obrigatório fazer upload de imagens separadas para Desktop e Mobile!\n\nPor favor, faça upload de ambas as imagens antes de salvar.')
           return
         }
-      } catch {
+      } catch (parseError) {
         // Se não for JSON, significa que é uma string simples (formato antigo)
         // Mas agora exigimos JSON com desktop e mobile
         alert('❌ É obrigatório fazer upload de imagens separadas para Desktop e Mobile!\n\nPor favor, faça upload de ambas as imagens antes de salvar.')
         return
       }
+      
       if (!ctaText) {
         alert('❌ Texto do botão é obrigatório!')
         return
@@ -1141,6 +1146,7 @@ export default function Admin() {
     )
   }
 
+  // Render principal do componente
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
