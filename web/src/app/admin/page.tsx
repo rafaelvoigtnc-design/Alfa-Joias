@@ -390,7 +390,10 @@ export default function Admin() {
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation()
+    
     console.log('🚀 ========== INICIANDO SALVAMENTO DE PRODUTO ==========')
+    console.log('📝 Evento recebido:', e.type, e)
     
     // Preservar o ID do produto que está sendo editado ANTES de qualquer processamento
     const currentEditingProductId = editingProduct?.id
@@ -400,10 +403,11 @@ export default function Admin() {
       isEditing, 
       editingProductId: currentEditingProductId,
       editingProductName: editingProduct?.name,
-      editingProduct: editingProduct
+      editingProduct: editingProduct ? { id: editingProduct.id, name: editingProduct.name } : null
     })
     
-    const formData = new FormData(e.target as HTMLFormElement)
+    try {
+      const formData = new FormData(e.target as HTMLFormElement)
     
     // Debug: mostrar todos os campos do formulário
     console.log('📋 Campos do formulário:', {
@@ -440,11 +444,23 @@ export default function Admin() {
     })
     
     // Validar que há pelo menos uma imagem
-    if (!coverImage || coverImage.trim() === '') {
+    // IMPORTANTE: Ao editar, se não houver imagem nova, usar a imagem existente do produto
+    const finalCoverImage = coverImage || editingProduct?.image || ''
+    
+    if (!finalCoverImage || finalCoverImage.trim() === '') {
       console.error('❌ VALIDAÇÃO FALHOU: Imagem vazia')
+      console.error('❌ Debug imagem:', {
+        coverImage,
+        editingProductImage: editingProduct?.image,
+        productImagesLength: productImages.length,
+        coverImageIndex
+      })
       alert('❌ É obrigatório adicionar pelo menos uma imagem para o produto!\n\nPor favor, faça upload de uma imagem antes de salvar.')
       return
     }
+    
+    // Usar a imagem final validada
+    const validatedCoverImage = finalCoverImage
     
     const additionalImagesJson = formData.get('additionalImages') as string
     let additionalImages: string[] = []
@@ -484,7 +500,7 @@ export default function Admin() {
       category: rawCategory.trim(),
       brand: brandValue || '',
       price: normalizedPrice,
-      image: coverImage,
+      image: validatedCoverImage,
       description: (formData.get('description') as string) || '',
       featured: formData.get('featured') === 'on',
       on_sale: formData.get('on_sale') === 'on',
@@ -542,9 +558,15 @@ export default function Admin() {
     }
     
     // Validação adicional de imagem (garantir que não está vazia após normalização)
+    // Se ainda estiver vazia, tentar usar a imagem do produto sendo editado
     if (!productData.image || productData.image.trim() === '') {
-      alert('❌ Erro: A imagem do produto está vazia!\n\nPor favor, faça upload de uma imagem antes de salvar.')
-      return
+      if (editingProduct?.image) {
+        console.log('⚠️ Usando imagem do produto existente:', editingProduct.image.substring(0, 50))
+        productData.image = editingProduct.image
+      } else {
+        alert('❌ Erro: A imagem do produto está vazia!\n\nPor favor, faça upload de uma imagem antes de salvar.')
+        return
+      }
     }
     
     // Verificar tamanho da imagem (base64 pode ser muito grande)
