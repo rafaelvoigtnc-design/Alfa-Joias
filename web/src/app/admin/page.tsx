@@ -408,200 +408,200 @@ export default function Admin() {
     
     try {
       const formData = new FormData(e.target as HTMLFormElement)
-    
-    // Debug: mostrar todos os campos do formulário
-    console.log('📋 Campos do formulário:', {
-      name: formData.get('name'),
-      category: formData.get('category'),
-      brand: formData.get('brand'),
-      price: formData.get('price'),
-      description: formData.get('description'),
-      stock: formData.get('stock')
-    })
-    
-    const stock = Math.max(1, parseInt(formData.get('stock') as string) || 1)
-    
-    // Processar imagens - PRIORIZAR ESTADO SOBRE FORMDATA
-    // O estado productImages é a fonte de verdade, pois é atualizado diretamente pelo ImageEditor
-    // Se coverImageIndex está fora do range, usar a primeira imagem disponível
-    const validCoverIndex = (coverImageIndex >= 0 && coverImageIndex < productImages.length) 
-      ? coverImageIndex 
-      : (productImages.length > 0 ? 0 : -1)
-    
-    const coverImageFromState = validCoverIndex >= 0 ? productImages[validCoverIndex] || '' : ''
-    const coverImageFromForm = formData.get('image') as string || ''
-    const coverImage = coverImageFromState || coverImageFromForm || editingProduct?.image || ''
-    
-    console.log('📸 Debug imagem:', {
-      'productImages.length': productImages.length,
-      'coverImageIndex original': coverImageIndex,
-      'validCoverIndex': validCoverIndex,
-      'coverImageFromState': coverImageFromState ? `${coverImageFromState.substring(0, 50)}... (${coverImageFromState.length} chars)` : 'vazio',
-      'coverImageFromForm': coverImageFromForm ? `${coverImageFromForm.substring(0, 50)}... (${coverImageFromForm.length} chars)` : 'vazio',
-      'editingProduct?.image': editingProduct?.image ? `${editingProduct.image.substring(0, 50)}... (${editingProduct.image.length} chars)` : 'vazio',
-      'coverImage final': coverImage ? `${coverImage.substring(0, 50)}... (${coverImage.length} chars)` : 'vazio',
-      'productImages array': productImages.map((img, i) => ({ index: i, hasImage: !!img, length: img?.length || 0 }))
-    })
-    
-    // Validar que há pelo menos uma imagem
-    // IMPORTANTE: Ao editar, se não houver imagem nova, usar a imagem existente do produto
-    const finalCoverImage = coverImage || editingProduct?.image || ''
-    
-    if (!finalCoverImage || finalCoverImage.trim() === '') {
-      console.error('❌ VALIDAÇÃO FALHOU: Imagem vazia')
-      console.error('❌ Debug imagem:', {
-        coverImage,
-        editingProductImage: editingProduct?.image,
-        productImagesLength: productImages.length,
-        coverImageIndex
+      
+      // Debug: mostrar todos os campos do formulário
+      console.log('📋 Campos do formulário:', {
+        name: formData.get('name'),
+        category: formData.get('category'),
+        brand: formData.get('brand'),
+        price: formData.get('price'),
+        description: formData.get('description'),
+        stock: formData.get('stock')
       })
-      alert('❌ É obrigatório adicionar pelo menos uma imagem para o produto!\n\nPor favor, faça upload de uma imagem antes de salvar.')
-      return
-    }
-    
-    // Usar a imagem final validada
-    const validatedCoverImage = finalCoverImage
-    
-    const additionalImagesJson = formData.get('additionalImages') as string
-    let additionalImages: string[] = []
-    
-    try {
-      if (additionalImagesJson) {
-        additionalImages = JSON.parse(additionalImagesJson)
-      } else {
-        // Se não vem do form, calcular das imagens que não são a capa
-        additionalImages = productImages.filter((_, i) => i !== coverImageIndex)
-      }
-    } catch (e) {
-      console.error('Erro ao parsear additionalImages:', e)
-      additionalImages = productImages.filter((_, i) => i !== coverImageIndex)
-    }
-    
-    // Preparar dados do produto (remover additionalImages se não existe no banco)
-    // Garantir que a marca seja capturada corretamente (priorizar selectedBrand que é atualizado pelo BrandSelector)
-    const brandValue = (selectedBrand || formData.get('brand') as string || editingProduct?.brand || '').trim()
-    
-    console.log('🔍 Debug marca:', { selectedBrand, formBrand: formData.get('brand'), editingBrand: editingProduct?.brand, finalBrand: brandValue })
-    
-    // Coletar e normalizar dados
-    const rawName = (formData.get('name') as string) || ''
-    const rawCategory = (formData.get('category') as string) || ''
-    const rawPrice = (formData.get('price') as string) || ''
-    const normalizedPrice = normalizePrice(rawPrice)
-    
-    console.log('💰 Debug preço:', {
-      rawPrice,
-      normalizedPrice,
-      isValid: !isNaN(parseFloat(normalizedPrice)) && parseFloat(normalizedPrice) > 0
-    })
-    
-    const productData: any = {
-      name: rawName.trim(),
-      category: rawCategory.trim(),
-      brand: brandValue || '',
-      price: normalizedPrice,
-      image: validatedCoverImage,
-      description: (formData.get('description') as string) || '',
-      featured: formData.get('featured') === 'on',
-      on_sale: formData.get('on_sale') === 'on',
-      original_price: normalizePrice(formData.get('original_price') as string || ''),
-      discount_percentage: parseInt(formData.get('discount_percentage') as string) || 0,
-      sale_price: normalizePrice(formData.get('sale_price') as string || ''),
-      gender: (formData.get('gender') as string) || '',
-      model: (formData.get('model') as string) || '',
-      stock: stock,
-    }
-    
-    console.log('📦 Dados coletados do formulário:', productData)
-    
-    // Salvar imagens adicionais (só se a coluna existir no banco)
-    // Se a coluna não existir, será ignorado silenciosamente
-    try {
-      if (additionalImages.length > 0) {
-        productData.additional_images = additionalImages
-      } else {
-        productData.additional_images = []
-      }
-    } catch (e) {
-      console.warn('⚠️ Coluna additional_images pode não existir no banco. Execute o script SQL para adicioná-la.')
-      // Não adicionar ao productData se der erro
-    }
-
-    // Padronização: calcular preço promocional se necessário
-    if (productData.on_sale) {
-      const original = parseFloat(productData.original_price || productData.price || '0')
-      const discount = productData.discount_percentage || 0
-      const sale = parseFloat(productData.sale_price || '0')
-      if (!sale && original && discount) {
-        const calculated = original * (1 - discount / 100)
-        productData.sale_price = calculated.toString()
-      }
-      if (!productData.original_price && original) {
-        productData.original_price = original.toString()
-      }
-    } else {
-      // Se não está em promoção, limpar campos de promoção
-      productData.original_price = ''
-      productData.discount_percentage = 0
-      productData.sale_price = ''
-    }
-
-    // Validação de dados
-    console.log('🔍 Iniciando validação...')
-    const validation = await import('@/lib/validation').then(m => m.validateProductData(productData))
-    console.log('✅ Resultado da validação:', validation)
-    
-    if (!validation.valid) {
-      console.error('❌ VALIDAÇÃO FALHOU:', validation.errors)
-      alert('❌ Erros de validação:\n\n' + validation.errors.join('\n') + '\n\nPor favor, corrija os erros e tente novamente.')
-      return
-    }
-    
-    // Validação adicional de imagem (garantir que não está vazia após normalização)
-    // Se ainda estiver vazia, tentar usar a imagem do produto sendo editado
-    if (!productData.image || productData.image.trim() === '') {
-      if (editingProduct?.image) {
-        console.log('⚠️ Usando imagem do produto existente:', editingProduct.image.substring(0, 50))
-        productData.image = editingProduct.image
-      } else {
-        alert('❌ Erro: A imagem do produto está vazia!\n\nPor favor, faça upload de uma imagem antes de salvar.')
+      
+      const stock = Math.max(1, parseInt(formData.get('stock') as string) || 1)
+      
+      // Processar imagens - PRIORIZAR ESTADO SOBRE FORMDATA
+      // O estado productImages é a fonte de verdade, pois é atualizado diretamente pelo ImageEditor
+      // Se coverImageIndex está fora do range, usar a primeira imagem disponível
+      const validCoverIndex = (coverImageIndex >= 0 && coverImageIndex < productImages.length) 
+        ? coverImageIndex 
+        : (productImages.length > 0 ? 0 : -1)
+      
+      const coverImageFromState = validCoverIndex >= 0 ? productImages[validCoverIndex] || '' : ''
+      const coverImageFromForm = formData.get('image') as string || ''
+      const coverImage = coverImageFromState || coverImageFromForm || editingProduct?.image || ''
+      
+      console.log('📸 Debug imagem:', {
+        'productImages.length': productImages.length,
+        'coverImageIndex original': coverImageIndex,
+        'validCoverIndex': validCoverIndex,
+        'coverImageFromState': coverImageFromState ? `${coverImageFromState.substring(0, 50)}... (${coverImageFromState.length} chars)` : 'vazio',
+        'coverImageFromForm': coverImageFromForm ? `${coverImageFromForm.substring(0, 50)}... (${coverImageFromForm.length} chars)` : 'vazio',
+        'editingProduct?.image': editingProduct?.image ? `${editingProduct.image.substring(0, 50)}... (${editingProduct.image.length} chars)` : 'vazio',
+        'coverImage final': coverImage ? `${coverImage.substring(0, 50)}... (${coverImage.length} chars)` : 'vazio',
+        'productImages array': productImages.map((img, i) => ({ index: i, hasImage: !!img, length: img?.length || 0 }))
+      })
+      
+      // Validar que há pelo menos uma imagem
+      // IMPORTANTE: Ao editar, se não houver imagem nova, usar a imagem existente do produto
+      const finalCoverImage = coverImage || editingProduct?.image || ''
+      
+      if (!finalCoverImage || finalCoverImage.trim() === '') {
+        console.error('❌ VALIDAÇÃO FALHOU: Imagem vazia')
+        console.error('❌ Debug imagem:', {
+          coverImage,
+          editingProductImage: editingProduct?.image,
+          productImagesLength: productImages.length,
+          coverImageIndex
+        })
+        alert('❌ É obrigatório adicionar pelo menos uma imagem para o produto!\n\nPor favor, faça upload de uma imagem antes de salvar.')
         return
       }
-    }
-    
-    // Verificar tamanho da imagem (base64 pode ser muito grande)
-    // Supabase TEXT tem limite de ~1GB, mas imagens base64 muito grandes podem causar problemas
-    // Limite recomendado: 10MB em base64 (~13.3MB de dados base64)
-    const imageSizeInBytes = productData.image.length * 0.75 // Aproximação: base64 é ~33% maior que binário
-    const maxSizeInBytes = 10 * 1024 * 1024 // 10MB
-    
-    if (imageSizeInBytes > maxSizeInBytes) {
-      const sizeInMB = (imageSizeInBytes / (1024 * 1024)).toFixed(2)
-      const maxSizeInMB = (maxSizeInBytes / (1024 * 1024)).toFixed(2)
-      alert(`⚠️ A imagem é muito grande (${sizeInMB}MB)!\n\nO tamanho máximo recomendado é ${maxSizeInMB}MB.\n\nPor favor, use uma imagem menor ou comprima a imagem antes de fazer upload.`)
-      // Não bloquear, apenas avisar - o usuário pode tentar salvar mesmo assim
-    }
-    
-    const imageInfo = productData.image 
-      ? `${productData.image.substring(0, 50)}... (${productData.image.length} chars, ~${(imageSizeInBytes / (1024 * 1024)).toFixed(2)}MB)` 
-      : 'vazio'
-    
-    console.log('💾 Dados do produto que serão salvos:', {
-      name: productData.name,
-      category: productData.category,
-      brand: productData.brand,
-      price: productData.price,
-      image: imageInfo,
-      hasAdditionalImages: additionalImages.length > 0,
-      stock: productData.stock
-    })
-
-    try {
-      // Tentar salvar com additional_images, mas se der erro, tentar sem
-      let saved = false
-      let savedProduct: any = null
+      
+      // Usar a imagem final validada
+      const validatedCoverImage = finalCoverImage
+      
+      const additionalImagesJson = formData.get('additionalImages') as string
+      let additionalImages: string[] = []
       
       try {
+        if (additionalImagesJson) {
+          additionalImages = JSON.parse(additionalImagesJson)
+        } else {
+          // Se não vem do form, calcular das imagens que não são a capa
+          additionalImages = productImages.filter((_, i) => i !== coverImageIndex)
+        }
+      } catch (e) {
+        console.error('Erro ao parsear additionalImages:', e)
+        additionalImages = productImages.filter((_, i) => i !== coverImageIndex)
+      }
+      
+      // Preparar dados do produto (remover additionalImages se não existe no banco)
+      // Garantir que a marca seja capturada corretamente (priorizar selectedBrand que é atualizado pelo BrandSelector)
+      const brandValue = (selectedBrand || formData.get('brand') as string || editingProduct?.brand || '').trim()
+      
+      console.log('🔍 Debug marca:', { selectedBrand, formBrand: formData.get('brand'), editingBrand: editingProduct?.brand, finalBrand: brandValue })
+      
+      // Coletar e normalizar dados
+      const rawName = (formData.get('name') as string) || ''
+      const rawCategory = (formData.get('category') as string) || ''
+      const rawPrice = (formData.get('price') as string) || ''
+      const normalizedPrice = normalizePrice(rawPrice)
+      
+      console.log('💰 Debug preço:', {
+        rawPrice,
+        normalizedPrice,
+        isValid: !isNaN(parseFloat(normalizedPrice)) && parseFloat(normalizedPrice) > 0
+      })
+      
+      const productData: any = {
+        name: rawName.trim(),
+        category: rawCategory.trim(),
+        brand: brandValue || '',
+        price: normalizedPrice,
+        image: validatedCoverImage,
+        description: (formData.get('description') as string) || '',
+        featured: formData.get('featured') === 'on',
+        on_sale: formData.get('on_sale') === 'on',
+        original_price: normalizePrice(formData.get('original_price') as string || ''),
+        discount_percentage: parseInt(formData.get('discount_percentage') as string) || 0,
+        sale_price: normalizePrice(formData.get('sale_price') as string || ''),
+        gender: (formData.get('gender') as string) || '',
+        model: (formData.get('model') as string) || '',
+        stock: stock,
+      }
+      
+      console.log('📦 Dados coletados do formulário:', productData)
+      
+      // Salvar imagens adicionais (só se a coluna existir no banco)
+      // Se a coluna não existir, será ignorado silenciosamente
+      try {
+        if (additionalImages.length > 0) {
+          productData.additional_images = additionalImages
+        } else {
+          productData.additional_images = []
+        }
+      } catch (e) {
+        console.warn('⚠️ Coluna additional_images pode não existir no banco. Execute o script SQL para adicioná-la.')
+        // Não adicionar ao productData se der erro
+      }
+
+      // Padronização: calcular preço promocional se necessário
+      if (productData.on_sale) {
+        const original = parseFloat(productData.original_price || productData.price || '0')
+        const discount = productData.discount_percentage || 0
+        const sale = parseFloat(productData.sale_price || '0')
+        if (!sale && original && discount) {
+          const calculated = original * (1 - discount / 100)
+          productData.sale_price = calculated.toString()
+        }
+        if (!productData.original_price && original) {
+          productData.original_price = original.toString()
+        }
+      } else {
+        // Se não está em promoção, limpar campos de promoção
+        productData.original_price = ''
+        productData.discount_percentage = 0
+        productData.sale_price = ''
+      }
+
+      // Validação de dados
+      console.log('🔍 Iniciando validação...')
+      const validation = await import('@/lib/validation').then(m => m.validateProductData(productData))
+      console.log('✅ Resultado da validação:', validation)
+      
+      if (!validation.valid) {
+        console.error('❌ VALIDAÇÃO FALHOU:', validation.errors)
+        alert('❌ Erros de validação:\n\n' + validation.errors.join('\n') + '\n\nPor favor, corrija os erros e tente novamente.')
+        return
+      }
+      
+      // Validação adicional de imagem (garantir que não está vazia após normalização)
+      // Se ainda estiver vazia, tentar usar a imagem do produto sendo editado
+      if (!productData.image || productData.image.trim() === '') {
+        if (editingProduct?.image) {
+          console.log('⚠️ Usando imagem do produto existente:', editingProduct.image.substring(0, 50))
+          productData.image = editingProduct.image
+        } else {
+          alert('❌ Erro: A imagem do produto está vazia!\n\nPor favor, faça upload de uma imagem antes de salvar.')
+          return
+        }
+      }
+      
+      // Verificar tamanho da imagem (base64 pode ser muito grande)
+      // Supabase TEXT tem limite de ~1GB, mas imagens base64 muito grandes podem causar problemas
+      // Limite recomendado: 10MB em base64 (~13.3MB de dados base64)
+      const imageSizeInBytes = productData.image.length * 0.75 // Aproximação: base64 é ~33% maior que binário
+      const maxSizeInBytes = 10 * 1024 * 1024 // 10MB
+      
+      if (imageSizeInBytes > maxSizeInBytes) {
+        const sizeInMB = (imageSizeInBytes / (1024 * 1024)).toFixed(2)
+        const maxSizeInMB = (maxSizeInBytes / (1024 * 1024)).toFixed(2)
+        alert(`⚠️ A imagem é muito grande (${sizeInMB}MB)!\n\nO tamanho máximo recomendado é ${maxSizeInMB}MB.\n\nPor favor, use uma imagem menor ou comprima a imagem antes de fazer upload.`)
+        // Não bloquear, apenas avisar - o usuário pode tentar salvar mesmo assim
+      }
+      
+      const imageInfo = productData.image 
+        ? `${productData.image.substring(0, 50)}... (${productData.image.length} chars, ~${(imageSizeInBytes / (1024 * 1024)).toFixed(2)}MB)` 
+        : 'vazio'
+      
+      console.log('💾 Dados do produto que serão salvos:', {
+        name: productData.name,
+        category: productData.category,
+        brand: productData.brand,
+        price: productData.price,
+        image: imageInfo,
+        hasAdditionalImages: additionalImages.length > 0,
+        stock: productData.stock
+      })
+
+      try {
+        // Tentar salvar com additional_images, mas se der erro, tentar sem
+        let saved = false
+        let savedProduct: any = null
+        
+        try {
         console.log('💾 Tentando salvar produto no banco...', { 
           isEditing, 
           productId: currentEditingProductId,
@@ -636,92 +636,95 @@ export default function Admin() {
           console.log('✅ Produto adicionado no BANCO:', savedProduct)
           saved = true
         }
-      } catch (err: any) {
-        console.error('❌ Erro ao salvar produto (primeira tentativa):', err)
-        console.error('❌ Detalhes do erro:', {
-          message: err?.message,
-          code: err?.code,
-          details: err?.details,
-          hint: err?.hint,
-          error: err
+        } catch (err: any) {
+          console.error('❌ Erro ao salvar produto (primeira tentativa):', err)
+          console.error('❌ Detalhes do erro:', {
+            message: err?.message,
+            code: err?.code,
+            details: err?.details,
+            hint: err?.hint,
+            error: err
+          })
+          
+          // Se o erro for sobre additional_images, tentar novamente sem essa coluna
+          if (err?.message?.includes('additional_images') || err?.code === 'PGRST116' || err?.details?.includes('additional_images')) {
+            console.warn('⚠️ Coluna additional_images não encontrada. Tentando salvar sem ela...')
+            const productDataWithoutAdditional = { ...productData }
+            delete productDataWithoutAdditional.additional_images
+            
+            try {
+              if (isEditing && currentEditingProductId) {
+                console.log('✏️ Tentando atualizar produto sem additional_images...', { id: currentEditingProductId })
+                
+                if (!currentEditingProductId) {
+                  throw new Error('ID do produto não encontrado. Não é possível atualizar.')
+                }
+                
+                savedProduct = await updateSupabaseProduct(currentEditingProductId, productDataWithoutAdditional)
+                console.log('✅ Produto atualizado sem additional_images')
+                saved = true
+                alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
+              } else {
+                savedProduct = await addSupabaseProduct(productDataWithoutAdditional)
+                console.log('✅ Produto adicionado sem additional_images')
+                saved = true
+                alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
+              }
+            } catch (retryErr: any) {
+              console.error('❌ Erro ao salvar produto (segunda tentativa, sem additional_images):', retryErr)
+              throw retryErr
+            }
+          } else {
+            throw err // Re-lançar se não for erro de additional_images
+          }
+        }
+        
+        if (saved && savedProduct) {
+          console.log('✅ Produto salvo com sucesso!', savedProduct)
+          alert('✅ Produto salvo com sucesso no banco de dados!')
+          
+          // Recarregar lista de produtos para mostrar as mudanças
+          if (refetchProducts) {
+            console.log('🔄 Recarregando lista de produtos...')
+            try {
+              await refetchProducts()
+              console.log('✅ Lista de produtos recarregada')
+            } catch (refetchErr) {
+              console.error('⚠️ Erro ao recarregar lista de produtos:', refetchErr)
+              // Não bloquear o fluxo se o refetch falhar
+            }
+          }
+          
+          // Limpar formulário apenas se salvou com sucesso
+          setEditingProduct(null)
+          setShowProductForm(false)
+          setSelectedBrand('')
+          setProductImages([])
+          setCoverImageIndex(0)
+          setAdditionalImageEditorKey(0)
+        } else {
+          console.error('❌ Produto não foi salvo!', { saved, savedProduct })
+          alert('❌ Erro: Produto não foi salvo. Verifique o console para mais detalhes.')
+        }
+      } catch (error: any) {
+        console.error('❌ Erro ao salvar produto no banco:', error)
+        console.error('❌ Detalhes completos do erro:', {
+          message: error?.message,
+          code: error?.code,
+          details: error?.details,
+          hint: error?.hint,
+          stack: error?.stack,
+          error: error
         })
         
-        // Se o erro for sobre additional_images, tentar novamente sem essa coluna
-        if (err?.message?.includes('additional_images') || err?.code === 'PGRST116' || err?.details?.includes('additional_images')) {
-          console.warn('⚠️ Coluna additional_images não encontrada. Tentando salvar sem ela...')
-          const productDataWithoutAdditional = { ...productData }
-          delete productDataWithoutAdditional.additional_images
-          
-          try {
-            if (isEditing && currentEditingProductId) {
-              console.log('✏️ Tentando atualizar produto sem additional_images...', { id: currentEditingProductId })
-              
-              if (!currentEditingProductId) {
-                throw new Error('ID do produto não encontrado. Não é possível atualizar.')
-              }
-              
-              savedProduct = await updateSupabaseProduct(currentEditingProductId, productDataWithoutAdditional)
-              console.log('✅ Produto atualizado sem additional_images')
-              saved = true
-              alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
-            } else {
-              savedProduct = await addSupabaseProduct(productDataWithoutAdditional)
-              console.log('✅ Produto adicionado sem additional_images')
-              saved = true
-              alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
-            }
-          } catch (retryErr: any) {
-            console.error('❌ Erro ao salvar produto (segunda tentativa, sem additional_images):', retryErr)
-            throw retryErr
-          }
-        } else {
-          throw err // Re-lançar se não for erro de additional_images
-        }
-      }
-      
-      if (saved && savedProduct) {
-        console.log('✅ Produto salvo com sucesso!', savedProduct)
-        alert('✅ Produto salvo com sucesso no banco de dados!')
+        const errorMessage = error?.message || error?.details || 'Erro desconhecido'
+        const errorHint = error?.hint ? `\n\n💡 Dica: ${error.hint}` : ''
         
-        // Recarregar lista de produtos para mostrar as mudanças
-        if (refetchProducts) {
-          console.log('🔄 Recarregando lista de produtos...')
-          try {
-            await refetchProducts()
-            console.log('✅ Lista de produtos recarregada')
-          } catch (refetchErr) {
-            console.error('⚠️ Erro ao recarregar lista de produtos:', refetchErr)
-            // Não bloquear o fluxo se o refetch falhar
-          }
-        }
-        
-        // Limpar formulário apenas se salvou com sucesso
-        setEditingProduct(null)
-        setShowProductForm(false)
-        setSelectedBrand('')
-        setProductImages([])
-        setCoverImageIndex(0)
-        setAdditionalImageEditorKey(0)
-      } else {
-        console.error('❌ Produto não foi salvo!', { saved, savedProduct })
-        alert('❌ Erro: Produto não foi salvo. Verifique o console para mais detalhes.')
+        alert(`❌ ERRO AO SALVAR NO BANCO DE DADOS\n\n${errorMessage}${errorHint}\n\n💡 Verifique:\n• Configuração do Supabase\n• Conexão com a internet\n• Permissões no banco\n• Console do navegador para mais detalhes`)
       }
-      
     } catch (error: any) {
-      console.error('❌ Erro ao salvar produto no banco:', error)
-      console.error('❌ Detalhes completos do erro:', {
-        message: error?.message,
-        code: error?.code,
-        details: error?.details,
-        hint: error?.hint,
-        stack: error?.stack,
-        error: error
-      })
-      
-      const errorMessage = error?.message || error?.details || 'Erro desconhecido'
-      const errorHint = error?.hint ? `\n\n💡 Dica: ${error.hint}` : ''
-      
-      alert(`❌ ERRO AO SALVAR NO BANCO DE DADOS\n\n${errorMessage}${errorHint}\n\n💡 Verifique:\n• Configuração do Supabase\n• Conexão com a internet\n• Permissões no banco\n• Console do navegador para mais detalhes`)
+      console.error('❌ Erro ao processar formulário de produto:', error)
+      alert('❌ Erro ao processar formulário. Verifique o console para mais detalhes.')
     }
   }
 
