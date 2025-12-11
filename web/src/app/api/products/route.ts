@@ -17,7 +17,7 @@ export async function GET() {
       async () => {
         const { data, error } = await supabase
           .from('products')
-          .select('id, name, category, brand, price, image, description, on_sale, original_price, sale_price, discount_percentage, featured, stock, gender, model, created_at')
+          .select('id, name, category, brand, price, image, description, additional_images, on_sale, original_price, sale_price, discount_percentage, featured, stock, gender, model, created_at, updated_at')
           .order('created_at', { ascending: false })
           .limit(500) // Limitar para melhor performance
 

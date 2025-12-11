@@ -241,10 +241,15 @@ export default function Admin() {
     // SEMPRE usar APENAS Supabase - sem fallback
     if (!supabaseLoading) {
       if (supabaseProducts && supabaseProducts.length > 0) {
-        setProducts(supabaseProducts)
-        console.log('✅ Produtos carregados do BANCO:', supabaseProducts.length, 'produtos')
-        console.log('⭐ Produtos em destaque:', supabaseProducts.filter(p => p.featured).length)
-        console.log('🏷️ Produtos em promoção:', supabaseProducts.filter(p => p.on_sale).length)
+        // Mapear produtos para converter additional_images (snake_case) para additionalImages (camelCase)
+        const mappedProducts = supabaseProducts.map((product: any) => ({
+          ...product,
+          additionalImages: product.additional_images || product.additionalImages || []
+        }))
+        setProducts(mappedProducts)
+        console.log('✅ Produtos carregados do BANCO:', mappedProducts.length, 'produtos')
+        console.log('⭐ Produtos em destaque:', mappedProducts.filter(p => p.featured).length)
+        console.log('🏷️ Produtos em promoção:', mappedProducts.filter(p => p.on_sale).length)
       } else {
         console.log('⚠️ Nenhum produto no banco de dados')
         setProducts([])
@@ -667,36 +672,60 @@ export default function Admin() {
             error: err
           })
           
-          // Se o erro for sobre additional_images, tentar novamente sem essa coluna
-          if (err?.message?.includes('additional_images') || err?.code === 'PGRST116' || err?.details?.includes('additional_images')) {
-            console.warn('⚠️ Coluna additional_images não encontrada. Tentando salvar sem ela...')
-            const productDataWithoutAdditional = { ...productData }
-            delete productDataWithoutAdditional.additional_images
+          // Tentar novamente sem campos opcionais que podem causar problemas
+          const productDataSimplified: any = {
+            name: productData.name,
+            category: productData.category,
+            brand: productData.brand || '',
+            price: productData.price,
+            image: productData.image,
+            description: productData.description || '',
+            featured: productData.featured || false,
+            on_sale: productData.on_sale || false,
+            stock: productData.stock || 1,
+            gender: productData.gender || '',
+            model: productData.model || ''
+          }
+          
+          // Adicionar campos opcionais apenas se não forem vazios
+          if (productData.original_price) productDataSimplified.original_price = productData.original_price
+          if (productData.discount_percentage) productDataSimplified.discount_percentage = productData.discount_percentage
+          if (productData.sale_price) productDataSimplified.sale_price = productData.sale_price
+          
+          // Tentar sem additional_images primeiro
+          try {
+            console.warn('⚠️ Tentando salvar produto com dados simplificados (sem additional_images)...')
             
-            try {
-              if (isEditing && currentEditingProductId) {
-                console.log('✏️ Tentando atualizar produto sem additional_images...', { id: currentEditingProductId })
-                
-                if (!currentEditingProductId) {
-                  throw new Error('ID do produto não encontrado. Não é possível atualizar.')
-                }
-                
-                savedProduct = await updateSupabaseProduct(currentEditingProductId, productDataWithoutAdditional)
-                console.log('✅ Produto atualizado sem additional_images')
-                saved = true
-                alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
-              } else {
-                savedProduct = await addSupabaseProduct(productDataWithoutAdditional)
-                console.log('✅ Produto adicionado sem additional_images')
-                saved = true
-                alert('⚠️ Produto salvo, mas a coluna additional_images não existe no banco.\n\nPor favor, execute o script SQL "add-additional-images-column.sql" no Supabase para habilitar imagens adicionais.')
+            if (isEditing && currentEditingProductId) {
+              console.log('✏️ Tentando atualizar produto com dados simplificados...', { id: currentEditingProductId })
+              
+              if (!currentEditingProductId) {
+                throw new Error('ID do produto não encontrado. Não é possível atualizar.')
               }
-            } catch (retryErr: any) {
-              console.error('❌ Erro ao salvar produto (segunda tentativa, sem additional_images):', retryErr)
-              throw retryErr
+              
+              savedProduct = await updateSupabaseProduct(currentEditingProductId, productDataSimplified)
+              console.log('✅ Produto atualizado com dados simplificados')
+              saved = true
+            } else {
+              savedProduct = await addSupabaseProduct(productDataSimplified)
+              console.log('✅ Produto adicionado com dados simplificados')
+              saved = true
             }
-          } else {
-            throw err // Re-lançar se não for erro de additional_images
+          } catch (retryErr: any) {
+            console.error('❌ Erro ao salvar produto (segunda tentativa):', retryErr)
+            console.error('❌ Detalhes do erro (retry):', {
+              message: retryErr?.message,
+              code: retryErr?.code,
+              details: retryErr?.details,
+              hint: retryErr?.hint
+            })
+            
+            // Se ainda falhar, mostrar erro detalhado
+            const errorMsg = retryErr?.message || retryErr?.details || 'Erro desconhecido ao salvar produto'
+            const errorCode = retryErr?.code || 'SEM_CODIGO'
+            const errorHint = retryErr?.hint || ''
+            
+            throw new Error(`ERRO ${errorCode}: ${errorMsg}${errorHint ? '\n\nDica: ' + errorHint : ''}\n\nPor favor, execute o script SQL "SOLUCAO-DEFINITIVA-PRODUTOS.sql" no Supabase.`)
           }
         }
         
@@ -745,9 +774,24 @@ export default function Admin() {
         })
         
         const errorMessage = error?.message || error?.details || 'Erro desconhecido'
-        const errorHint = error?.hint ? `\n\n💡 Dica: ${error.hint}` : ''
+        const errorCode = error?.code || ''
+        const errorHint = error?.hint || ''
         
-        alert(`❌ ERRO AO SALVAR NO BANCO DE DADOS\n\n${errorMessage}${errorHint}\n\n💡 Verifique:\n• Configuração do Supabase\n• Conexão com a internet\n• Permissões no banco\n• Console do navegador para mais detalhes`)
+        // Mensagem mais clara e útil
+        let userMessage = `❌ ERRO AO SALVAR PRODUTO\n\n`
+        userMessage += `Código: ${errorCode || 'N/A'}\n`
+        userMessage += `Mensagem: ${errorMessage}\n`
+        if (errorHint) {
+          userMessage += `\n💡 Dica: ${errorHint}\n`
+        }
+        userMessage += `\n🔧 SOLUÇÃO:\n`
+        userMessage += `1. Acesse o Supabase Dashboard\n`
+        userMessage += `2. Vá em SQL Editor\n`
+        userMessage += `3. Execute o arquivo: SOLUCAO-DEFINITIVA-PRODUTOS.sql\n`
+        userMessage += `4. Tente salvar novamente\n`
+        userMessage += `\n📋 Se o erro persistir, verifique o console (F12) para mais detalhes.`
+        
+        alert(userMessage)
       }
     } catch (error: any) {
       console.error('❌ Erro ao processar formulário de produto:', error)
@@ -1591,14 +1635,24 @@ export default function Admin() {
                             <div className="flex flex-col sm:flex-row space-y-1 sm:space-y-0 sm:space-x-2">
                               <button
                                 onClick={() => {
+                                  // Mapear produto para garantir que additional_images seja convertido para additionalImages
+                                  const productAny: any = product
+                                  const additionalImagesValue = productAny.additional_images || productAny.additionalImages || []
+                                  const productToEdit = {
+                                    ...product,
+                                    additionalImages: additionalImagesValue
+                                  } as Product
                                   console.log('✏️ Botão Editar clicado para produto:', {
-                                    id: product.id,
-                                    name: product.name,
-                                    brand: product.brand,
-                                    fullProduct: product
+                                    id: productToEdit.id,
+                                    name: productToEdit.name,
+                                    brand: productToEdit.brand,
+                                    description: productToEdit.description,
+                                    hasImage: !!productToEdit.image,
+                                    additionalImagesCount: productToEdit.additionalImages?.length || 0,
+                                    fullProduct: productToEdit
                                   })
-                                  setEditingProduct(product)
-                                  setSelectedBrand(product.brand || '')
+                                  setEditingProduct(productToEdit)
+                                  setSelectedBrand(productToEdit.brand || '')
                                   setShowProductForm(true)
                                   console.log('✅ Estado atualizado: editingProduct definido, formulário aberto')
                                 }}
