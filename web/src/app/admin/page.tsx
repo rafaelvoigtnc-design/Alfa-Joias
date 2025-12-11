@@ -107,6 +107,7 @@ export default function Admin() {
   const [productImages, setProductImages] = useState<string[]>([])
   const [coverImageIndex, setCoverImageIndex] = useState(0)
   const [additionalImageEditorKey, setAdditionalImageEditorKey] = useState(0)
+  const [productFormKey, setProductFormKey] = useState(0) // Key estável para o formulário
   const [selectedServiceIcon, setSelectedServiceIcon] = useState<string>('wrench')
   
   // Inicializar bannerImage quando editar banner
@@ -149,24 +150,28 @@ export default function Admin() {
   }, [showServiceForm, editingService])
 
   // Inicializar imagens quando editar produto
+  // IMPORTANTE: Só executar quando showProductForm está aberto para evitar re-renders desnecessários
   useEffect(() => {
-    if (editingProduct) {
-      const allImages: string[] = []
-      if (editingProduct.image) {
-        allImages.push(editingProduct.image)
+    if (showProductForm) {
+      if (editingProduct) {
+        const allImages: string[] = []
+        if (editingProduct.image) {
+          allImages.push(editingProduct.image)
+        }
+        if (editingProduct.additionalImages && editingProduct.additionalImages.length > 0) {
+          allImages.push(...editingProduct.additionalImages)
+        }
+        setProductImages(allImages)
+        setCoverImageIndex(0)
+        setAdditionalImageEditorKey(0)
+      } else if (!editingProduct) {
+        // Só limpar se não estiver editando e o formulário estiver aberto
+        setProductImages([])
+        setCoverImageIndex(0)
+        setAdditionalImageEditorKey(0)
       }
-      if (editingProduct.additionalImages && editingProduct.additionalImages.length > 0) {
-        allImages.push(...editingProduct.additionalImages)
-      }
-      setProductImages(allImages)
-      setCoverImageIndex(0)
-      setAdditionalImageEditorKey(0)
-    } else {
-      setProductImages([])
-      setCoverImageIndex(0)
-      setAdditionalImageEditorKey(0)
     }
-  }, [editingProduct])
+  }, [editingProduct, showProductForm])
   
   // Controlar estado do checkbox de promoção especial
   useEffect(() => {
@@ -761,26 +766,18 @@ export default function Admin() {
             })
           }
           
-          // Limpar formulário COMPLETAMENTE ANTES de recarregar (melhor UX)
-          // Resetar o formulário HTML primeiro
-          const form = (e.target as HTMLFormElement)
-          if (form && form.reset) {
-            form.reset()
-            console.log('🔄 Formulário HTML resetado')
-          }
-          
           // Limpar TODOS os estados relacionados ao formulário
+          // NÃO resetar o formulário HTML aqui - isso causa problemas durante a digitação
           setEditingProduct(null)
           setSelectedBrand('')
           setProductImages([])
           setCoverImageIndex(0)
-          setAdditionalImageEditorKey(prev => prev + 1) // Forçar re-render completo
+          setAdditionalImageEditorKey(0)
           
-          // Fechar formulário após um pequeno delay para garantir que tudo foi limpo
-          setTimeout(() => {
-            setShowProductForm(false)
-            console.log('✅ Formulário fechado e estados limpos')
-          }, 100)
+          // Fechar formulário e atualizar key para próximo uso
+          setShowProductForm(false)
+          setProductFormKey(prev => prev + 1) // Atualizar key apenas após fechar
+          console.log('✅ Formulário fechado e estados limpos completamente')
           
           // Reabilitar botão
           reenableButton()
@@ -1411,9 +1408,15 @@ export default function Admin() {
                 <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Produtos</h2>
                 <button
                   onClick={() => {
+                    // Limpar TODOS os estados antes de abrir formulário novo
                     setEditingProduct(null)
                     setSelectedBrand('')
+                    setProductImages([])
+                    setCoverImageIndex(0)
+                    setAdditionalImageEditorKey(0)
+                    setProductFormKey(prev => prev + 1) // Atualizar key apenas ao abrir novo
                     setShowProductForm(true)
+                    console.log('✅ Formulário novo preparado')
                   }}
                   className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
@@ -2335,17 +2338,13 @@ export default function Admin() {
                 type="button"
                 onClick={() => {
                   // Limpar TODOS os estados ao fechar
-                  const form = document.getElementById('product-form') as HTMLFormElement
-                  if (form) {
-                    form.reset()
-                    console.log('🔄 Formulário resetado ao fechar')
-                  }
                   setEditingProduct(null)
                   setSelectedBrand('')
                   setProductImages([])
                   setCoverImageIndex(0)
-                  setAdditionalImageEditorKey(prev => prev + 1) // Forçar re-render
+                  setAdditionalImageEditorKey(0)
                   setShowProductForm(false)
+                  setProductFormKey(prev => prev + 1) // Atualizar key para próximo uso
                   console.log('✅ Formulário fechado e todos os estados limpos')
                 }}
                 className="text-gray-400 hover:text-gray-600"
@@ -2357,7 +2356,7 @@ export default function Admin() {
             <form 
               onSubmit={handleProductSubmit} 
               className="space-y-4"
-              key={editingProduct?.id || `new-product-${Date.now()}`}
+              key={editingProduct?.id || `new-product-${productFormKey}`}
               id="product-form"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2825,8 +2824,15 @@ export default function Admin() {
                 <button
                   type="button"
                   onClick={() => {
-                    setShowProductForm(false)
+                    // Limpar TODOS os estados ao cancelar
                     setEditingProduct(null)
+                    setSelectedBrand('')
+                    setProductImages([])
+                    setCoverImageIndex(0)
+                    setAdditionalImageEditorKey(0)
+                    setShowProductForm(false)
+                    setProductFormKey(prev => prev + 1) // Atualizar key para próximo uso
+                    console.log('✅ Formulário cancelado e todos os estados limpos')
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
                 >
