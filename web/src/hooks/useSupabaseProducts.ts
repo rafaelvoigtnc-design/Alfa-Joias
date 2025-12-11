@@ -93,11 +93,23 @@ export function useSupabaseProducts() {
   const abortControllerRef = useRef<AbortController | null>(null)
   const requestIdRef = useRef(0)
 
-  const fetchProducts = async () => {
-    // Prevenir múltiplas chamadas simultâneas
-    if (isFetchingRef.current) {
+  const fetchProducts = async (force: boolean = false) => {
+    // Prevenir múltiplas chamadas simultâneas (a menos que seja forçado)
+    if (isFetchingRef.current && !force) {
       console.log('⏸️ Já está buscando produtos, ignorando chamada duplicada...')
       return
+    }
+    
+    // Se forçado, limpar cache e resetar flags
+    if (force) {
+      console.log('🔄 Refetch forçado - limpando cache e resetando estado...')
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(CACHE_KEY)
+      }
+      isFetchingRef.current = false
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort()
+      }
     }
     
     // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar acessível no catch)
@@ -295,13 +307,25 @@ export function useSupabaseProducts() {
         console.log('✅ [useSupabaseProducts] Produto adicionado com sucesso:', data[0])
         const newProduct = data[0]
         
-        // Atualizar estado local
+        // Limpar cache para forçar atualização
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(CACHE_KEY)
+        }
+        
+        // Atualizar estado local imediatamente
         setProducts(prev => {
           const updated = [newProduct, ...prev]
           // Atualizar cache também
           setCachedProducts(updated)
           return updated
         })
+        
+        // Forçar refetch após um pequeno delay para garantir sincronização
+        setTimeout(() => {
+          fetchProducts(true).catch(err => {
+            console.warn('⚠️ Erro ao refetch após adicionar produto:', err)
+          })
+        }, 500)
         
         return newProduct
       } else {
@@ -360,13 +384,25 @@ export function useSupabaseProducts() {
         console.log('✅ [useSupabaseProducts] Produto atualizado com sucesso:', data[0])
         const updatedProduct = data[0]
         
-        // Atualizar estado local
+        // Limpar cache para forçar atualização
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(CACHE_KEY)
+        }
+        
+        // Atualizar estado local imediatamente
         setProducts(prev => {
           const updated = prev.map(p => p.id === id ? updatedProduct : p)
           // Atualizar cache também
           setCachedProducts(updated)
           return updated
         })
+        
+        // Forçar refetch após um pequeno delay para garantir sincronização
+        setTimeout(() => {
+          fetchProducts(true).catch(err => {
+            console.warn('⚠️ Erro ao refetch após atualizar produto:', err)
+          })
+        }, 500)
         
         return updatedProduct
       } else {
@@ -412,6 +448,11 @@ export function useSupabaseProducts() {
     fetchProducts()
   }, [])
 
+  const refetch = async () => {
+    // Forçar refetch ignorando proteções
+    return fetchProducts(true)
+  }
+
   return {
     products,
     loading,
@@ -422,7 +463,7 @@ export function useSupabaseProducts() {
     getFeaturedProducts,
     getProductsOnSale,
     getProductsByCategory,
-    refetch: fetchProducts
+    refetch
   }
 }
 

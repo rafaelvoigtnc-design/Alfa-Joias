@@ -605,63 +605,36 @@ export default function Admin() {
         // Tentar salvar com additional_images, mas se der erro, tentar sem
         let saved = false
         let savedProduct: any = null
+        let retryCount = 0
+        const maxRetries = 2
         
-        try {
-          console.log('💾 Tentando salvar produto no banco...', { 
+        // Função para tentar salvar
+        const attemptSave = async (dataToSave: any, attemptNumber: number): Promise<any> => {
+          console.log(`💾 Tentativa ${attemptNumber} de salvar produto no banco...`, { 
             isEditing, 
             productId: currentEditingProductId,
             productName: editingProduct?.name,
-            editingProductFull: editingProduct,
-            productDataKeys: Object.keys(productData),
-            productDataSample: {
-              name: productData.name,
-              category: productData.category,
-              price: productData.price
-            }
+            dataKeys: Object.keys(dataToSave),
+            attemptNumber
           })
           
           if (isEditing && currentEditingProductId) {
-            // Atualizar produto APENAS no Supabase
-            console.log('✏️ MODO EDIÇÃO: Atualizando produto existente...', {
-              id: currentEditingProductId,
-              originalName: editingProduct?.name,
-              newData: {
-                name: productData.name,
-                category: productData.category,
-                price: productData.price,
-                brand: productData.brand
-              },
-              allUpdates: productData
-            })
-            
-            // Garantir que o ID está presente
             if (!currentEditingProductId) {
-              console.error('❌ ERRO CRÍTICO: currentEditingProductId está vazio!', {
-                editingProduct,
-                currentEditingProductId,
-                isEditing
-              })
               throw new Error('ID do produto não encontrado. Não é possível atualizar.')
             }
-            
-            console.log('🔄 Chamando updateSupabaseProduct com:', {
-              id: currentEditingProductId,
-              updatesCount: Object.keys(productData).length
-            })
-            savedProduct = await updateSupabaseProduct(currentEditingProductId, productData)
-            console.log('✅ Produto atualizado no BANCO:', savedProduct)
-            saved = true
+            return await updateSupabaseProduct(currentEditingProductId, dataToSave)
           } else {
-            // Adicionar produto APENAS no Supabase
-            console.log('➕ MODO CRIAÇÃO: Adicionando novo produto...', {
-              reason: !isEditing ? 'isEditing é false' : !currentEditingProductId ? 'ID não encontrado' : 'desconhecido',
-              isEditing,
-              currentEditingProductId
-            })
-            savedProduct = await addSupabaseProduct(productData)
-            console.log('✅ Produto adicionado no BANCO:', savedProduct)
-            saved = true
+            return await addSupabaseProduct(dataToSave)
           }
+        }
+        
+        try {
+          
+          // Primeira tentativa com todos os dados
+          retryCount = 1
+          savedProduct = await attemptSave(productData, retryCount)
+          console.log(`✅ Produto ${isEditing ? 'atualizado' : 'adicionado'} no BANCO (tentativa ${retryCount}):`, savedProduct)
+          saved = true
         } catch (err: any) {
           console.error('❌ Erro ao salvar produto (primeira tentativa):', err)
           console.error('❌ Detalhes do erro:', {
@@ -672,64 +645,56 @@ export default function Admin() {
             error: err
           })
           
-          // Tentar novamente sem campos opcionais que podem causar problemas
-          const productDataSimplified: any = {
-            name: productData.name,
-            category: productData.category,
-            brand: productData.brand || '',
-            price: productData.price,
-            image: productData.image,
-            description: productData.description || '',
-            featured: productData.featured || false,
-            on_sale: productData.on_sale || false,
-            stock: productData.stock || 1,
-            gender: productData.gender || '',
-            model: productData.model || ''
-          }
-          
-          // Adicionar campos opcionais apenas se não forem vazios
-          if (productData.original_price) productDataSimplified.original_price = productData.original_price
-          if (productData.discount_percentage) productDataSimplified.discount_percentage = productData.discount_percentage
-          if (productData.sale_price) productDataSimplified.sale_price = productData.sale_price
-          
-          // Tentar sem additional_images primeiro
-          try {
-            console.warn('⚠️ Tentando salvar produto com dados simplificados (sem additional_images)...')
+          // Segunda tentativa com dados simplificados (sem campos opcionais problemáticos)
+          if (retryCount < maxRetries) {
+            console.warn('⚠️ Tentando salvar produto com dados simplificados...')
             
-            if (isEditing && currentEditingProductId) {
-              console.log('✏️ Tentando atualizar produto com dados simplificados...', { id: currentEditingProductId })
-              
-              if (!currentEditingProductId) {
-                throw new Error('ID do produto não encontrado. Não é possível atualizar.')
-              }
-              
-              savedProduct = await updateSupabaseProduct(currentEditingProductId, productDataSimplified)
-              console.log('✅ Produto atualizado com dados simplificados')
-              saved = true
-            } else {
-              savedProduct = await addSupabaseProduct(productDataSimplified)
-              console.log('✅ Produto adicionado com dados simplificados')
-              saved = true
+            const productDataSimplified: any = {
+              name: productData.name,
+              category: productData.category,
+              brand: productData.brand || '',
+              price: productData.price,
+              image: productData.image,
+              description: productData.description || '',
+              featured: productData.featured || false,
+              on_sale: productData.on_sale || false,
+              stock: productData.stock || 1,
+              gender: productData.gender || '',
+              model: productData.model || ''
             }
-          } catch (retryErr: any) {
-            console.error('❌ Erro ao salvar produto (segunda tentativa):', retryErr)
-            console.error('❌ Detalhes do erro (retry):', {
-              message: retryErr?.message,
-              code: retryErr?.code,
-              details: retryErr?.details,
-              hint: retryErr?.hint
-            })
             
-            // Se ainda falhar, mostrar erro detalhado
-            const errorMsg = retryErr?.message || retryErr?.details || 'Erro desconhecido ao salvar produto'
-            const errorCode = retryErr?.code || 'SEM_CODIGO'
-            const errorHint = retryErr?.hint || ''
+            // Adicionar campos opcionais apenas se não forem vazios
+            if (productData.original_price) productDataSimplified.original_price = productData.original_price
+            if (productData.discount_percentage) productDataSimplified.discount_percentage = productData.discount_percentage
+            if (productData.sale_price) productDataSimplified.sale_price = productData.sale_price
             
-            throw new Error(`ERRO ${errorCode}: ${errorMsg}${errorHint ? '\n\nDica: ' + errorHint : ''}\n\nPor favor, execute o script SQL "SOLUCAO-DEFINITIVA-PRODUTOS.sql" no Supabase.`)
+            try {
+              retryCount = 2
+              savedProduct = await attemptSave(productDataSimplified, retryCount)
+              console.log(`✅ Produto ${isEditing ? 'atualizado' : 'adicionado'} com dados simplificados (tentativa ${retryCount})`)
+              saved = true
+            } catch (retryErr: any) {
+              console.error('❌ Erro ao salvar produto (segunda tentativa):', retryErr)
+              console.error('❌ Detalhes do erro (retry):', {
+                message: retryErr?.message,
+                code: retryErr?.code,
+                details: retryErr?.details,
+                hint: retryErr?.hint
+              })
+              
+              // Se ainda falhar, mostrar erro detalhado
+              const errorMsg = retryErr?.message || retryErr?.details || 'Erro desconhecido ao salvar produto'
+              const errorCode = retryErr?.code || 'SEM_CODIGO'
+              const errorHint = retryErr?.hint || ''
+              
+              throw new Error(`ERRO ${errorCode}: ${errorMsg}${errorHint ? '\n\nDica: ' + errorHint : ''}\n\nPor favor, execute o script SQL "SOLUCAO-DEFINITIVA-PRODUTOS.sql" no Supabase.`)
+            }
+          } else {
+            throw err // Re-lançar se já tentou todas as vezes
           }
         }
         
-        if (saved && savedProduct) {
+        if (saved && savedProduct && savedProduct.id) {
           console.log('✅ Produto salvo com sucesso!', savedProduct)
           console.log('📊 Resumo da operação:', {
             wasEditing: isEditing,
@@ -737,27 +702,80 @@ export default function Admin() {
             operation: isEditing ? 'ATUALIZAÇÃO' : 'CRIAÇÃO',
             savedProductId: savedProduct?.id
           })
-          alert('✅ Produto salvo com sucesso no banco de dados!')
           
-          // Recarregar lista de produtos para mostrar as mudanças
-          if (refetchProducts) {
-            console.log('🔄 Recarregando lista de produtos...')
-            try {
-              await refetchProducts()
-              console.log('✅ Lista de produtos recarregada')
-            } catch (refetchErr) {
-              console.error('⚠️ Erro ao recarregar lista de produtos:', refetchErr)
-              // Não bloquear o fluxo se o refetch falhar
-            }
+          // Preparar produto para adicionar ao estado
+          const productToAdd = {
+            ...savedProduct,
+            additionalImages: (savedProduct as any).additional_images || (savedProduct as any).additionalImages || []
           }
           
-          // Limpar formulário apenas se salvou com sucesso
+          // Atualizar estado local IMEDIATAMENTE (sem esperar refetch)
+          if (isEditing && currentEditingProductId) {
+            // Atualizar produto existente na lista
+            setProducts(prev => {
+              const mapped = prev.map((p: any) => {
+                if (p.id === currentEditingProductId || p.id === savedProduct.id) {
+                  return productToAdd
+                }
+                return p
+              })
+              // Se o produto não foi encontrado na lista, adicionar
+              const found = mapped.some((p: any) => p.id === savedProduct.id)
+              if (!found) {
+                mapped.unshift(productToAdd)
+              }
+              return mapped
+            })
+          } else {
+            // Adicionar novo produto à lista (no início)
+            setProducts(prev => {
+              // Verificar se já existe para evitar duplicatas
+              const exists = prev.some((p: any) => p.id === savedProduct.id)
+              if (exists) {
+                // Se já existe, atualizar
+                return prev.map((p: any) => p.id === savedProduct.id ? productToAdd : p)
+              } else {
+                // Se não existe, adicionar no início
+                return [productToAdd, ...prev]
+              }
+            })
+          }
+          
+          // Limpar formulário ANTES de recarregar (melhor UX)
           setEditingProduct(null)
           setShowProductForm(false)
           setSelectedBrand('')
           setProductImages([])
           setCoverImageIndex(0)
           setAdditionalImageEditorKey(0)
+          
+          // Mostrar mensagem de sucesso
+          alert('✅ Produto salvo com sucesso no banco de dados!')
+          
+          // Recarregar lista de produtos em background para garantir sincronização
+          // Não bloquear a UI, mas garantir que execute
+          console.log('🔄 Recarregando lista de produtos em background...')
+          setTimeout(async () => {
+            try {
+              if (refetchProducts) {
+                await refetchProducts()
+                console.log('✅ Lista de produtos recarregada do servidor')
+              }
+            } catch (refetchErr) {
+              console.error('⚠️ Erro ao recarregar lista de produtos:', refetchErr)
+              // Tentar novamente após mais tempo
+              setTimeout(async () => {
+                try {
+                  if (refetchProducts) {
+                    await refetchProducts()
+                    console.log('✅ Lista de produtos recarregada (retry)')
+                  }
+                } catch (retryErr) {
+                  console.error('⚠️ Erro ao recarregar lista de produtos (retry):', retryErr)
+                }
+              }, 2000)
+            }
+          }, 500)
         } else {
           console.error('❌ Produto não foi salvo!', { saved, savedProduct, isEditing, currentEditingProductId })
           alert('❌ Erro: Produto não foi salvo. Verifique o console para mais detalhes.')
