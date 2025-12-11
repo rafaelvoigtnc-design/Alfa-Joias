@@ -397,6 +397,23 @@ export default function Admin() {
     e.preventDefault()
     e.stopPropagation()
     
+    // Desabilitar botão de submit para evitar múltiplos cliques
+    const form = e.target as HTMLFormElement
+    const submitButton = form.querySelector('button[type="submit"]') as HTMLButtonElement
+    const originalButtonText = submitButton?.textContent
+    if (submitButton) {
+      submitButton.disabled = true
+      submitButton.textContent = 'Salvando...'
+    }
+    
+    // Função para reabilitar botão em caso de erro
+    const reenableButton = () => {
+      if (submitButton) {
+        submitButton.disabled = false
+        submitButton.textContent = originalButtonText || 'Salvar'
+      }
+    }
+    
     console.log('🚀 ========== INICIANDO SALVAMENTO DE PRODUTO ==========')
     console.log('📝 Evento recebido:', e.type, e)
     
@@ -460,6 +477,7 @@ export default function Admin() {
           productImagesLength: productImages.length,
           coverImageIndex
         })
+        reenableButton()
         alert('❌ É obrigatório adicionar pelo menos uma imagem para o produto!\n\nPor favor, faça upload de uma imagem antes de salvar.')
         return
       }
@@ -558,6 +576,7 @@ export default function Admin() {
       
       if (!validation.valid) {
         console.error('❌ VALIDAÇÃO FALHOU:', validation.errors)
+        reenableButton()
         alert('❌ Erros de validação:\n\n' + validation.errors.join('\n') + '\n\nPor favor, corrija os erros e tente novamente.')
         return
       }
@@ -569,6 +588,7 @@ export default function Admin() {
           console.log('⚠️ Usando imagem do produto existente:', editingProduct.image.substring(0, 50))
           productData.image = editingProduct.image
         } else {
+          reenableButton()
           alert('❌ Erro: A imagem do produto está vazia!\n\nPor favor, faça upload de uma imagem antes de salvar.')
           return
         }
@@ -741,13 +761,29 @@ export default function Admin() {
             })
           }
           
-          // Limpar formulário ANTES de recarregar (melhor UX)
+          // Limpar formulário COMPLETAMENTE ANTES de recarregar (melhor UX)
+          // Resetar o formulário HTML primeiro
+          const form = (e.target as HTMLFormElement)
+          if (form && form.reset) {
+            form.reset()
+            console.log('🔄 Formulário HTML resetado')
+          }
+          
+          // Limpar TODOS os estados relacionados ao formulário
           setEditingProduct(null)
-          setShowProductForm(false)
           setSelectedBrand('')
           setProductImages([])
           setCoverImageIndex(0)
-          setAdditionalImageEditorKey(0)
+          setAdditionalImageEditorKey(prev => prev + 1) // Forçar re-render completo
+          
+          // Fechar formulário após um pequeno delay para garantir que tudo foi limpo
+          setTimeout(() => {
+            setShowProductForm(false)
+            console.log('✅ Formulário fechado e estados limpos')
+          }, 100)
+          
+          // Reabilitar botão
+          reenableButton()
           
           // Mostrar mensagem de sucesso
           alert('✅ Produto salvo com sucesso no banco de dados!')
@@ -777,10 +813,12 @@ export default function Admin() {
             }
           }, 500)
         } else {
+          reenableButton()
           console.error('❌ Produto não foi salvo!', { saved, savedProduct, isEditing, currentEditingProductId })
           alert('❌ Erro: Produto não foi salvo. Verifique o console para mais detalhes.')
         }
       } catch (error: any) {
+        reenableButton()
         console.error('❌ Erro ao salvar produto no banco:', error)
         console.error('❌ Detalhes completos do erro:', {
           message: error?.message,
@@ -812,6 +850,13 @@ export default function Admin() {
         alert(userMessage)
       }
     } catch (error: any) {
+      // Reabilitar botão em caso de erro geral
+      const form = document.getElementById('product-form') as HTMLFormElement
+      const submitButton = form?.querySelector('button[type="submit"]') as HTMLButtonElement
+      if (submitButton) {
+        submitButton.disabled = false
+        submitButton.textContent = 'Salvar'
+      }
       console.error('❌ Erro ao processar formulário de produto:', error)
       alert('❌ Erro ao processar formulário. Verifique o console para mais detalhes.')
     }
@@ -2287,10 +2332,21 @@ export default function Admin() {
                 {editingProduct ? 'Editar Produto' : 'Adicionar Produto'}
               </h3>
               <button
+                type="button"
                 onClick={() => {
-                  setShowProductForm(false)
+                  // Limpar TODOS os estados ao fechar
+                  const form = document.getElementById('product-form') as HTMLFormElement
+                  if (form) {
+                    form.reset()
+                    console.log('🔄 Formulário resetado ao fechar')
+                  }
                   setEditingProduct(null)
                   setSelectedBrand('')
+                  setProductImages([])
+                  setCoverImageIndex(0)
+                  setAdditionalImageEditorKey(prev => prev + 1) // Forçar re-render
+                  setShowProductForm(false)
+                  console.log('✅ Formulário fechado e todos os estados limpos')
                 }}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -2298,7 +2354,12 @@ export default function Admin() {
               </button>
             </div>
 
-            <form onSubmit={handleProductSubmit} className="space-y-4">
+            <form 
+              onSubmit={handleProductSubmit} 
+              className="space-y-4"
+              key={editingProduct?.id || `new-product-${Date.now()}`}
+              id="product-form"
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Nome</label>
