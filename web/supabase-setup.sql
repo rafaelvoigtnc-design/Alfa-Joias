@@ -167,6 +167,62 @@ CREATE POLICY "Permitir inserção de novos usuários" ON users FOR INSERT WITH 
 CREATE POLICY "Usuários podem ver seus próprios pedidos" ON orders FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Usuários podem criar pedidos" ON orders FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+-- Políticas de produtos (INSERT, UPDATE, DELETE para admins)
+-- Se você não tiver sistema de autenticação, descomente as políticas alternativas abaixo
+-- e comente estas que requerem autenticação
+
+-- Política: Admins podem inserir produtos
+CREATE POLICY "Admins podem inserir produtos" ON products 
+  FOR INSERT 
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.is_admin = true
+    )
+  );
+
+-- Política: Admins podem atualizar produtos
+CREATE POLICY "Admins podem atualizar produtos" ON products 
+  FOR UPDATE 
+  USING (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.is_admin = true
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.is_admin = true
+    )
+  );
+
+-- Política: Admins podem deletar produtos
+CREATE POLICY "Admins podem deletar produtos" ON products 
+  FOR DELETE 
+  USING (
+    EXISTS (
+      SELECT 1 FROM users 
+      WHERE users.id = auth.uid() 
+      AND users.is_admin = true
+    )
+  );
+
+-- ============================================
+-- ALTERNATIVA: Se não houver autenticação configurada,
+-- descomente as políticas abaixo e comente as políticas acima
+-- ============================================
+-- DROP POLICY IF EXISTS "Admins podem inserir produtos" ON products;
+-- DROP POLICY IF EXISTS "Admins podem atualizar produtos" ON products;
+-- DROP POLICY IF EXISTS "Admins podem deletar produtos" ON products;
+-- 
+-- CREATE POLICY "Permitir inserção de produtos" ON products FOR INSERT WITH CHECK (true);
+-- CREATE POLICY "Permitir atualização de produtos" ON products FOR UPDATE USING (true) WITH CHECK (true);
+-- CREATE POLICY "Permitir deleção de produtos" ON products FOR DELETE USING (true);
+
 -- ============================================
 -- FUNÇÕES E TRIGGERS
 -- ============================================
