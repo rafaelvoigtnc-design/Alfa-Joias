@@ -29,7 +29,7 @@ export function useBrands() {
       console.log('🔄 Buscando marcas do Supabase...')
 
       // Usar retry automático
-      const { data, error } = await withAutoRetry(
+      const result = await withAutoRetry(
         async () => {
           const result = await supabase
             .from('brands')
@@ -57,6 +57,8 @@ export function useBrands() {
 
       setIsRetrying(false)
       setRetryAttempt(0)
+
+      const { data, error } = result
 
       if (error) {
         console.error('❌ Erro do Supabase:', error.message)
