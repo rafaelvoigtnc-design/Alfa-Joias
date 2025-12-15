@@ -7,10 +7,16 @@ import { shuffleArray } from '@/lib/productRecommendation'
 export default function Brands() {
   const { brands, loading } = useBrands()
   // Removido filtro por 'active' - coluna não existe no banco
-  // Embaralhar marcas para aparecerem sempre em ordem diferente
+  // Remover duplicatas baseadas no ID e embaralhar marcas para aparecerem sempre em ordem diferente
   const activeBrands = useMemo(() => {
     if (brands.length === 0) return []
-    return shuffleArray(brands)
+    
+    // Remover duplicatas baseadas no ID (caso haja duplicatas no banco)
+    const uniqueBrands = brands.filter((brand, index, self) => 
+      index === self.findIndex((b) => b.id === brand.id)
+    )
+    
+    return shuffleArray(uniqueBrands)
   }, [brands])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoRotating, setIsAutoRotating] = useState(true)
@@ -115,14 +121,24 @@ export default function Brands() {
                     : 'translateX(0)'
                 }}
               >
-                {/* Renderizar todas as marcas (duplicadas para loop infinito) */}
-                {/* Duplicar marcas várias vezes para criar carrossel infinito suave */}
-                {Array.from({ length: Math.max(2, Math.ceil(totalSlides * 1.5)) }).flatMap(() => activeBrands).map((brand, index) => (
-                  <div
-                    key={`${brand.id}-${index}`}
-                    className="flex-shrink-0 px-2 sm:px-3"
-                    style={{ width: `${100 / itemsPerView}%` }}
-                  >
+                {/* Renderizar marcas únicas apenas (sem duplicação visual) */}
+                {/* Duplicar apenas o necessário para criar carrossel infinito suave, mas garantir que cada marca única apareça apenas uma vez por ciclo */}
+                {(() => {
+                  // Criar array de marcas únicas para renderização
+                  const uniqueBrandsForRender = activeBrands.filter((brand, index, self) => 
+                    index === self.findIndex((b) => b.id === brand.id)
+                  )
+                  
+                  // Duplicar apenas o necessário para o carrossel (máximo 2 ciclos completos)
+                  const cyclesNeeded = Math.max(2, Math.ceil(totalSlides * 1.5))
+                  const brandsToRender = Array.from({ length: cyclesNeeded }).flatMap(() => uniqueBrandsForRender)
+                  
+                  return brandsToRender.map((brand, index) => (
+                    <div
+                      key={`${brand.id}-cycle-${Math.floor(index / uniqueBrandsForRender.length)}-pos-${index % uniqueBrandsForRender.length}`}
+                      className="flex-shrink-0 px-2 sm:px-3"
+                      style={{ width: `${100 / itemsPerView}%` }}
+                    >
                     <div className="bg-white rounded-lg p-3 sm:p-4 md:p-6 text-center hover:bg-gray-50 transition-all duration-300 md:hover:shadow-lg md:hover:-translate-y-1">
                       <div className="mb-2 sm:mb-3 flex items-center justify-center" style={{ minHeight: '48px' }}>
                         <img 
@@ -146,7 +162,8 @@ export default function Brands() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))
+                })()}
               </div>
             </div>
             

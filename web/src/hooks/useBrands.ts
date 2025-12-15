@@ -74,11 +74,29 @@ export function useBrands() {
       }
 
       console.log('✅ Marcas carregadas do Supabase:', data?.length || 0)
+      
+      // Remover duplicatas baseadas no ID antes de definir no estado
+      let uniqueBrands: Brand[] = []
       if (data && data.length > 0) {
-        data.forEach(brand => console.log(`   - ${brand.name} (${brand.id})`))
+        // Criar um Map para garantir unicidade por ID
+        const brandsMap = new Map<string, Brand>()
+        data.forEach(brand => {
+          if (!brandsMap.has(brand.id)) {
+            brandsMap.set(brand.id, brand)
+          } else {
+            console.warn(`⚠️ Marca duplicada encontrada no banco: ${brand.name} (ID: ${brand.id})`)
+          }
+        })
+        uniqueBrands = Array.from(brandsMap.values())
+        
+        if (uniqueBrands.length !== data.length) {
+          console.warn(`⚠️ ${data.length - uniqueBrands.length} marca(s) duplicada(s) removida(s)`)
+        }
+        
+        uniqueBrands.forEach(brand => console.log(`   - ${brand.name} (${brand.id})`))
       }
 
-      setBrands(data || [])
+      setBrands(uniqueBrands)
       setError(null)
 
     } catch (err) {
