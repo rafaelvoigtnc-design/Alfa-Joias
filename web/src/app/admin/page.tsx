@@ -149,11 +149,33 @@ export default function Admin() {
     }
   }, [showServiceForm, editingService])
 
+  // Limpar estados do formulário de produto quando fechado completamente
+  useEffect(() => {
+    if (!showProductForm && !editingProduct) {
+      // Quando o formulário é fechado E não há produto sendo editado, limpar tudo
+      console.log('🧹 Limpando estados do formulário de produto (fechado completamente)')
+      setSelectedBrand('')
+      setProductImages([])
+      setCoverImageIndex(0)
+      setAdditionalImageEditorKey(0)
+      
+      // Resetar formulário HTML após um pequeno delay para garantir que o DOM foi atualizado
+      setTimeout(() => {
+        const form = document.getElementById('product-form') as HTMLFormElement
+        if (form) {
+          form.reset()
+          console.log('✅ Formulário HTML resetado após fechar')
+        }
+      }, 200)
+    }
+  }, [showProductForm, editingProduct])
+
   // Inicializar imagens quando editar produto
   // IMPORTANTE: Só executar quando showProductForm está aberto para evitar re-renders desnecessários
   useEffect(() => {
     if (showProductForm) {
       if (editingProduct) {
+        // Modo edição: carregar imagens do produto
         const allImages: string[] = []
         if (editingProduct.image) {
           allImages.push(editingProduct.image)
@@ -163,12 +185,22 @@ export default function Admin() {
         }
         setProductImages(allImages)
         setCoverImageIndex(0)
-        setAdditionalImageEditorKey(0)
-      } else if (!editingProduct) {
-        // Só limpar se não estiver editando e o formulário estiver aberto
+        setAdditionalImageEditorKey(prev => prev + 1) // Forçar re-render do editor
+      } else {
+        // Modo criação: garantir que está limpo
         setProductImages([])
         setCoverImageIndex(0)
-        setAdditionalImageEditorKey(0)
+        setAdditionalImageEditorKey(prev => prev + 1) // Forçar re-render do editor
+        setSelectedBrand('')
+        
+        // Resetar formulário HTML quando abrir para novo produto
+        setTimeout(() => {
+          const form = document.getElementById('product-form') as HTMLFormElement
+          if (form) {
+            form.reset()
+            console.log('✅ Formulário HTML resetado ao abrir para novo produto')
+          }
+        }, 50)
       }
     }
   }, [editingProduct, showProductForm])
@@ -766,17 +798,31 @@ export default function Admin() {
             })
           }
           
-          // Limpar TODOS os estados relacionados ao formulário
-          // NÃO resetar o formulário HTML aqui - isso causa problemas durante a digitação
+          // Limpar TODOS os estados relacionados ao formulário ANTES de fechar
+          // Ordem importante: limpar estados primeiro, depois resetar formulário, depois fechar
+          
+          // 1. Limpar estados
           setEditingProduct(null)
           setSelectedBrand('')
           setProductImages([])
           setCoverImageIndex(0)
           setAdditionalImageEditorKey(0)
           
-          // Fechar formulário e atualizar key para próximo uso
+          // 2. Atualizar key para forçar re-render completo do formulário na próxima vez
+          setProductFormKey(prev => prev + 1)
+          
+          // 3. Fechar formulário
           setShowProductForm(false)
-          setProductFormKey(prev => prev + 1) // Atualizar key apenas após fechar
+          
+          // 4. Resetar formulário HTML após fechar (com delay para garantir que o DOM foi atualizado)
+          setTimeout(() => {
+            const form = document.getElementById('product-form') as HTMLFormElement
+            if (form) {
+              form.reset()
+              console.log('✅ Formulário HTML resetado após salvar')
+            }
+          }, 100)
+          
           console.log('✅ Formulário fechado e estados limpos completamente')
           
           // Reabilitar botão
@@ -1442,6 +1488,10 @@ export default function Admin() {
                     onClick={() => {
                       setEditingProduct(null)
                       setSelectedBrand('')
+                      setProductImages([])
+                      setCoverImageIndex(0)
+                      setAdditionalImageEditorKey(0)
+                      setProductFormKey(prev => prev + 1)
                       setShowProductForm(true)
                     }}
                     className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
