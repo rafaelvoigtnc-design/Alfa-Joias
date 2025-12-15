@@ -190,7 +190,3 @@ export function useAutoRetry<T>(
     lastError
   }
 }
-
-// Import necessário para o hook
-import { useState, useCallback } from 'react'
-
