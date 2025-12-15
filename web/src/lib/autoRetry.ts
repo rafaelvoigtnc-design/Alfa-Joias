@@ -14,9 +14,9 @@ export interface RetryOptions {
 }
 
 const DEFAULT_OPTIONS: Required<RetryOptions> = {
-  maxRetries: 5,
-  initialDelay: 1000,
-  maxDelay: 10000,
+  maxRetries: 2, // Reduzido para 2 por padrão (mais rápido)
+  initialDelay: 500, // Reduzido para 500ms (mais rápido)
+  maxDelay: 2000, // Reduzido para 2 segundos (mais rápido)
   backoffMultiplier: 2,
   retryableErrors: [500, 502, 503, 504, 408, 429],
   onRetry: () => {}
@@ -114,7 +114,7 @@ export async function fetchWithAutoRetry(
   return withAutoRetry(
     async () => {
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 15000) // 15 segundos de timeout
+      const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 segundos de timeout (mais rápido)
       
       try {
         const response = await fetch(url, {

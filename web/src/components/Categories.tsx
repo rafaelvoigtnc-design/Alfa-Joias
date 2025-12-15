@@ -100,9 +100,9 @@ export default function Categories() {
       setLoading(true)
       const { supabase } = await import('@/lib/supabase')
       
-      // Timeout de 5 segundos para evitar carregamento infinito
+      // Timeout reduzido para 3 segundos (mais rápido)
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout ao carregar categorias')), 5000)
+        setTimeout(() => reject(new Error('Timeout ao carregar categorias')), 3000)
       )
       
       // Usar sistema de retry automático
@@ -123,11 +123,11 @@ export default function Categories() {
           return result
         },
         {
-          maxRetries: 5,
-          initialDelay: 1000,
-          maxDelay: 5000,
+          maxRetries: 2, // Reduzido para 2 tentativas (mais rápido)
+          initialDelay: 500, // Começar com 500ms (mais rápido)
+          maxDelay: 2000, // Máximo de 2 segundos (mais rápido)
           onRetry: (attempt) => {
-            console.log(`🔄 Tentando carregar categorias novamente (tentativa ${attempt}/5)...`)
+            console.log(`🔄 Tentando carregar categorias novamente (tentativa ${attempt}/2)...`)
           }
         }
       )

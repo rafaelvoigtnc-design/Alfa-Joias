@@ -124,6 +124,7 @@ export default function HeroCarousel() {
   }, [])
 
   const activeBanners = banners.filter(b => b.active)
+  const [isAutoRotating, setIsAutoRotating] = useState(true)
 
   // Funções de navegação
   const goToNextSlide = () => {
@@ -135,6 +136,17 @@ export default function HeroCarousel() {
     if (activeBanners.length === 0) return
     setCurrentSlide((prev) => (prev - 1 + activeBanners.length) % activeBanners.length)
   }
+
+  // Auto-rotação em todos os dispositivos a cada 12 segundos
+  useEffect(() => {
+    if (activeBanners.length <= 1 || !isAutoRotating) return
+
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % activeBanners.length)
+    }, 12000) // 12 segundos
+
+    return () => clearInterval(interval)
+  }, [activeBanners.length, isAutoRotating])
 
   // Suporte a touch para mobile
   const [touchStart, setTouchStart] = useState<number | null>(null)
@@ -148,6 +160,8 @@ export default function HeroCarousel() {
     if (target.closest('button[aria-label*="banner"], button[aria-label*="Banner"]')) {
       return
     }
+    // Pausar auto-rotação quando usuário interage
+    setIsAutoRotating(false)
     setTouchEnd(null)
     setTouchStart(e.targetTouches[0].clientX)
   }
@@ -169,7 +183,13 @@ export default function HeroCarousel() {
         return
       }
     }
-    if (!touchStart || !touchEnd) return
+    if (!touchStart || !touchEnd) {
+      // Retomar auto-rotação após 5 segundos de inatividade
+      setTimeout(() => {
+        setIsAutoRotating(true)
+      }, 5000)
+      return
+    }
     const distance = touchStart - touchEnd
     const isLeftSwipe = distance > minSwipeDistance
     const isRightSwipe = distance < -minSwipeDistance
@@ -180,6 +200,11 @@ export default function HeroCarousel() {
     if (isRightSwipe) {
       goToPrevSlide()
     }
+    
+    // Retomar auto-rotação após 5 segundos de inatividade
+    setTimeout(() => {
+      setIsAutoRotating(true)
+    }, 5000)
   }
 
 
@@ -231,6 +256,15 @@ export default function HeroCarousel() {
     )
   }
 
+  // Pausar rotação ao passar o mouse (desktop)
+  const handleMouseEnter = () => {
+    setIsAutoRotating(false)
+  }
+
+  const handleMouseLeave = () => {
+    setIsAutoRotating(true)
+  }
+
   return (
     <section 
       className="relative bg-white" 
@@ -239,6 +273,8 @@ export default function HeroCarousel() {
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <div className="relative h-[40vh] sm:h-[50vh] md:h-[60vh] lg:h-[70vh] min-h-[300px] sm:min-h-[400px] md:min-h-[500px] overflow-hidden" style={{ position: 'relative' }}>
         {/* Imagem Desktop */}

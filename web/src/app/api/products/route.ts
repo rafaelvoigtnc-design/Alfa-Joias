@@ -5,9 +5,9 @@ import { isConnectionError, withRetry } from '@/lib/errorHandler'
 // Edge Runtime para Cloudflare Pages
 export const runtime = 'edge'
 
-// Cache otimizado: revalidar a cada 30 segundos (balance entre performance e dados atualizados)
+// Cache otimizado: revalidar a cada 60 segundos para melhor performance
 export const dynamic = 'force-dynamic'
-export const revalidate = 30
+export const revalidate = 60
 
 export async function GET() {
   try {
@@ -33,15 +33,15 @@ export async function GET() {
 
         return data || []
       },
-      3, // 3 tentativas
-      1000 // delay inicial de 1 segundo
+      2, // Reduzido para 2 tentativas (mais rápido)
+      500 // delay inicial reduzido para 500ms (mais rápido)
     )
 
     const response = NextResponse.json({ success: true, products: result })
-    // Cache otimizado: 30 segundos no cliente, 30 segundos no CDN
-    // Isso melhora muito a performance sem comprometer dados atualizados
-    response.headers.set('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
-    response.headers.set('CDN-Cache-Control', 'public, s-maxage=30')
+    // Cache otimizado: 60 segundos no cliente, 60 segundos no CDN, stale-while-revalidate de 120s
+    // Isso melhora muito a performance - dados podem ser servidos do cache enquanto atualiza em background
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=60')
     return response
   } catch (err) {
     console.error('❌ Erro na API de produtos após retries:', err)

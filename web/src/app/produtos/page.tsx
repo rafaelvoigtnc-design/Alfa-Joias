@@ -184,31 +184,49 @@ function ProdutosContent() {
         
         console.log('🔄 Buscando produtos do banco de dados...', { requestId: currentRequestId })
         
-          // Timeout reduzido para 10 segundos (suficiente com cache otimizado)
+          // Timeout reduzido para 5 segundos (mais rápido)
           reloadTimeout = setTimeout(() => {
             if (currentRequestId === requestIdRef.current) {
               setShowReload(true)
             }
-          }, 10000)
+          }, 5000)
         
-        // Timeout reduzido para 8 segundos (suficiente com cache otimizado)
+        // Timeout reduzido para 5 segundos (mais rápido com cache otimizado)
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 8000)
+          setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 5000)
         )
+        
+        // Carregar cache primeiro para resposta instantânea
+        if (typeof window !== 'undefined') {
+          try {
+            const cachedStr = localStorage.getItem('alfajoias-products-cache')
+            if (cachedStr) {
+              const cached = JSON.parse(cachedStr)
+              if (cached.products && cached.products.length > 0 && Date.now() - cached.timestamp < 15 * 60 * 1000) {
+                console.log('📦 Carregando produtos do cache local (resposta instantânea)')
+                setProducts(cached.products)
+                setFilteredProducts(cached.products)
+                setLoading(false)
+              }
+            }
+          } catch (e) {
+            // Ignorar erro de cache
+          }
+        }
         
         // Usar sistema de retry automático melhorado
         const { fetchWithAutoRetry } = await import('@/lib/autoRetry')
         
         const queryPromise = fetchWithAutoRetry('/api/products', {
           cache: 'default',
-          headers: { 'Cache-Control': 'max-age=30' },
+          headers: { 'Cache-Control': 'max-age=60' }, // Aumentado para 60 segundos
           signal: controller.signal
         }, {
-          maxRetries: 5,
-          initialDelay: 1000,
-          maxDelay: 5000,
+          maxRetries: 2, // Reduzido para 2 tentativas (mais rápido)
+          initialDelay: 500, // Começar com 500ms (mais rápido)
+          maxDelay: 2000, // Máximo de 2 segundos (mais rápido)
           onRetry: (attempt) => {
-            console.log(`🔄 Tentando carregar produtos novamente (tentativa ${attempt}/5)...`)
+            console.log(`🔄 Tentando carregar produtos novamente (tentativa ${attempt}/2)...`)
           }
         }).then(res => {
           if (!res.ok) {

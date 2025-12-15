@@ -44,13 +44,13 @@ export function useBrands() {
           return result
         },
         {
-          maxRetries: 5,
-          initialDelay: 1000,
-          maxDelay: 5000,
+          maxRetries: 2, // Reduzido para 2 tentativas (mais rápido)
+          initialDelay: 500, // Começar com 500ms (mais rápido)
+          maxDelay: 2000, // Máximo de 2 segundos (mais rápido)
           onRetry: (attempt, err) => {
             setIsRetrying(true)
             setRetryAttempt(attempt)
-            console.log(`🔄 Tentando carregar marcas novamente (tentativa ${attempt}/5)...`)
+            console.log(`🔄 Tentando carregar marcas novamente (tentativa ${attempt}/2)...`)
           }
         }
       )

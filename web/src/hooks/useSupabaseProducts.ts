@@ -3,7 +3,7 @@ import { supabase, Product } from '@/lib/supabase'
 
 // Cache local para fallback - aumentado para melhor performance
 const CACHE_KEY = 'alfajoias-products-cache'
-const CACHE_EXPIRY = 10 * 60 * 1000 // 10 minutos (aumentado de 5 para melhor performance)
+const CACHE_EXPIRY = 15 * 60 * 1000 // 15 minutos (cache mais longo para melhor performance)
 
 interface CacheData {
   products: Product[]
@@ -104,8 +104,8 @@ export function useSupabaseProducts() {
         setLoading(false) // Mostrar dados do cache imediatamente
       }
       
-      // Timeout reduzido para 10 segundos (suficiente com cache otimizado)
-      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      // Timeout reduzido para 5 segundos (mais rápido com cache otimizado)
+      const timeoutId = setTimeout(() => controller.abort(), 5000)
       
       // Usar sistema de retry automático melhorado
       const response = await fetchWithAutoRetry(
@@ -118,11 +118,11 @@ export function useSupabaseProducts() {
           signal: controller.signal
         },
         {
-          maxRetries: 5, // Mais tentativas para garantir carregamento
-          initialDelay: 1000, // Começar com 1 segundo
-          maxDelay: 5000, // Máximo de 5 segundos entre tentativas
+          maxRetries: 2, // Reduzido para 2 tentativas (mais rápido)
+          initialDelay: 500, // Começar com 500ms (mais rápido)
+          maxDelay: 2000, // Máximo de 2 segundos entre tentativas (mais rápido)
           onRetry: (attempt, error) => {
-            console.log(`🔄 Tentando carregar produtos novamente (tentativa ${attempt}/5)...`)
+            console.log(`🔄 Tentando carregar produtos novamente (tentativa ${attempt}/2)...`)
           }
         }
       )
