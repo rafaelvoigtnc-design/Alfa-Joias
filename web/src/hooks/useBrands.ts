@@ -1,31 +1,69 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase, Brand } from '@/lib/supabase'
+import { withAutoRetry } from '@/lib/autoRetry'
 
 export function useBrands() {
   const [brands, setBrands] = useState<Brand[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isRetrying, setIsRetrying] = useState(false)
+  const [retryAttempt, setRetryAttempt] = useState(0)
+  const isFetchingRef = useRef(false)
 
   const fetchBrands = async () => {
+    // Prevenir múltiplas chamadas simultâneas
+    if (isFetchingRef.current) {
+      console.log('⏸️ Já está buscando marcas, ignorando chamada duplicada...')
+      return
+    }
+    
     console.log('🔄 fetchBrands iniciado - usando SUPABASE')
     
     try {
+      isFetchingRef.current = true
       setLoading(true)
       setError(null)
+      setIsRetrying(false)
+      setRetryAttempt(0)
       
       console.log('🔄 Buscando marcas do Supabase...')
 
-      const { data, error } = await supabase
-        .from('brands')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100)
+      // Usar retry automático
+      const { data, error } = await withAutoRetry(
+        async () => {
+          const result = await supabase
+            .from('brands')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(100)
+          
+          if (result.error) {
+            throw result.error
+          }
+          
+          return result
+        },
+        {
+          maxRetries: 5,
+          initialDelay: 1000,
+          maxDelay: 5000,
+          onRetry: (attempt, err) => {
+            setIsRetrying(true)
+            setRetryAttempt(attempt)
+            console.log(`🔄 Tentando carregar marcas novamente (tentativa ${attempt}/5)...`)
+          }
+        }
+      )
+
+      setIsRetrying(false)
+      setRetryAttempt(0)
 
       if (error) {
         console.error('❌ Erro do Supabase:', error.message)
         setError(`Erro ao conectar com o banco de dados: ${error.message}`)
         setBrands([])
         setLoading(false)
+        isFetchingRef.current = false
         return
       }
 
@@ -38,11 +76,14 @@ export function useBrands() {
       setError(null)
 
     } catch (err) {
+      setIsRetrying(false)
+      setRetryAttempt(0)
       console.error('❌ Erro ao carregar marcas:', err)
       setError(err instanceof Error ? err.message : 'Erro ao carregar marcas do banco de dados')
       setBrands([])
     } finally {
       setLoading(false)
+      isFetchingRef.current = false
       console.log('✅ fetchBrands concluído')
     }
   }
@@ -137,6 +178,8 @@ export function useBrands() {
     brands,
     loading,
     error,
+    isRetrying,
+    retryAttempt,
     addBrand,
     updateBrand,
     deleteBrand,

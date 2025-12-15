@@ -105,13 +105,32 @@ export default function Categories() {
         setTimeout(() => reject(new Error('Timeout ao carregar categorias')), 5000)
       )
       
-      // BUSCAR TODAS AS CATEGORIAS DO BANCO (sem filtros de nome - vamos filtrar depois)
-      // Isso garante que novas categorias sejam carregadas
-      const queryPromise = supabase
-        .from('categories')
-        .select('id, name, description, image, icon, created_at, updated_at')
-        .order('created_at', { ascending: true })
-        .limit(20) // Limitar para melhor performance
+      // Usar sistema de retry automático
+      const { withAutoRetry } = await import('@/lib/autoRetry')
+      
+      const queryPromise = withAutoRetry(
+        async () => {
+          const result = await supabase
+            .from('categories')
+            .select('id, name, description, image, icon, created_at, updated_at')
+            .order('created_at', { ascending: true })
+            .limit(20) // Limitar para melhor performance
+          
+          if (result.error) {
+            throw result.error
+          }
+          
+          return result
+        },
+        {
+          maxRetries: 5,
+          initialDelay: 1000,
+          maxDelay: 5000,
+          onRetry: (attempt) => {
+            console.log(`🔄 Tentando carregar categorias novamente (tentativa ${attempt}/5)...`)
+          }
+        }
+      )
       
       const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
       const { data, error } = result

@@ -46,42 +46,8 @@ function setCachedProducts(products: Product[]) {
   }
 }
 
-// Função de retry com backoff exponencial
-async function fetchWithRetry(
-  url: string,
-  options: RequestInit,
-  maxRetries: number = 3,
-  delayMs: number = 1000
-): Promise<Response> {
-  let lastError: any
-  
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const response = await fetch(url, options)
-      
-      // Se for erro de servidor (503, 500), tentar novamente
-      if (response.status === 503 || response.status === 500) {
-        if (attempt < maxRetries) {
-          const waitTime = delayMs * Math.pow(2, attempt)
-          console.log(`⏳ Tentativa ${attempt + 1}/${maxRetries + 1} falhou (${response.status}). Aguardando ${waitTime}ms...`)
-          await new Promise(resolve => setTimeout(resolve, waitTime))
-          continue
-        }
-      }
-      
-      return response
-    } catch (error) {
-      lastError = error
-      if (attempt < maxRetries) {
-        const waitTime = delayMs * Math.pow(2, attempt)
-        console.log(`⏳ Tentativa ${attempt + 1}/${maxRetries + 1} falhou. Aguardando ${waitTime}ms...`)
-        await new Promise(resolve => setTimeout(resolve, waitTime))
-      }
-    }
-  }
-  
-  throw lastError
-}
+// Importar sistema de retry melhorado
+import { fetchWithAutoRetry } from '@/lib/autoRetry'
 
 export function useSupabaseProducts() {
   const [products, setProducts] = useState<Product[]>([])
@@ -141,9 +107,8 @@ export function useSupabaseProducts() {
       // Timeout reduzido para 10 segundos (suficiente com cache otimizado)
       const timeoutId = setTimeout(() => controller.abort(), 10000)
       
-      // Usar cache do navegador (agora a API tem cache otimizado)
-      // Não adicionar timestamp para aproveitar cache
-      const response = await fetchWithRetry(
+      // Usar sistema de retry automático melhorado
+      const response = await fetchWithAutoRetry(
         `/api/products`,
         { 
           cache: 'default', // Usar cache do navegador
@@ -152,8 +117,14 @@ export function useSupabaseProducts() {
           },
           signal: controller.signal
         },
-        2, // Reduzido para 2 tentativas (suficiente com cache)
-        500 // delay inicial reduzido para 500ms (mais rápido)
+        {
+          maxRetries: 5, // Mais tentativas para garantir carregamento
+          initialDelay: 1000, // Começar com 1 segundo
+          maxDelay: 5000, // Máximo de 5 segundos entre tentativas
+          onRetry: (attempt, error) => {
+            console.log(`🔄 Tentando carregar produtos novamente (tentativa ${attempt}/5)...`)
+          }
+        }
       )
       
       clearTimeout(timeoutId)

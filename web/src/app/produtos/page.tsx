@@ -196,12 +196,29 @@ function ProdutosContent() {
           setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 8000)
         )
         
-        // Otimizar query: selecionar apenas campos necessários e limitar
-        // Usar API route que tem cache otimizado ao invés de query direta
-        const queryPromise = fetch('/api/products', {
+        // Usar sistema de retry automático melhorado
+        const { fetchWithAutoRetry } = await import('@/lib/autoRetry')
+        
+        const queryPromise = fetchWithAutoRetry('/api/products', {
           cache: 'default',
-          headers: { 'Cache-Control': 'max-age=30' }
-        }).then(res => res.json()).then(data => ({ data: data.products || [], error: data.error ? new Error(data.error) : null }))
+          headers: { 'Cache-Control': 'max-age=30' },
+          signal: controller.signal
+        }, {
+          maxRetries: 5,
+          initialDelay: 1000,
+          maxDelay: 5000,
+          onRetry: (attempt) => {
+            console.log(`🔄 Tentando carregar produtos novamente (tentativa ${attempt}/5)...`)
+          }
+        }).then(res => {
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}: ${res.statusText}`)
+          }
+          return res.json()
+        }).then(data => ({ 
+          data: data.products || [], 
+          error: data.error ? new Error(data.error) : null 
+        }))
         
         const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
         const { data, error } = result
