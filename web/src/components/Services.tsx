@@ -129,6 +129,14 @@ export default function Services() {
             text-size-adjust: none !important;
           }
         }
+        
+        /* Reduzir tamanho do texto no PC (desktop) */
+        @media screen and (min-width: 1024px) {
+          #services-section p.service-card-desc {
+            font-size: 0.875rem !important; /* 14px */
+            line-height: 1.4 !important;
+          }
+        }
       `}} />
     <section id="services-section" className="py-20 bg-white">
       {/* Banner de Serviços com Imagem */}
@@ -192,7 +200,7 @@ export default function Services() {
                   {service.title}
                 </h3>
 
-                <p className="text-gray-700 mb-1 sm:mb-1.5 md:mb-4 text-center font-light leading-tight px-0.5 service-card-desc">
+                <p className="text-gray-700 mb-1 sm:mb-1.5 md:mb-4 text-center font-light leading-tight px-0.5 service-card-desc text-xs sm:text-xs md:text-sm lg:text-base">
                   {service.description}
                 </p>
 

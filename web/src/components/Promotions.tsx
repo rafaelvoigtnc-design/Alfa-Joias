@@ -4,10 +4,16 @@ import Link from 'next/link'
 import { Phone, Percent, Clock, Gem, Diamond, Sparkles, Eye } from 'lucide-react'
 import { useProducts } from '@/hooks/useProducts'
 import { formatPrice } from '@/lib/priceUtils'
+import { smartProductSort } from '@/lib/productRecommendation'
+import { useMemo } from 'react'
 
 export default function Promotions() {
   const { getProductsOnSale, loading, error } = useProducts()
-  const products = getProductsOnSale().filter(p => typeof (p as any).stock !== 'number' || (p as any).stock > 0)
+  const products = useMemo(() => {
+    const filtered = getProductsOnSale().filter(p => typeof (p as any).stock !== 'number' || (p as any).stock > 0)
+    // Aplicar algoritmo inteligente de ordenação
+    return smartProductSort(filtered)
+  }, [getProductsOnSale])
 
   const getCategoryIcon = (category: string) => {
     switch (category) {

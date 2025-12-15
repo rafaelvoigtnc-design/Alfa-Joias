@@ -1,15 +1,31 @@
 'use client'
 
 import Link from 'next/link'
+import { useState, useEffect } from 'react'
 import { Phone, Eye, Clock, Gem, Diamond, Sparkles } from 'lucide-react'
 import { useSupabaseProducts } from '@/hooks/useSupabaseProducts'
 import { formatPrice } from '@/lib/priceUtils'
+import { smartSortProducts } from '@/lib/productSorting'
 
 export default function FeaturedProducts() {
   const { products, loading, error } = useSupabaseProducts()
-  const featuredProducts = products
-    .filter(product => product.featured === true)
-    .filter(product => typeof (product as any).stock !== 'number' || (product as any).stock > 0)
+  const [sortedFeaturedProducts, setSortedFeaturedProducts] = useState<any[]>([])
+  
+  useEffect(() => {
+    if (products.length > 0) {
+      const featured = products
+        .filter(product => product.featured === true)
+        .filter(product => typeof (product as any).stock !== 'number' || (product as any).stock > 0)
+      
+      // Aplicar ordenação inteligente
+      const sorted = smartSortProducts(featured)
+      setSortedFeaturedProducts(sorted)
+    } else {
+      setSortedFeaturedProducts([])
+    }
+  }, [products])
+  
+  const featuredProducts = sortedFeaturedProducts
 
   const getCategoryIcon = (category: string) => {
     switch (category) {

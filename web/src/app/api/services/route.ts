@@ -5,9 +5,9 @@ import { isConnectionError, withRetry } from '@/lib/errorHandler'
 // Edge Runtime para Cloudflare Pages
 export const runtime = 'edge'
 
-// Forçar revalidação dinâmica
+// Cache otimizado: revalidar a cada 60 segundos (serviços mudam menos frequentemente)
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const revalidate = 60
 
 export async function GET() {
   try {
@@ -44,14 +44,9 @@ export async function GET() {
         'Content-Type': 'application/json; charset=utf-8',
       }
     })
-    // Desabilitar cache para sempre retornar dados atualizados
-    // Headers adicionais para forçar bypass do cache do Cloudflare/CDN
-    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0')
-    response.headers.set('Pragma', 'no-cache')
-    response.headers.set('Expires', '0')
-    response.headers.set('X-Cache-Status', 'BYPASS')
-    response.headers.set('CDN-Cache-Control', 'no-cache')
-    response.headers.set('Cloudflare-CDN-Cache-Control', 'no-cache')
+    // Cache otimizado: 60 segundos no cliente, 60 segundos no CDN
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=60')
     return response
 
   } catch (error) {

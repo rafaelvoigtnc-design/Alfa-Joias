@@ -128,24 +128,31 @@ export default function Promocoes() {
           setDbError(null)
           setShowReload(false)
           
-          // Timeout de 30 segundos para mostrar opção de reload
+          // Timeout reduzido para 10 segundos (suficiente com cache otimizado)
           reloadTimeout = setTimeout(() => {
             if (currentRequestId === requestIdRef.current) {
               setShowReload(true)
             }
-          }, 30000)
+          }, 10000)
           
-          // SEMPRE carregar APENAS do Supabase
-          const { supabase } = await import('@/lib/supabase')
+          // Usar API route que tem cache otimizado
           console.log('🔄 Buscando promoções do banco de dados...', { requestId: currentRequestId })
           
-          // Otimizar query: apenas produtos em promoção com campos necessários
-          const { data, error } = await supabase
-            .from('products')
-            .select('id, name, category, brand, price, image, description, on_sale, original_price, sale_price, discount_percentage, stock, gender, model, created_at')
-            .eq('on_sale', true) // Filtrar apenas promoções no banco
-            .order('created_at', { ascending: false })
-            .limit(500) // Limitar para melhor performance
+          const response = await fetch('/api/products', {
+            cache: 'default',
+            headers: { 'Cache-Control': 'max-age=30' }
+          })
+          
+          if (!response.ok) {
+            throw new Error('Erro ao carregar produtos')
+          }
+          
+          const result = await response.json()
+          const allProducts = result.products || []
+          
+          // Filtrar apenas produtos em promoção no cliente (mais rápido que query no banco)
+          const data = allProducts.filter((p: any) => p.on_sale === true)
+          const error = result.error ? new Error(result.error) : null
           
           clearTimeout(reloadTimeout)
           
@@ -188,8 +195,13 @@ export default function Promocoes() {
           // Verificar novamente antes de atualizar estado
           if (currentRequestId === requestIdRef.current) {
             console.log('✅ Produtos em PROMOÇÃO carregados:', productsOnSale.length, { requestId: currentRequestId })
-            setProducts(productsOnSale)
-            setFilteredProducts(productsOnSale)
+            
+            // Aplicar ordenação inteligente (embaralha e organiza por relevância)
+            const { smartSortProducts } = await import('@/lib/productSorting')
+            const sortedProducts = smartSortProducts(productsOnSale as any)
+            
+            setProducts(sortedProducts as Product[])
+            setFilteredProducts(sortedProducts as Product[])
             setLoading(false)
             setShowReload(false)
           }

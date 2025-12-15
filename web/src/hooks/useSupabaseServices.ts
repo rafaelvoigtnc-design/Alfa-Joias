@@ -14,7 +14,7 @@ interface Service {
 
 // Cache local para fallback
 const CACHE_KEY = 'alfajoias-services-cache'
-const CACHE_EXPIRY = 5 * 60 * 1000 // 5 minutos
+const CACHE_EXPIRY = 10 * 60 * 1000 // 10 minutos (aumentado de 5 para melhor performance)
 
 interface CacheData {
   services: Service[]
@@ -137,24 +137,19 @@ export function useSupabaseServices() {
         setLoading(false) // Mostrar dados do cache imediatamente
       }
       
-      // Adicionar timestamp único para forçar bypass do cache do Cloudflare/CDN e navegador
-      const timestamp = Date.now()
-      const random = Math.random().toString(36).substring(7)
+      // Usar cache do navegador (API tem cache de 60 segundos)
       const response = await fetchWithRetry(
-        `/api/services?_t=${timestamp}&_r=${random}`,
+        `/api/services`,
         {
-          cache: 'no-store',
+          cache: 'default', // Usar cache do navegador
           method: 'GET',
           headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate, max-age=0',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-            'X-Request-ID': `${timestamp}-${random}`
+            'Cache-Control': 'max-age=60' // Aceitar cache de até 60 segundos
           },
           signal: controller.signal
         },
-        3, // 3 tentativas
-        1000 // delay inicial de 1 segundo
+        2, // Reduzido para 2 tentativas
+        500 // delay inicial reduzido para 500ms
       )
       
       // Verificar se esta requisição foi cancelada

@@ -1,12 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useBrands } from '@/hooks/useBrands'
+import { shuffleArray } from '@/lib/productRecommendation'
 
 export default function Brands() {
   const { brands, loading } = useBrands()
   // Removido filtro por 'active' - coluna não existe no banco
-  const activeBrands = brands
+  // Embaralhar marcas para aparecerem sempre em ordem diferente
+  const activeBrands = useMemo(() => {
+    if (brands.length === 0) return []
+    return shuffleArray(brands)
+  }, [brands])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoRotating, setIsAutoRotating] = useState(true)
 

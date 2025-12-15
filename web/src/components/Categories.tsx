@@ -364,7 +364,7 @@ export default function Categories() {
                   <h3 className="text-xs sm:text-sm md:text-base font-medium text-gray-900 mb-1 group-hover:text-gray-800 transition-colors leading-tight">
                     {category.name}
                   </h3>
-                  <p className="text-gray-600 text-[10px] sm:text-xs md:text-sm leading-tight line-clamp-2">
+                  <p className="text-gray-600 text-[10px] sm:text-xs md:text-sm lg:text-xs leading-tight line-clamp-2">
                     {category.description}
                   </p>
                 </div>

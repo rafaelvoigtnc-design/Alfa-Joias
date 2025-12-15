@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { Phone, Eye, Clock, Gem, Search, Filter, X, ChevronDown, Diamond } from 'lucide-react'
 import { formatPrice } from '@/lib/priceUtils'
 import { supabase } from '@/lib/supabase'
+import { smartSortProducts } from '@/lib/productSorting'
 
   interface Product {
   id: string
@@ -183,24 +184,24 @@ function ProdutosContent() {
         
         console.log('🔄 Buscando produtos do banco de dados...', { requestId: currentRequestId })
         
-        // Timeout de 30 segundos para mostrar opção de reload
-        reloadTimeout = setTimeout(() => {
-          if (currentRequestId === requestIdRef.current) {
-            setShowReload(true)
-          }
-        }, 30000)
+          // Timeout reduzido para 10 segundos (suficiente com cache otimizado)
+          reloadTimeout = setTimeout(() => {
+            if (currentRequestId === requestIdRef.current) {
+              setShowReload(true)
+            }
+          }, 10000)
         
-        // Timeout aumentado para 15 segundos
+        // Timeout reduzido para 8 segundos (suficiente com cache otimizado)
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 15000)
+          setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 8000)
         )
         
         // Otimizar query: selecionar apenas campos necessários e limitar
-        const queryPromise = supabase
-          .from('products')
-          .select('id, name, category, brand, price, image, description, on_sale, original_price, sale_price, discount_percentage, stock, gender, model, created_at')
-          .order('created_at', { ascending: false })
-          .limit(500) // Reduzir limite para melhor performance
+        // Usar API route que tem cache otimizado ao invés de query direta
+        const queryPromise = fetch('/api/products', {
+          cache: 'default',
+          headers: { 'Cache-Control': 'max-age=30' }
+        }).then(res => res.json()).then(data => ({ data: data.products || [], error: data.error ? new Error(data.error) : null }))
         
         const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
         const { data, error } = result
@@ -243,8 +244,13 @@ function ProdutosContent() {
         // Verificar novamente antes de atualizar estado
         if (currentRequestId === requestIdRef.current) {
           console.log('✅ Produtos carregados do BANCO:', data.length, { requestId: currentRequestId })
-          setProducts(data)
-          setFilteredProducts(data)
+          
+          // Aplicar ordenação inteligente (embaralha e organiza por relevância)
+          const { smartSortProducts } = await import('@/lib/productSorting')
+          const sortedProducts = smartSortProducts(data as any)
+          
+          setProducts(sortedProducts as Product[])
+          setFilteredProducts(sortedProducts as Product[])
           setLoading(false)
           setShowReload(false)
         }
@@ -351,29 +357,13 @@ function ProdutosContent() {
       })
     }
 
-    // Ordenar: produtos com estoque primeiro, esgotados no final
-    filtered.sort((a, b) => {
-      const stockA = (a as any).stock
-      const stockB = (b as any).stock
-      
-      // Se ambos têm estoque definido
-      if (typeof stockA === 'number' && typeof stockB === 'number') {
-        if (stockA === 0 && stockB > 0) return 1 // a esgotado, b em estoque -> b primeiro
-        if (stockA > 0 && stockB === 0) return -1 // a em estoque, b esgotado -> a primeiro
-      }
-      // Se apenas um é esgotado
-      if (typeof stockA === 'number' && stockA === 0 && (typeof stockB !== 'number' || stockB > 0)) return 1
-      if (typeof stockB === 'number' && stockB === 0 && (typeof stockA !== 'number' || stockA > 0)) return -1
-      
-      // Se ambos estão em estoque ou ambos sem definição, manter ordem original
-      return 0
-    })
-
-    return filtered
+    // Usar algoritmo inteligente para ordenar produtos
+    // Isso garante diversidade de categorias e produtos relevantes para o usuário
+    return smartSortProducts(filtered as any) as Product[]
   }, [products, selectedCategory, selectedBrand, selectedGender, selectedModel, searchTerm, minPrice, maxPrice])
   
   useEffect(() => {
-    setFilteredProducts(filteredProductsMemo)
+    setFilteredProducts(filteredProductsMemo as Product[])
   }, [filteredProductsMemo])
 
   const getCategoryIcon = (category: string) => {
