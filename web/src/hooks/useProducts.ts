@@ -36,14 +36,11 @@ export function useProducts() {
       setError(null)
       console.log('🔄 Buscando produtos do Supabase...', { requestId: currentRequestId })
       
-      // Adicionar timestamp para forçar bypass do cache do Cloudflare/CDN
-      const timestamp = Date.now()
-      const response = await fetch(`/api/products?_t=${timestamp}`, { 
-        cache: 'no-store',
+      // Usar cache otimizado (API agora tem cache de 30 segundos)
+      const response = await fetch(`/api/products`, { 
+        cache: 'default', // Usar cache do navegador
         headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
+          'Cache-Control': 'max-age=30' // Aceitar cache de até 30 segundos
         },
         signal: controller.signal
       })

@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase, Product } from '@/lib/supabase'
 
-// Cache local para fallback
+// Cache local para fallback - aumentado para melhor performance
 const CACHE_KEY = 'alfajoias-products-cache'
-const CACHE_EXPIRY = 5 * 60 * 1000 // 5 minutos
+const CACHE_EXPIRY = 10 * 60 * 1000 // 10 minutos (aumentado de 5 para melhor performance)
 
 interface CacheData {
   products: Product[]
@@ -138,25 +138,22 @@ export function useSupabaseProducts() {
         setLoading(false) // Mostrar dados do cache imediatamente
       }
       
-      // Timeout aumentado para 15 segundos (mais tempo para retries)
-      const timeoutId = setTimeout(() => controller.abort(), 15000)
+      // Timeout reduzido para 10 segundos (suficiente com cache otimizado)
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
       
-      // Desabilitar cache para sempre buscar dados atualizados
-      // Adicionar timestamp para forçar bypass do cache do Cloudflare/CDN
-      const timestamp = Date.now()
+      // Usar cache do navegador (agora a API tem cache otimizado)
+      // Não adicionar timestamp para aproveitar cache
       const response = await fetchWithRetry(
-        `/api/products?_t=${timestamp}`,
+        `/api/products`,
         { 
-          cache: 'no-store',
+          cache: 'default', // Usar cache do navegador
           headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
+            'Cache-Control': 'max-age=30' // Aceitar cache de até 30 segundos
           },
           signal: controller.signal
         },
-        3, // 3 tentativas
-        1000 // delay inicial de 1 segundo
+        2, // Reduzido para 2 tentativas (suficiente com cache)
+        500 // delay inicial reduzido para 500ms (mais rápido)
       )
       
       clearTimeout(timeoutId)
