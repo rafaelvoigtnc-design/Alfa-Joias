@@ -218,7 +218,7 @@ export default function ProductPage() {
     )
   }
 
-  const IconComponent = getCategoryIcon(product.category)
+  const IconComponent = getCategoryIcon(product.category || 'Outros')
 
   return (
     <div className="min-h-screen bg-gray-50">
