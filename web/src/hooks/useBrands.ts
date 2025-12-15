@@ -58,11 +58,15 @@ export function useBrands() {
       setIsRetrying(false)
       setRetryAttempt(0)
 
-      const { data, error } = result
+      // Como lançamos erro se result.error existir, aqui result.error sempre será null
+      const { data, error } = result as { data: Brand[] | null; error: any }
 
       if (error) {
-        console.error('❌ Erro do Supabase:', error.message)
-        setError(`Erro ao conectar com o banco de dados: ${error.message}`)
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : (error as any)?.message || 'Erro desconhecido'
+        console.error('❌ Erro do Supabase:', errorMessage)
+        setError(`Erro ao conectar com o banco de dados: ${errorMessage}`)
         setBrands([])
         setLoading(false)
         isFetchingRef.current = false
