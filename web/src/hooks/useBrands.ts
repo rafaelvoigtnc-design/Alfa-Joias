@@ -10,14 +10,20 @@ export function useBrands() {
   const [retryAttempt, setRetryAttempt] = useState(0)
   const isFetchingRef = useRef(false)
 
-  const fetchBrands = async () => {
-    // Prevenir múltiplas chamadas simultâneas
-    if (isFetchingRef.current) {
+  const fetchBrands = async (forceRetry: boolean = false) => {
+    // Prevenir múltiplas chamadas simultâneas (a menos que seja retry forçado)
+    if (isFetchingRef.current && !forceRetry) {
       console.log('⏸️ Já está buscando marcas, ignorando chamada duplicada...')
       return
     }
     
-    console.log('🔄 fetchBrands iniciado - usando SUPABASE')
+      console.log('🔄 fetchBrands iniciado - usando SUPABASE', forceRetry ? '(retry forçado)' : '')
+    
+    const startTime = Date.now()
+    if (typeof window !== 'undefined') {
+      (window as any).__brandsFetchStartTime = startTime
+    }
+    let timeoutId: NodeJS.Timeout | null = null
     
     try {
       isFetchingRef.current = true
@@ -28,32 +34,56 @@ export function useBrands() {
       
       console.log('🔄 Buscando marcas do Supabase...')
 
-      // Usar retry automático
-      const result = await withAutoRetry(
-        async () => {
-          const result = await supabase
-            .from('brands')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(100)
-          
-          if (result.error) {
-            throw result.error
-          }
-          
-          return result
-        },
-        {
-          maxRetries: 2, // Reduzido para 2 tentativas (mais rápido)
-          initialDelay: 500, // Começar com 500ms (mais rápido)
-          maxDelay: 2000, // Máximo de 2 segundos (mais rápido)
-          onRetry: (attempt, err) => {
-            setIsRetrying(true)
-            setRetryAttempt(attempt)
-            console.log(`🔄 Tentando carregar marcas novamente (tentativa ${attempt}/2)...`)
-          }
+      // Timeout de 8 segundos - se demorar mais, forçar retry
+      timeoutId = setTimeout(() => {
+        const elapsed = Date.now() - startTime
+        if (elapsed >= 8000 && isFetchingRef.current) {
+          console.warn(`⏰ Timeout de 8s atingido! Forçando retry automático...`)
+          setIsRetrying(true)
+          setRetryAttempt(1)
+          // Forçar retry após 1 segundo
+          setTimeout(() => {
+            if (isFetchingRef.current) {
+              console.log('🔄 Executando retry automático após timeout...')
+              fetchBrands(true)
+            }
+          }, 1000)
         }
-      )
+      }, 8000)
+
+      // Usar retry automático com timeout mais agressivo
+      const result = await Promise.race([
+        withAutoRetry(
+          async () => {
+            const result = await supabase
+              .from('brands')
+              .select('*')
+              .order('created_at', { ascending: false })
+              .limit(100)
+            
+            if (result.error) {
+              throw result.error
+            }
+            
+            return result
+          },
+          {
+            maxRetries: 3, // Aumentado para 3 tentativas
+            initialDelay: 1000, // Começar com 1 segundo
+            maxDelay: 3000, // Máximo de 3 segundos
+            onRetry: (attempt, err) => {
+              setIsRetrying(true)
+              setRetryAttempt(attempt)
+              console.log(`🔄 Tentando carregar marcas novamente (tentativa ${attempt}/3)...`)
+            }
+          }
+        ),
+        new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Timeout após 8 segundos')), 8000)
+        })
+      ]) as Awaited<ReturnType<typeof withAutoRetry>>
+
+      if (timeoutId) clearTimeout(timeoutId)
 
       setIsRetrying(false)
       setRetryAttempt(0)
@@ -75,22 +105,46 @@ export function useBrands() {
 
       console.log('✅ Marcas carregadas do Supabase:', data?.length || 0)
       
-      // Remover duplicatas baseadas no ID antes de definir no estado
+      // Remover duplicatas baseadas no ID E no nome antes de definir no estado
       let uniqueBrands: Brand[] = []
       if (data && data.length > 0) {
-        // Criar um Map para garantir unicidade por ID
-        const brandsMap = new Map<string, Brand>()
+        // Criar Maps para garantir unicidade por ID e por nome
+        const brandsByIdMap = new Map<string, Brand>()
+        const brandsByNameMap = new Map<string, Brand>()
+        
         data.forEach(brand => {
-          if (!brandsMap.has(brand.id)) {
-            brandsMap.set(brand.id, brand)
+          // Primeiro verificar por ID
+          if (!brandsByIdMap.has(brand.id)) {
+            // Depois verificar por nome (case-insensitive)
+            const nameKey = brand.name.toLowerCase().trim()
+            if (!brandsByNameMap.has(nameKey)) {
+              brandsByIdMap.set(brand.id, brand)
+              brandsByNameMap.set(nameKey, brand)
+            } else {
+              // Se já existe uma marca com o mesmo nome, manter a mais recente (created_at mais recente)
+              const existingBrand = brandsByNameMap.get(nameKey)!
+              const existingDate = new Date(existingBrand.created_at || 0).getTime()
+              const newDate = new Date(brand.created_at || 0).getTime()
+              
+              if (newDate > existingDate) {
+                // Remover a antiga e adicionar a nova
+                brandsByIdMap.delete(existingBrand.id)
+                brandsByIdMap.set(brand.id, brand)
+                brandsByNameMap.set(nameKey, brand)
+                console.warn(`⚠️ Marca duplicada por nome removida (mantida a mais recente): ${brand.name} (ID antigo: ${existingBrand.id}, ID novo: ${brand.id})`)
+              } else {
+                console.warn(`⚠️ Marca duplicada por nome ignorada (mantida a mais recente): ${brand.name} (ID: ${brand.id})`)
+              }
+            }
           } else {
-            console.warn(`⚠️ Marca duplicada encontrada no banco: ${brand.name} (ID: ${brand.id})`)
+            console.warn(`⚠️ Marca duplicada por ID encontrada no banco: ${brand.name} (ID: ${brand.id})`)
           }
         })
-        uniqueBrands = Array.from(brandsMap.values())
+        
+        uniqueBrands = Array.from(brandsByIdMap.values())
         
         if (uniqueBrands.length !== data.length) {
-          console.warn(`⚠️ ${data.length - uniqueBrands.length} marca(s) duplicada(s) removida(s)`)
+          console.warn(`⚠️ ${data.length - uniqueBrands.length} marca(s) duplicada(s) removida(s) (total: ${data.length} -> ${uniqueBrands.length})`)
         }
         
         uniqueBrands.forEach(brand => console.log(`   - ${brand.name} (${brand.id})`))
@@ -100,15 +154,32 @@ export function useBrands() {
       setError(null)
 
     } catch (err) {
+      if (timeoutId) clearTimeout(timeoutId)
       setIsRetrying(false)
       setRetryAttempt(0)
       console.error('❌ Erro ao carregar marcas:', err)
+      
+      const elapsed = Date.now() - startTime
+      const isTimeout = err instanceof Error && err.message.includes('Timeout')
+      
+      // Se foi timeout ou demorou mais de 8s, tentar retry automático
+      if ((isTimeout || elapsed >= 8000) && !forceRetry) {
+        console.log('⏰ Timeout detectado, tentando retry automático em 2 segundos...')
+        setTimeout(() => {
+          if (isFetchingRef.current) {
+            fetchBrands(true)
+          }
+        }, 2000)
+        return // Não definir erro ainda, aguardar retry
+      }
+      
       setError(err instanceof Error ? err.message : 'Erro ao carregar marcas do banco de dados')
       setBrands([])
     } finally {
       setLoading(false)
       isFetchingRef.current = false
-      console.log('✅ fetchBrands concluído')
+      const elapsed = Date.now() - startTime
+      console.log(`✅ fetchBrands concluído (tempo: ${elapsed}ms)`)
     }
   }
 
@@ -197,6 +268,32 @@ export function useBrands() {
   useEffect(() => {
     fetchBrands()
   }, [])
+  
+  // Monitorar loading separadamente - se demorar mais de 8s, forçar retry
+  useEffect(() => {
+    if (!loading) return
+    
+    const startTime = Date.now()
+    if (typeof window !== 'undefined') {
+      (window as any).__brandsFetchStartTime = startTime
+    }
+    
+    const loadingMonitor = setInterval(() => {
+      if (loading && isFetchingRef.current) {
+        const elapsed = Date.now() - ((window as any).__brandsFetchStartTime || startTime)
+        if (elapsed >= 8000) {
+          console.warn('⏰ Loading demorou mais de 8s, forçando retry automático...')
+          isFetchingRef.current = false // Permitir novo fetch
+          fetchBrands(true)
+          clearInterval(loadingMonitor)
+        }
+      } else {
+        clearInterval(loadingMonitor)
+      }
+    }, 1000)
+    
+    return () => clearInterval(loadingMonitor)
+  }, [loading])
 
   return {
     brands,

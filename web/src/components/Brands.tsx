@@ -7,16 +7,41 @@ import { shuffleArray } from '@/lib/productRecommendation'
 export default function Brands() {
   const { brands, loading } = useBrands()
   // Removido filtro por 'active' - coluna não existe no banco
-  // Remover duplicatas baseadas no ID e embaralhar marcas para aparecerem sempre em ordem diferente
+  // Remover duplicatas baseadas no ID E no nome, e embaralhar marcas para aparecerem sempre em ordem diferente
   const activeBrands = useMemo(() => {
     if (brands.length === 0) return []
     
-    // Remover duplicatas baseadas no ID (caso haja duplicatas no banco)
-    const uniqueBrands = brands.filter((brand, index, self) => 
+    // Remover duplicatas por ID primeiro
+    const uniqueById = brands.filter((brand, index, self) => 
       index === self.findIndex((b) => b.id === brand.id)
     )
     
-    return shuffleArray(uniqueBrands)
+    // Depois remover duplicatas por nome (case-insensitive)
+    const uniqueByName = uniqueById.filter((brand, index, self) => {
+      const nameKey = brand.name.toLowerCase().trim()
+      const firstIndex = self.findIndex((b) => b.name.toLowerCase().trim() === nameKey)
+      // Se não é o primeiro com esse nome, verificar qual é mais recente
+      if (index !== firstIndex) {
+        const firstBrand = self[firstIndex]
+        const firstDate = new Date(firstBrand.created_at || 0).getTime()
+        const currentDate = new Date(brand.created_at || 0).getTime()
+        // Manter apenas o mais recente
+        return currentDate > firstDate
+      }
+      return true
+    })
+    
+    // Garantir que não há duplicatas finais
+    const finalUnique = uniqueByName.filter((brand, index, self) => {
+      const nameKey = brand.name.toLowerCase().trim()
+      return index === self.findIndex((b) => b.name.toLowerCase().trim() === nameKey)
+    })
+    
+    if (finalUnique.length !== brands.length) {
+      console.warn(`⚠️ Brands: ${brands.length - finalUnique.length} marca(s) duplicada(s) removida(s) no componente`)
+    }
+    
+    return shuffleArray(finalUnique)
   }, [brands])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [isAutoRotating, setIsAutoRotating] = useState(true)

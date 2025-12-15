@@ -81,6 +81,12 @@ export function useSupabaseProducts() {
     // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar acessível no catch)
     const currentRequestId = ++requestIdRef.current
     
+    const startTime = Date.now()
+    if (typeof window !== 'undefined') {
+      (window as any).__productsFetchStartTime = startTime
+    }
+    let timeoutId: NodeJS.Timeout | null = null
+    
     try {
       // Cancelar requisição anterior se existir
       if (abortControllerRef.current) {
@@ -96,6 +102,21 @@ export function useSupabaseProducts() {
       setError(null)
       console.log('🔄 Buscando produtos do banco de dados...', { requestId: currentRequestId })
       
+      // Timeout de 8 segundos - se demorar mais, forçar retry
+      timeoutId = setTimeout(() => {
+        const elapsed = Date.now() - startTime
+        if (elapsed >= 8000 && isFetchingRef.current && currentRequestId === requestIdRef.current) {
+          console.warn(`⏰ Timeout de 8s atingido para produtos! Forçando retry automático...`)
+          // Forçar retry após 1 segundo
+          setTimeout(() => {
+            if (isFetchingRef.current && currentRequestId === requestIdRef.current) {
+              console.log('🔄 Executando retry automático de produtos após timeout...')
+              fetchProducts(true)
+            }
+          }, 1000)
+        }
+      }, 8000)
+      
       // Carregar cache local primeiro para melhor UX
       const cachedProducts = getCachedProducts()
       if (cachedProducts && cachedProducts.length > 0) {
@@ -103,9 +124,6 @@ export function useSupabaseProducts() {
         setProducts(cachedProducts)
         setLoading(false) // Mostrar dados do cache imediatamente
       }
-      
-      // Timeout reduzido para 5 segundos (mais rápido com cache otimizado)
-      const timeoutId = setTimeout(() => controller.abort(), 5000)
       
       // Usar sistema de retry automático melhorado
       const response = await fetchWithAutoRetry(
@@ -127,7 +145,7 @@ export function useSupabaseProducts() {
         }
       )
       
-      clearTimeout(timeoutId)
+      if (timeoutId) clearTimeout(timeoutId)
       
       // Verificar se esta requisição foi cancelada
       if (controller.signal.aborted) {
@@ -218,6 +236,20 @@ export function useSupabaseProducts() {
       // Só atualizar estado se ainda for a requisição mais recente
       const latestRequestId = requestIdRef.current
       if (currentRequestId === latestRequestId) {
+        const elapsed = Date.now() - startTime
+        const isTimeout = err instanceof Error && (err.message.includes('Timeout') || err.message.includes('aborted'))
+        
+        // Se foi timeout ou demorou mais de 8s, tentar retry automático
+        if ((isTimeout || elapsed >= 8000) && !force) {
+          console.log('⏰ Timeout detectado em produtos, tentando retry automático em 2 segundos...')
+          setTimeout(() => {
+            if (isFetchingRef.current && currentRequestId === requestIdRef.current) {
+              fetchProducts(true)
+            }
+          }, 2000)
+          return // Não definir erro ainda, aguardar retry
+        }
+        
         // Tentar usar cache local como fallback
         const cachedProducts = getCachedProducts()
         if (cachedProducts && cachedProducts.length > 0) {
@@ -232,6 +264,32 @@ export function useSupabaseProducts() {
       isFetchingRef.current = false
     }
   }
+  
+  // Monitorar loading - se demorar mais de 8s, forçar retry
+  useEffect(() => {
+    if (!loading) return
+    
+    const startTime = Date.now()
+    if (typeof window !== 'undefined') {
+      (window as any).__productsFetchStartTime = startTime
+    }
+    
+    const loadingMonitor = setInterval(() => {
+      if (loading && isFetchingRef.current) {
+        const elapsed = Date.now() - ((window as any).__productsFetchStartTime || startTime)
+        if (elapsed >= 8000) {
+          console.warn('⏰ Loading de produtos demorou mais de 8s, forçando retry automático...')
+          isFetchingRef.current = false // Permitir novo fetch
+          fetchProducts(true)
+          clearInterval(loadingMonitor)
+        }
+      } else {
+        clearInterval(loadingMonitor)
+      }
+    }, 1000)
+    
+    return () => clearInterval(loadingMonitor)
+  }, [loading])
 
   const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     try {
