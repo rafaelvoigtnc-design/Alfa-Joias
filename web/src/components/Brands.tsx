@@ -35,28 +35,37 @@ export default function Brands() {
     return () => window.removeEventListener('resize', updateItemsPerView)
   }, [])
 
-  const totalSlides = Math.ceil(activeBrands.length / itemsPerView) || 1
+  // Calcular total de slides - sempre criar pelo menos 2 slides para rotação contínua
+  const totalSlides = useMemo(() => {
+    if (activeBrands.length === 0) return 1
+    // Se houver poucas marcas, duplicar para criar múltiplos slides
+    const naturalSlides = Math.ceil(activeBrands.length / itemsPerView)
+    // Sempre ter pelo menos 2 slides para permitir rotação
+    return naturalSlides < 2 ? 2 : naturalSlides
+  }, [activeBrands.length, itemsPerView])
 
   // Sempre iniciar auto-rotação (sempre usar carrossel)
   useEffect(() => {
     setIsAutoRotating(true)
   }, [])
 
-  // Rotação automática a cada 10 segundos - sempre ativa (só roda se tiver mais marcas que itens visíveis)
+  // Rotação automática a cada 10 segundos - sempre ativa quando há marcas
   useEffect(() => {
-    if (activeBrands.length === 0 || activeBrands.length <= itemsPerView) return
+    // Só rotacionar se houver marcas e mais de um slide
+    if (activeBrands.length === 0 || totalSlides <= 1) return
     
     if (!isAutoRotating) return
     
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => {
         const nextIndex = prevIndex + 1
+        // Se chegou ao final, voltar ao início (loop infinito)
         return nextIndex >= totalSlides ? 0 : nextIndex
       })
     }, 10000) // 10 segundos
 
     return () => clearInterval(interval)
-  }, [activeBrands.length, totalSlides, itemsPerView, isAutoRotating])
+  }, [activeBrands.length, totalSlides, isAutoRotating])
 
   // Pausar rotação ao passar o mouse
   const handleMouseEnter = () => {
@@ -106,8 +115,9 @@ export default function Brands() {
                     : 'translateX(0)'
                 }}
               >
-                {/* Renderizar todas as marcas (duplicadas para loop infinito quando necessário) */}
-                {(totalSlides > 1 ? [...activeBrands, ...activeBrands] : activeBrands).map((brand, index) => (
+                {/* Renderizar todas as marcas (duplicadas para loop infinito) */}
+                {/* Duplicar marcas várias vezes para criar carrossel infinito suave */}
+                {Array.from({ length: Math.max(2, Math.ceil(totalSlides * 1.5)) }).flatMap(() => activeBrands).map((brand, index) => (
                   <div
                     key={`${brand.id}-${index}`}
                     className="flex-shrink-0 px-2 sm:px-3"

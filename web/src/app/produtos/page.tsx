@@ -317,7 +317,15 @@ function ProdutosContent() {
     }
 
     if (selectedGender !== 'Todos') {
-      filtered = filtered.filter(product => product.gender === selectedGender)
+      filtered = filtered.filter(product => {
+        const productGender = product.gender
+        // Se o produto for Unissex, aparece em todos os filtros de gênero
+        if (productGender === 'Unissex') {
+          return true
+        }
+        // Caso contrário, comparação exata
+        return productGender === selectedGender
+      })
     }
 
     if (selectedModel !== 'Todos') {
