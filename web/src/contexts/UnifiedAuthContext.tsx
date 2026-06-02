@@ -150,19 +150,12 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
       setIsCheckingUser(true)
       console.log('🔄 Verificando usuário no banco...', authUser.id)
       
-      // Verificar se usuário já existe (com timeout)
-      const result = await Promise.race([
-        supabase
-          .from('users')
-          .select('*')
-          .eq('id', authUser.id)
-          .single(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 5000)
-        )
-      ]) as any
-      
-      const { data: existingUser, error: selectError } = result
+      // Verificar se usuário já existe (sem timeout)
+      const { data: existingUser, error: selectError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authUser.id)
+        .single()
       
       if (selectError && selectError.message !== 'PGRST116') {
         console.error('❌ Erro ao verificar usuário:', selectError)
@@ -183,15 +176,8 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
           is_admin: false
         }
         
-        // Inserir com timeout
-        const insertResult = await Promise.race([
-          supabase.from('users').insert([userData]),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 5000)
-          )
-        ]) as any
-        
-        const { error: insertError } = insertResult
+        // Inserir sem timeout
+        const { error: insertError } = await supabase.from('users').insert([userData])
         
         if (insertError) {
           console.error('❌ Erro ao criar usuário:', insertError)
@@ -213,47 +199,23 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
       console.log('🔍 Verificando status de admin para:', userId)
       setAdminLoading(true)
 
-      // Verificar com timeout para evitar travamentos
-      const result = await Promise.race([
-        supabase
-          .from('users')
-          .select('is_admin')
-          .eq('id', userId)
-          .single(),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Timeout')), 5000)
-        )
-      ]) as any
-
-      const { data, error } = result
+      // Verificar sem timeout
+      const { data, error } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', userId)
+        .single()
 
       if (error) {
         console.warn('⚠️ Erro ao verificar admin status:', error)
-        // Tentar novamente após um segundo (sem timeout)
-        setTimeout(async () => {
-          try {
-            const { data: retryData, error: retryError } = await supabase
-              .from('users')
-              .select('is_admin')
-              .eq('id', userId)
-              .single()
-
-            if (!retryError && retryData) {
-              setIsAdmin(Boolean(retryData.is_admin))
-              console.log('✅ Admin status (retry):', retryData.is_admin)
-            }
-          } catch (e) {
-            console.error('❌ Falha na tentativa de verificar admin')
-          } finally {
-            setAdminLoading(false)
-          }
-        }, 1000)
+        setIsAdmin(false)
       } else {
         setIsAdmin(Boolean(data?.is_admin))
         console.log('✅ Admin status:', data?.is_admin)
       }
     } catch (error) {
-      console.error('❌ Timeout ao verificar admin status')
+      console.error('❌ Erro ao verificar admin status:', error)
+      setIsAdmin(false)
     } finally {
       setAdminLoading(false)
     }

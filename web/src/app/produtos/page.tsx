@@ -184,18 +184,6 @@ function ProdutosContent() {
         
         console.log('🔄 Buscando produtos do banco de dados...', { requestId: currentRequestId })
         
-          // Timeout reduzido para 5 segundos (mais rápido)
-          reloadTimeout = setTimeout(() => {
-            if (currentRequestId === requestIdRef.current) {
-              setShowReload(true)
-            }
-          }, 5000)
-        
-        // Timeout reduzido para 5 segundos (mais rápido com cache otimizado)
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Não foi possível carregar os produtos. Por favor, tente novamente.')), 5000)
-        )
-        
         // Carregar cache primeiro para resposta instantânea
         if (typeof window !== 'undefined') {
           try {
@@ -214,34 +202,20 @@ function ProdutosContent() {
           }
         }
         
-        // Usar sistema de retry automático melhorado
-        const { fetchWithAutoRetry } = await import('@/lib/autoRetry')
-        
-        const queryPromise = fetchWithAutoRetry('/api/products', {
+        // Usar sistema de retry simples (igual ao de serviços)
+        const response = await fetch('/api/products', {
           cache: 'default',
-          headers: { 'Cache-Control': 'max-age=60' }, // Aumentado para 60 segundos
+          headers: { 'Cache-Control': 'max-age=60' },
           signal: controller.signal
-        }, {
-          maxRetries: 2, // Reduzido para 2 tentativas (mais rápido)
-          initialDelay: 500, // Começar com 500ms (mais rápido)
-          maxDelay: 2000, // Máximo de 2 segundos (mais rápido)
-          onRetry: (attempt) => {
-            console.log(`🔄 Tentando carregar produtos novamente (tentativa ${attempt}/2)...`)
-          }
-        }).then(res => {
-          if (!res.ok) {
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`)
-          }
-          return res.json()
-        }).then(data => ({ 
-          data: data.products || [], 
-          error: data.error ? new Error(data.error) : null 
-        }))
+        })
         
-        const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
-        const { data, error } = result
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        }
         
-        if (reloadTimeout) clearTimeout(reloadTimeout)
+        const result = await response.json()
+        const data = result.products || []
+        const error = result.error ? new Error(result.error) : null
         
         // Verificar se ainda é a requisição mais recente
         if (currentRequestId !== requestIdRef.current) {

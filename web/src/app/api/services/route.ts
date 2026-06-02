@@ -5,9 +5,8 @@ import { isConnectionError, withRetry } from '@/lib/errorHandler'
 // Edge Runtime para Cloudflare Pages
 export const runtime = 'edge'
 
-// Cache otimizado: revalidar a cada 60 segundos (serviços mudam menos frequentemente)
-export const dynamic = 'force-dynamic'
-export const revalidate = 60
+// Cache otimizado para carregamento instantâneo
+export const revalidate = 300 // 5 minutos
 
 export async function GET() {
   try {
@@ -45,8 +44,8 @@ export async function GET() {
       }
     })
     // Cache otimizado: 60 segundos no cliente, 60 segundos no CDN
-    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=120')
-    response.headers.set('CDN-Cache-Control', 'public, s-maxage=60')
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+    response.headers.set('CDN-Cache-Control', 'public, s-maxage=300')
     return response
 
   } catch (error) {

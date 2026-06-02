@@ -128,13 +128,6 @@ export default function Promocoes() {
           setDbError(null)
           setShowReload(false)
           
-          // Timeout reduzido para 10 segundos (suficiente com cache otimizado)
-          reloadTimeout = setTimeout(() => {
-            if (currentRequestId === requestIdRef.current) {
-              setShowReload(true)
-            }
-          }, 10000)
-          
           // Usar API route que tem cache otimizado
           console.log('🔄 Buscando promoções do banco de dados...', { requestId: currentRequestId })
           
@@ -153,8 +146,6 @@ export default function Promocoes() {
           // Filtrar apenas produtos em promoção no cliente (mais rápido que query no banco)
           const data = allProducts.filter((p: any) => p.on_sale === true)
           const error = result.error ? new Error(result.error) : null
-          
-          clearTimeout(reloadTimeout)
           
           // Verificar se ainda é a requisição mais recente
           if (currentRequestId !== requestIdRef.current) {
@@ -208,7 +199,6 @@ export default function Promocoes() {
           isFetchingRef.current = false
           
         } catch (err: any) {
-          if (reloadTimeout) clearTimeout(reloadTimeout)
           console.error('❌ Falha ao carregar promoções:', err)
           
           // Verificar se ainda é a requisição mais recente

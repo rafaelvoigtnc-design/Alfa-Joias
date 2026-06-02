@@ -16,3 +16,5 @@ DELETE FROM products;
 -- Todos os produtos serão permanentemente removidos.
 -- ============================================
 
+
+

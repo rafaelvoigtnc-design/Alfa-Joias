@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { supabase, Product } from '@/lib/supabase'
 
-// Cache local para fallback - aumentado para melhor performance
+// Cache local para fallback - aumentado para carregamento instantâneo
 const CACHE_KEY = 'alfajoias-products-cache'
-const CACHE_EXPIRY = 15 * 60 * 1000 // 15 minutos (cache mais longo para melhor performance)
+const CACHE_EXPIRY = 30 * 60 * 1000 // 30 minutos (carregamento instantâneo)
 
 interface CacheData {
   products: Product[]
@@ -20,7 +20,6 @@ function getCachedProducts(): Product[] | null {
     const data: CacheData = JSON.parse(cached)
     const now = Date.now()
     
-    // Se cache expirou, retornar null
     if (now - data.timestamp > CACHE_EXPIRY) {
       localStorage.removeItem(CACHE_KEY)
       return null
@@ -46,8 +45,41 @@ function setCachedProducts(products: Product[]) {
   }
 }
 
-// Importar sistema de retry melhorado
-import { fetchWithAutoRetry } from '@/lib/autoRetry'
+// Função de retry simples igual ao de serviços
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries: number = 2,
+  delayMs: number = 500
+): Promise<Response> {
+  let lastError: any
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options)
+      
+      if (response.status === 503 || response.status === 500) {
+        if (attempt < maxRetries) {
+          const waitTime = delayMs * Math.pow(2, attempt)
+          console.log(`⏳ Tentativa ${attempt + 1}/${maxRetries + 1} falhou (${response.status}). Aguardando ${waitTime}ms...`)
+          await new Promise(resolve => setTimeout(resolve, waitTime))
+          continue
+        }
+      }
+      
+      return response
+    } catch (error) {
+      lastError = error
+      if (attempt < maxRetries) {
+        const waitTime = delayMs * Math.pow(2, attempt)
+        console.log(`⏳ Tentativa ${attempt + 1}/${maxRetries + 1} falhou. Aguardando ${waitTime}ms...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+      }
+    }
+  }
+  
+  throw lastError
+}
 
 export function useSupabaseProducts() {
   const [products, setProducts] = useState<Product[]>([])
@@ -60,15 +92,15 @@ export function useSupabaseProducts() {
   const requestIdRef = useRef(0)
 
   const fetchProducts = async (force: boolean = false) => {
-    // Prevenir múltiplas chamadas simultâneas (a menos que seja forçado)
+    // Prevenir múltiplas chamadas simultâneas
     if (isFetchingRef.current && !force) {
       console.log('⏸️ Já está buscando produtos, ignorando chamada duplicada...')
       return
     }
     
-    // Se forçado, limpar cache e resetar flags
+    // Se forçado, limpar cache
     if (force) {
-      console.log('🔄 Refetch forçado - limpando cache e resetando estado...')
+      console.log('🔄 Refetch forçado - limpando cache...')
       if (typeof window !== 'undefined') {
         localStorage.removeItem(CACHE_KEY)
       }
@@ -78,82 +110,49 @@ export function useSupabaseProducts() {
       }
     }
     
-    // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar acessível no catch)
     const currentRequestId = ++requestIdRef.current
     
-    const startTime = Date.now()
-    if (typeof window !== 'undefined') {
-      (window as any).__productsFetchStartTime = startTime
-    }
-    let timeoutId: NodeJS.Timeout | null = null
-    
     try {
-      // Cancelar requisição anterior se existir
       if (abortControllerRef.current) {
         abortControllerRef.current.abort()
       }
       
-      // Criar novo AbortController para esta requisição
       const controller = new AbortController()
       abortControllerRef.current = controller
       
       isFetchingRef.current = true
       setLoading(true)
       setError(null)
-      console.log('🔄 Buscando produtos do banco de dados...', { requestId: currentRequestId })
+      console.log('🔄 Buscando produtos via API...', { requestId: currentRequestId })
       
-      // Timeout de 8 segundos - se demorar mais, forçar retry
-      timeoutId = setTimeout(() => {
-        const elapsed = Date.now() - startTime
-        if (elapsed >= 8000 && isFetchingRef.current && currentRequestId === requestIdRef.current) {
-          console.warn(`⏰ Timeout de 8s atingido para produtos! Forçando retry automático...`)
-          // Forçar retry após 1 segundo
-          setTimeout(() => {
-            if (isFetchingRef.current && currentRequestId === requestIdRef.current) {
-              console.log('🔄 Executando retry automático de produtos após timeout...')
-              fetchProducts(true)
-            }
-          }, 1000)
-        }
-      }, 8000)
-      
-      // Carregar cache local primeiro para melhor UX
+      // Carregar cache local primeiro para carregamento instantâneo
       const cachedProducts = getCachedProducts()
       if (cachedProducts && cachedProducts.length > 0) {
-        console.log('📦 Usando produtos do cache local enquanto busca atualização...', cachedProducts.length)
+        console.log('⚡ Carregamento instantâneo do cache local:', cachedProducts.length, 'produtos')
         setProducts(cachedProducts)
         setLoading(false) // Mostrar dados do cache imediatamente
       }
       
-      // Usar sistema de retry automático melhorado
-      const response = await fetchWithAutoRetry(
+      // Usar cache do navegador com tempo maior para carregamento instantâneo
+      const response = await fetchWithRetry(
         `/api/products`,
-        { 
-          cache: 'default', // Usar cache do navegador
+        {
+          cache: 'default',
+          method: 'GET',
           headers: {
-            'Cache-Control': 'max-age=30' // Aceitar cache de até 30 segundos
+            'Cache-Control': 'max-age=300' // 5 minutos de cache do navegador
           },
           signal: controller.signal
         },
-        {
-          maxRetries: 2, // Reduzido para 2 tentativas (mais rápido)
-          initialDelay: 500, // Começar com 500ms (mais rápido)
-          maxDelay: 2000, // Máximo de 2 segundos entre tentativas (mais rápido)
-          onRetry: (attempt, error) => {
-            console.log(`🔄 Tentando carregar produtos novamente (tentativa ${attempt}/2)...`)
-          }
-        }
+        2, // 2 tentativas
+        500 // delay inicial 500ms
       )
       
-      if (timeoutId) clearTimeout(timeoutId)
-      
-      // Verificar se esta requisição foi cancelada
       if (controller.signal.aborted) {
         console.log('⏹️ Requisição cancelada (nova requisição iniciada)')
         return
       }
       
-      // Verificar se ainda é a requisição mais recente
       if (currentRequestId !== requestIdRef.current) {
         console.log('⏹️ Requisição antiga ignorada (nova requisição já iniciada)')
         return
@@ -170,92 +169,65 @@ export function useSupabaseProducts() {
         
         console.error('❌ Erro na API de produtos:', response.status, errorData)
         
-        // Mensagem amigável para erros de conexão
         if (errorData.connectionError || response.status === 503) {
-          setError('Erro de conexão. Verifique sua internet e tente novamente.')
-        } else {
-          setError(`Erro na API de produtos: ${errorData.error || response.status}`)
+          console.warn('⚠️ Erro de conexão detectado. Produtos não podem ser carregados.')
         }
+        
         setProducts([])
         setLoading(false)
         isFetchingRef.current = false
         return
       }
       
-      const { success, products: data, error, connectionError } = await response.json()
+      const data = await response.json()
       
-      // Verificar novamente se ainda é a requisição mais recente
       if (currentRequestId !== requestIdRef.current) {
         console.log('⏹️ Resposta de requisição antiga ignorada')
         return
       }
       
-      if (!success) {
-        console.error('❌ Erro ao buscar do banco:', error)
-        const errorMsg = connectionError 
-          ? 'Erro de conexão. Verifique sua internet e tente novamente.'
-          : `Erro ao conectar com o banco de dados: ${error}`
-        setError(errorMsg)
+      if (!data.success) {
+        console.error('❌ Erro na resposta da API:', data.error)
+        
+        if (data.connectionError) {
+          console.warn('⚠️ Erro de conexão detectado. Produtos não podem ser carregados.')
+        }
+        
         setProducts([])
         setLoading(false)
         isFetchingRef.current = false
         return
       }
       
-      if (!data || data.length === 0) {
-        console.warn('⚠️ Banco de dados está vazio!')
+      if (!data.products || data.products.length === 0) {
+        console.warn('⚠️ Nenhum produto encontrado!')
         setProducts([])
         setLoading(false)
         isFetchingRef.current = false
         return
       }
       
-      console.log('✅ Produtos carregados do BANCO:', data.length, 'produtos', { requestId: currentRequestId })
+      console.log('✅ Produtos carregados via API:', data.products.length, { requestId: currentRequestId })
       
-      // Salvar no cache local
-      setCachedProducts(data)
+      setCachedProducts(data.products)
       
-      setProducts(data)
+      setProducts(data.products)
       setLoading(false)
       isFetchingRef.current = false
-      
-    } catch (err) {
-      // Verificar se foi cancelamento (não é erro real)
-      if (err instanceof Error && err.name === 'AbortError') {
-        // Verificar se foi cancelado por nova requisição ou timeout
-        if (abortControllerRef.current?.signal.aborted) {
-          console.log('⏹️ Requisição cancelada (nova requisição ou timeout)')
-          return // Não atualizar estado se foi cancelada
-        }
-        setError('Tempo de carregamento excedido. Verifique sua conexão.')
-      } else {
-        console.error('❌ Erro ao carregar produtos do banco:', err)
-        setError(err instanceof Error ? err.message : 'Erro ao carregar produtos do banco de dados')
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('⏹️ Requisição cancelada (nova requisição ou timeout)')
+        return
       }
       
-      // Só atualizar estado se ainda for a requisição mais recente
+      console.error('❌ Erro ao carregar produtos:', error)
+      
       const latestRequestId = requestIdRef.current
       if (currentRequestId === latestRequestId) {
-        const elapsed = Date.now() - startTime
-        const isTimeout = err instanceof Error && (err.message.includes('Timeout') || err.message.includes('aborted'))
-        
-        // Se foi timeout ou demorou mais de 8s, tentar retry automático
-        if ((isTimeout || elapsed >= 8000) && !force) {
-          console.log('⏰ Timeout detectado em produtos, tentando retry automático em 2 segundos...')
-          setTimeout(() => {
-            if (isFetchingRef.current && currentRequestId === requestIdRef.current) {
-              fetchProducts(true)
-            }
-          }, 2000)
-          return // Não definir erro ainda, aguardar retry
-        }
-        
-        // Tentar usar cache local como fallback
         const cachedProducts = getCachedProducts()
         if (cachedProducts && cachedProducts.length > 0) {
           console.log('📦 Usando produtos do cache local devido a erro:', cachedProducts.length)
           setProducts(cachedProducts)
-          setError('Usando dados em cache. Alguns produtos podem estar desatualizados.')
         } else {
           setProducts([])
         }
@@ -265,31 +237,6 @@ export function useSupabaseProducts() {
     }
   }
   
-  // Monitorar loading - se demorar mais de 8s, forçar retry
-  useEffect(() => {
-    if (!loading) return
-    
-    const startTime = Date.now()
-    if (typeof window !== 'undefined') {
-      (window as any).__productsFetchStartTime = startTime
-    }
-    
-    const loadingMonitor = setInterval(() => {
-      if (loading && isFetchingRef.current) {
-        const elapsed = Date.now() - ((window as any).__productsFetchStartTime || startTime)
-        if (elapsed >= 8000) {
-          console.warn('⏰ Loading de produtos demorou mais de 8s, forçando retry automático...')
-          isFetchingRef.current = false // Permitir novo fetch
-          fetchProducts(true)
-          clearInterval(loadingMonitor)
-        }
-      } else {
-        clearInterval(loadingMonitor)
-      }
-    }, 1000)
-    
-    return () => clearInterval(loadingMonitor)
-  }, [loading])
 
   const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
     try {

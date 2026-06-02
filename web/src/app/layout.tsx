@@ -2,7 +2,6 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext'
-import { SimpleAuthProvider } from '@/contexts/SimpleAuthContext'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ConnectionStatus from '@/components/ConnectionStatus'
@@ -11,6 +10,9 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://alfajoias.com.br'),
+  verification: {
+    google: 'xVdFxcOwtgt_2vNziHAFY0yp22yRLA19X2S0RfrY860',
+  },
   title: {
     default: 'Alfa Jóias - A Vitrine dos seus Olhos',
     template: '%s | Alfa Jóias'
@@ -89,16 +91,14 @@ export default function RootLayout({
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
       </head>
       <body className={inter.className}>
-        <SimpleAuthProvider>
-          <UnifiedAuthProvider>
-            <ConnectionStatus />
-            <Header />
-            <main className="min-h-screen">
-              {children}
-            </main>
-            <Footer />
-          </UnifiedAuthProvider>
-        </SimpleAuthProvider>
+        <UnifiedAuthProvider>
+          <ConnectionStatus />
+          <Header />
+          <main className="min-h-screen">
+            {children}
+          </main>
+          <Footer />
+        </UnifiedAuthProvider>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
       </body>
     </html>

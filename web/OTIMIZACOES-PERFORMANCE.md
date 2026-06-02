@@ -120,3 +120,5 @@ diminua minimamente o tamanho do texto em nossas especialidades no PC, pois o te
 - 🔄 **Dados sempre disponíveis**
 - ⚡ **Navegação instantânea**
 
+
+

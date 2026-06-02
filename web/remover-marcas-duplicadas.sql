@@ -61,3 +61,5 @@ WHERE table_name = 'brands'
 -- Descomente a linha abaixo se necessário:
 -- ALTER TABLE brands ADD CONSTRAINT brands_name_unique UNIQUE (name);
 
+
+

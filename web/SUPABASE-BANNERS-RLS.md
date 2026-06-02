@@ -122,3 +122,5 @@ Mesmo com RLS configurado corretamente, se ainda houver "authenticator error" do
 
 
 
+
+

@@ -22,3 +22,5 @@ WHERE category = 'Relógios';
 -- DELETE FROM categories WHERE name = 'Relógios';
 -- ============================================
 
+
+

@@ -12,9 +12,9 @@ interface Service {
   updated_at: string
 }
 
-// Cache local para fallback
+// Cache local para fallback - aumentado para carregamento instantâneo
 const CACHE_KEY = 'alfajoias-services-cache'
-const CACHE_EXPIRY = 10 * 60 * 1000 // 10 minutos (aumentado de 5 para melhor performance)
+const CACHE_EXPIRY = 30 * 60 * 1000 // 30 minutos (carregamento instantâneo)
 
 interface CacheData {
   services: Service[]
@@ -129,27 +129,27 @@ export function useSupabaseServices() {
       setLoading(true)
       console.log('🔄 Buscando serviços via API...', { requestId: currentRequestId })
       
-      // Carregar cache local primeiro para melhor UX
+      // Carregar cache local primeiro para carregamento instantâneo
       const cachedServices = getCachedServices()
       if (cachedServices && cachedServices.length > 0) {
-        console.log('📦 Usando serviços do cache local enquanto busca atualização...', cachedServices.length)
+        console.log('⚡ Carregamento instantâneo do cache local:', cachedServices.length, 'serviços')
         setServices(cachedServices)
         setLoading(false) // Mostrar dados do cache imediatamente
       }
       
-      // Usar cache do navegador (API tem cache de 60 segundos)
+      // Usar cache do navegador com tempo maior para carregamento instantâneo
       const response = await fetchWithRetry(
         `/api/services`,
         {
           cache: 'default', // Usar cache do navegador
           method: 'GET',
           headers: {
-            'Cache-Control': 'max-age=60' // Aceitar cache de até 60 segundos
+            'Cache-Control': 'max-age=300' // 5 minutos de cache
           },
           signal: controller.signal
         },
-        2, // Reduzido para 2 tentativas
-        500 // delay inicial reduzido para 500ms
+        2, // 2 tentativas
+        500 // delay inicial 500ms
       )
       
       // Verificar se esta requisição foi cancelada
