@@ -222,49 +222,38 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Obter sessão inicial (otimizado)
+    // Obter sessão inicial (não bloqueante - sem verificações de banco)
     const getSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         setSession(session)
         setUser(session?.user ?? null)
         
-        if (session?.user) {
-          // Executar verificações em paralelo para melhor performance
-          await Promise.all([
-            checkAdminStatus(session.user.id),
-            ensureUserInDatabase(session.user)
-          ])
-        }
+        // Não fazer verificações de banco no carregamento inicial
+        // Isso bloqueia o carregamento dos produtos
+        // Verificações serão feitas apenas quando necessário
       } catch (error) {
         console.error('Erro ao obter sessão:', error)
       } finally {
-        setLoading(false)
+        setLoading(false) // Setar loading false imediatamente
       }
     }
 
     getSession()
 
-    // Escutar mudanças na autenticação (otimizado)
+    // Escutar mudanças na autenticação (não bloqueante - sem verificações de banco)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
 
-        if (session?.user) {
-          const promises = [checkAdminStatus(session.user.id)]
-
-          if (event === 'SIGNED_IN') {
-            promises.push(ensureUserInDatabase(session.user))
-          }
-
-          await Promise.all(promises)
-        } else {
+        // Não fazer verificações de banco - isso bloqueia o carregamento
+        if (!session?.user) {
           setIsAdmin(false)
           setAdminLoading(false)
         }
 
-        setLoading(false)
+        setLoading(false) // Setar loading false imediatamente
       }
     )
 
@@ -290,22 +279,22 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loading])
 
-  // Carregar carrinho do banco quando usuário logar
+  // Carregar carrinho do banco quando usuário logar (não bloqueante)
   useEffect(() => {
     if (user?.id && !loading) {
-      loadCartFromDatabase()
+      loadCartFromDatabase().catch(err => console.error('Erro ao carregar carrinho:', err))
     }
   }, [user?.id, loading])
 
-  // Salvar carrinho sempre que ele mudar
+  // Salvar carrinho sempre que ele mudar (não bloqueante)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       // Sempre salvar no localStorage
       localStorage.setItem('alfajoias-cart', JSON.stringify(cart))
       
-      // Salvar no banco se usuário estiver logado
+      // Salvar no banco se usuário estiver logado (em background)
       if (user?.id && cart.length > 0) {
-        saveCartToDatabase(cart)
+        saveCartToDatabase(cart).catch(err => console.error('Erro ao salvar carrinho:', err))
       }
     }
   }, [cart, user?.id])
