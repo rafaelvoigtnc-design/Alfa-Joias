@@ -279,12 +279,11 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loading])
 
-  // Carregar carrinho do banco quando usuário logar (não bloqueante)
+  // Carregar carrinho do banco quando usuário logar (removido - não bloquear carregamento)
   useEffect(() => {
-    if (user?.id && !loading) {
-      loadCartFromDatabase().catch(err => console.error('Erro ao carregar carrinho:', err))
-    }
-  }, [user?.id, loading])
+    // Não carregar carrinho do banco automaticamente - isso bloqueia o carregamento
+    // Carrinho será carregado apenas quando necessário (na página de carrinho)
+  }, [])
 
   // Salvar carrinho sempre que ele mudar (não bloqueante)
   useEffect(() => {
