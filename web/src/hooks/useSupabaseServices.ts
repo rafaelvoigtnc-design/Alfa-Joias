@@ -126,7 +126,6 @@ export function useSupabaseServices() {
       abortControllerRef.current = controller
       
       isFetchingRef.current = true
-      setLoading(true)
       console.log('🔄 Buscando serviços via API...', { requestId: currentRequestId })
       
       // Carregar cache local primeiro para carregamento instantâneo
@@ -135,6 +134,8 @@ export function useSupabaseServices() {
         console.log('⚡ Carregamento instantâneo do cache local:', cachedServices.length, 'serviços')
         setServices(cachedServices)
         setLoading(false) // Mostrar dados do cache imediatamente
+      } else {
+        setLoading(true) // Só setar loading true se não tiver cache
       }
       
       // Usar cache do navegador com tempo maior para carregamento instantâneo

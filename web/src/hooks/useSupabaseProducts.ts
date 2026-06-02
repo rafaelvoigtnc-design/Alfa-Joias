@@ -121,7 +121,6 @@ export function useSupabaseProducts() {
       abortControllerRef.current = controller
       
       isFetchingRef.current = true
-      setLoading(true)
       setError(null)
       console.log('🔄 Buscando produtos via API...', { requestId: currentRequestId })
       
@@ -131,6 +130,8 @@ export function useSupabaseProducts() {
         console.log('⚡ Carregamento instantâneo do cache local:', cachedProducts.length, 'produtos')
         setProducts(cachedProducts)
         setLoading(false) // Mostrar dados do cache imediatamente
+      } else {
+        setLoading(true) // Só setar loading true se não tiver cache
       }
       
       // Usar cache do navegador com tempo maior para carregamento instantâneo
