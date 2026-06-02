@@ -2,18 +2,19 @@
 
 import Link from 'next/link'
 import { Phone, Percent, Clock, Gem, Diamond, Sparkles, Eye } from 'lucide-react'
-import { useProducts } from '@/hooks/useProducts'
+import { useSupabaseProducts } from '@/hooks/useSupabaseProducts'
 import { formatPrice } from '@/lib/priceUtils'
 import { smartProductSort } from '@/lib/productRecommendation'
 import { useMemo } from 'react'
 
 export default function Promotions() {
-  const { getProductsOnSale, loading, error } = useProducts()
-  const products = useMemo(() => {
-    const filtered = getProductsOnSale().filter(p => typeof (p as any).stock !== 'number' || (p as any).stock > 0)
+  const { products, loading, error } = useSupabaseProducts()
+  const filteredProducts = useMemo(() => {
+    const onSale = products.filter((p: any) => p.on_sale || p.onSale)
+    const inStock = onSale.filter((p: any) => typeof p.stock !== 'number' || p.stock > 0)
     // Aplicar algoritmo inteligente de ordenação
-    return smartProductSort(filtered)
-  }, [getProductsOnSale])
+    return smartProductSort(inStock)
+  }, [products])
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
@@ -69,7 +70,7 @@ export default function Promotions() {
             <p className="text-red-500 text-lg font-light">Erro ao carregar promoções</p>
             <p className="text-sm text-red-400 mt-2">{error}</p>
           </div>
-        ) : products.length === 0 ? (
+        ) : filteredProducts.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Percent className="h-8 w-8 text-gray-400" />
@@ -90,7 +91,7 @@ Podem me ajudar?`)}`}
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6 lg:gap-8">
-            {products.map((product, index) => {
+            {filteredProducts.map((product, index) => {
               const IconComponent = getCategoryIcon(product.category || 'Outros')
               return (
                 <Link

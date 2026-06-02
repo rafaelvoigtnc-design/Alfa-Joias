@@ -4,11 +4,11 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle } from 'lucide-react'
-import { useSimpleAuth } from '@/contexts/SimpleAuthContext'
+import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
 
 export default function Login() {
   const router = useRouter()
-  const { user, loading: authLoading, signIn, signUp, signInWithGoogle, resetPassword } = useSimpleAuth()
+  const { user, loading: authLoading, signIn, signUp, signInWithGoogle, resetPassword } = useUnifiedAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
