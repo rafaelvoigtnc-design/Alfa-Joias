@@ -222,16 +222,17 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    // Obter sessão inicial (não bloqueante - sem verificações de banco)
+    // Obter sessão inicial (não bloqueante - verificações em background)
     const getSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession()
         setSession(session)
         setUser(session?.user ?? null)
         
-        // Não fazer verificações de banco no carregamento inicial
-        // Isso bloqueia o carregamento dos produtos
-        // Verificações serão feitas apenas quando necessário
+        // Verificar admin status em background (não bloqueia carregamento)
+        if (session?.user) {
+          checkAdminStatus(session.user.id).catch(err => console.error('Erro ao verificar admin:', err))
+        }
       } catch (error) {
         console.error('Erro ao obter sessão:', error)
       } finally {
@@ -241,14 +242,16 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
 
     getSession()
 
-    // Escutar mudanças na autenticação (não bloqueante - sem verificações de banco)
+    // Escutar mudanças na autenticação (não bloqueante - verificações em background)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
 
-        // Não fazer verificações de banco - isso bloqueia o carregamento
-        if (!session?.user) {
+        // Verificar admin status em background quando usuário logar
+        if (session?.user) {
+          checkAdminStatus(session.user.id).catch(err => console.error('Erro ao verificar admin:', err))
+        } else {
           setIsAdmin(false)
           setAdminLoading(false)
         }
