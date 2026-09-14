@@ -280,10 +280,10 @@ export default function HeroCarousel() {
               {activeBanners[currentSlide]?.subtitle}
             </p>
             <a
-              href={activeBanners[currentSlide]?.ctaLink || '/produtos'}
+              href={activeBanners[currentSlide]?.cta_link || '/produtos'}
               className="inline-flex items-center justify-center border-2 border-white text-white hover:bg-white hover:text-gray-900 px-5 sm:px-6 md:px-8 py-2.5 sm:py-3 md:py-4 text-sm sm:text-base md:text-lg transition-all duration-300 font-medium hover:scale-105 active:scale-95 rounded-md shadow-lg backdrop-blur-sm bg-white/10 min-w-[140px] sm:min-w-[160px]"
             >
-              <span className="flex-1 text-center">{activeBanners[currentSlide]?.ctaText || 'Explorar'}</span>
+              <span className="flex-1 text-center">{activeBanners[currentSlide]?.cta_text || 'Explorar'}</span>
               <svg className="ml-2 h-4 w-4 sm:h-5 sm:w-5 transition-transform duration-300 group-hover:translate-x-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
