@@ -1,29 +1,14 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useFirebaseBanners } from '@/hooks/useFirebaseBanners'
 
 export default function HeroCarousel() {
   const { banners, loading } = useFirebaseBanners()
   const [currentSlide, setCurrentSlide] = useState(0)
-        
-        // Timeout de 5 segundos para evitar carregamento infinito
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout ao carregar banners')), 5000)
-        )
-        
-        const queryPromise = supabase
-          .from('banners')
-          .select('*')
-          .eq('active', true)
-          .order('created_at', { ascending: false })
-          .limit(10) // Limitar para melhor performance
-        
-        const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
-        const { data, error } = result
-        
-  const activeBanners = banners.filter(b => b.active)
   const [isAutoRotating, setIsAutoRotating] = useState(true)
+
+  const activeBanners = banners.filter(b => b.active)
 
   // Funções de navegação
   const goToNextSlide = () => {
@@ -54,19 +39,16 @@ export default function HeroCarousel() {
   const minSwipeDistance = 50
 
   const onTouchStart = (e: React.TouchEvent) => {
-    // Ignorar se o toque foi em um botão ou seus filhos
     const target = e.target as HTMLElement
     if (target.closest('button[aria-label*="banner"], button[aria-label*="Banner"]')) {
       return
     }
-    // Pausar auto-rotação quando usuário interage
     setIsAutoRotating(false)
     setTouchEnd(null)
     setTouchStart(e.targetTouches[0].clientX)
   }
 
   const onTouchMove = (e: React.TouchEvent) => {
-    // Ignorar se o toque foi em um botão ou seus filhos
     const target = e.target as HTMLElement
     if (target.closest('button[aria-label*="banner"], button[aria-label*="Banner"]')) {
       return
@@ -75,7 +57,6 @@ export default function HeroCarousel() {
   }
 
   const onTouchEnd = (e?: React.TouchEvent) => {
-    // Ignorar se o toque foi em um botão ou seus filhos
     if (e) {
       const target = e.target as HTMLElement
       if (target.closest('button[aria-label*="banner"], button[aria-label*="Banner"]')) {
@@ -83,7 +64,6 @@ export default function HeroCarousel() {
       }
     }
     if (!touchStart || !touchEnd) {
-      // Retomar auto-rotação após 5 segundos de inatividade
       setTimeout(() => {
         setIsAutoRotating(true)
       }, 5000)
@@ -100,12 +80,10 @@ export default function HeroCarousel() {
       goToPrevSlide()
     }
     
-    // Retomar auto-rotação após 5 segundos de inatividade
     setTimeout(() => {
       setIsAutoRotating(true)
     }, 5000)
   }
-
 
   if (loading) {
     return (
@@ -179,12 +157,12 @@ export default function HeroCarousel() {
         {/* Imagem Desktop */}
         <div 
           className="hidden md:block absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
-          style={{ backgroundImage: `url(${activeBanners[currentSlide]?.imageDesktop || activeBanners[currentSlide]?.image})` }}
+          style={{ backgroundImage: `url(${activeBanners[currentSlide]?.image})` }}
         />
         {/* Imagem Mobile */}
         <div 
           className="md:hidden absolute inset-0 bg-cover bg-center transition-all duration-1000 ease-in-out"
-          style={{ backgroundImage: `url(${activeBanners[currentSlide]?.imageMobile || activeBanners[currentSlide]?.image})` }}
+          style={{ backgroundImage: `url(${activeBanners[currentSlide]?.image})` }}
         />
         <div className="absolute inset-0 bg-black/30 transition-opacity duration-1000" />
         
