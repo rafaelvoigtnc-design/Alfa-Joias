@@ -27,7 +27,7 @@ export default function HeroCarousel() {
 
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % activeBanners.length)
-    }, 12000) // 12 segundos
+    }, 12000)
 
     return () => clearInterval(interval)
   }, [activeBanners.length, isAutoRotating])
