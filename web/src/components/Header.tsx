@@ -88,7 +88,7 @@ export default function Header() {
                   {user.photoURL ? (
                     <img
                       src={user.photoURL}
-                      alt={user.displayName || user.email}
+                      alt={user.displayName || user.email || 'User'}
                       className="h-5 w-5 sm:h-6 sm:w-6 rounded-full"
                     />
                   ) : (
@@ -184,13 +184,13 @@ export default function Header() {
                     {user.photoURL ? (
                       <img
                         src={user.photoURL}
-                        alt={user.displayName || user.email}
+                        alt={user.displayName || user.email || 'User'}
                         className="h-6 w-6 rounded-full"
                       />
                     ) : (
                       <User className="h-5 w-5" />
                     )}
-                    <span className="text-sm hidden xl:inline">{user.displayName || user.email?.split('@')[0]}</span>
+                    <span className="text-sm hidden xl:inline">{user.displayName || user.email?.split('@')[0] || 'User'}</span>
                   </button>
                   
                   {showUserMenu && (
