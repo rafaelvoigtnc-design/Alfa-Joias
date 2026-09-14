@@ -70,37 +70,9 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
         updated_at: new Date().toISOString()
       }
 
-      // Verificar se já existe um carrinho para este usuário
-      const { data: existingCart } = await supabase
-        .from('user_carts')
-        .select('id')
-        .eq('user_id', user.id)
-        .single()
-
-      if (existingCart) {
-        // Atualizar carrinho existente
-        const { error: updateError } = await supabase
-          .from('user_carts')
-          .update(cartDataToSave)
-          .eq('user_id', user.id)
-        
-        if (updateError) {
-          console.error('❌ Erro ao atualizar carrinho:', updateError)
-        } else {
-          console.log('✅ Carrinho atualizado no banco')
-        }
-      } else {
-        // Criar novo carrinho
-        const { error: insertError } = await supabase
-          .from('user_carts')
-          .insert([cartDataToSave])
-        
-        if (insertError) {
-          console.error('❌ Erro ao criar carrinho:', insertError)
-        } else {
-          console.log('✅ Carrinho criado no banco')
-        }
-      }
+      // Temporarily disabled Supabase cart persistence during Firebase migration
+      // Cart is now using localStorage
+      console.log('⚠️ Carrinho temporariamente usando localStorage durante migração para Firebase')
     } catch (error) {
       console.warn('❌ Erro geral ao salvar carrinho no banco:', error)
     }

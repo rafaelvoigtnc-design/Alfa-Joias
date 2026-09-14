@@ -1,17 +1,17 @@
 'use client'
 
-import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
+import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext'
 import Link from 'next/link'
 import { Trash2, Plus, Minus, ShoppingBag, ArrowLeft, MessageCircle } from 'lucide-react'
 import { formatPrice, formatPriceValue } from '@/lib/priceUtils'
 
 export default function Cart() {
-  const { cart, updateQuantity, removeFromCart, clearCart, isLoggedIn } = useUnifiedAuth()
+  const { cart, updateQuantity, removeFromCart, clearCart, user } = useFirebaseAuth()
 
   // Função para formatar preço para exibição (sempre vírgula para decimais)
   const formatPriceForDisplay = (price: string | number): string => formatPriceValue(price)
 
-  if (!isLoggedIn) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
