@@ -1,33 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useFirebaseBanners } from '@/hooks/useFirebaseBanners'
 
 export default function HeroCarousel() {
-  const [banners, setBanners] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { banners, loading } = useFirebaseBanners()
   const [currentSlide, setCurrentSlide] = useState(0)
-  
-  // Refs para prevenir race conditions
-  const isFetchingRef = useRef(false)
-  const requestIdRef = useRef(0)
-
-  useEffect(() => {
-    const loadBanners = async () => {
-      // Prevenir múltiplas chamadas simultâneas
-      if (isFetchingRef.current) {
-        console.log('⏸️ Já está buscando banners, ignorando chamada duplicada...')
-        return
-      }
-      
-      // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar acessível no catch)
-      const currentRequestId = ++requestIdRef.current
-      
-      try {
-        
-        isFetchingRef.current = true
-        setLoading(true)
-        const { supabase } = await import('@/lib/supabase')
-        console.log('🔄 Buscando banners do banco...', { requestId: currentRequestId })
         
         // Timeout de 5 segundos para evitar carregamento infinito
         const timeoutPromise = new Promise((_, reject) => 
@@ -44,85 +22,6 @@ export default function HeroCarousel() {
         const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
         const { data, error } = result
         
-        // Verificar se ainda é a requisição mais recente
-        if (currentRequestId !== requestIdRef.current) {
-          console.log('⏹️ Resposta de requisição antiga de banners ignorada')
-          return
-        }
-        
-        if (error) {
-          console.error('❌ Erro ao buscar banners:', error)
-          if (currentRequestId === requestIdRef.current) {
-            setBanners([])
-            setLoading(false)
-          }
-          isFetchingRef.current = false
-          return
-        }
-        
-        if (data && data.length > 0) {
-          console.log('✅ Banners carregados do BANCO:', data.length, { requestId: currentRequestId })
-          if (currentRequestId === requestIdRef.current) {
-            setBanners(data.map((b: any) => {
-              // Parsear imagem (pode ser string simples ou JSON com desktop/mobile)
-              let image = b.image
-              let imageDesktop = b.image
-              let imageMobile = b.image
-              
-              try {
-                const parsed = JSON.parse(b.image)
-                if (typeof parsed === 'object' && (parsed.desktop || parsed.mobile)) {
-                  imageDesktop = parsed.desktop || parsed.original || b.image
-                  imageMobile = parsed.mobile || parsed.original || b.image
-                  image = imageDesktop // Fallback para compatibilidade
-                }
-              } catch {
-                // Não é JSON, usar string simples
-                imageDesktop = b.image
-                imageMobile = b.image
-              }
-              
-              return {
-                id: b.id,
-                title: b.title,
-                subtitle: b.subtitle,
-                image: image,
-                imageDesktop: imageDesktop,
-                imageMobile: imageMobile,
-                ctaText: b.cta_text,
-                ctaLink: b.cta_link,
-                active: b.active
-              }
-            }))
-            setLoading(false)
-            isFetchingRef.current = false
-            return
-          }
-        }
-        
-        console.warn('⚠️ Banco de banners vazio')
-        if (currentRequestId === requestIdRef.current) {
-          setBanners([])
-          setLoading(false)
-        }
-        isFetchingRef.current = false
-        return
-      } catch (err) {
-        console.error('❌ Erro ao buscar banners:', err)
-        // Em caso de erro, retornar array vazio (não usar fallback)
-        const latestRequestId = requestIdRef.current
-        if (currentRequestId === latestRequestId) {
-          setBanners([])
-          setLoading(false)
-        }
-        isFetchingRef.current = false
-        return
-      }
-    }
-    
-    loadBanners()
-  }, [])
-
   const activeBanners = banners.filter(b => b.active)
   const [isAutoRotating, setIsAutoRotating] = useState(true)
 

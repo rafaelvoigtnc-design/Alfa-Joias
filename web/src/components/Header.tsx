@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Menu, X, ShoppingCart, User, LogIn, LogOut } from 'lucide-react'
-import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
+import { useFirebaseAuth } from '@/contexts/FirebaseAuthContext'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [showUserMenu, setShowUserMenu] = useState(false)
-  const { cart, user, signOut, isAdmin } = useUnifiedAuth()
+  const { cart, user, signOut, isAdmin } = useFirebaseAuth()
   const pathname = usePathname()
 
   // Fechar menu do usuário quando clicar fora

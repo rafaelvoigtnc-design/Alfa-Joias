@@ -3,12 +3,12 @@
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { Phone, Eye, Clock, Gem, Diamond, Sparkles } from 'lucide-react'
-import { useSupabaseProducts } from '@/hooks/useSupabaseProducts'
+import { useFirebaseProducts } from '@/hooks/useFirebaseProducts'
 import { formatPrice } from '@/lib/priceUtils'
 import { smartSortProducts } from '@/lib/productSorting'
 
 export default function FeaturedProducts() {
-  const { products, loading, error } = useSupabaseProducts()
+  const { products, loading, error } = useFirebaseProducts()
   const [sortedFeaturedProducts, setSortedFeaturedProducts] = useState<any[]>([])
   
   useEffect(() => {

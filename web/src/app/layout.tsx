@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
-import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext'
+import { FirebaseAuthProvider } from '@/contexts/FirebaseAuthContext'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import ConnectionStatus from '@/components/ConnectionStatus'
@@ -91,14 +91,14 @@ export default function RootLayout({
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
       </head>
       <body className={inter.className}>
-        <UnifiedAuthProvider>
+        <FirebaseAuthProvider>
           <ConnectionStatus />
           <Header />
           <main className="min-h-screen">
             {children}
           </main>
           <Footer />
-        </UnifiedAuthProvider>
+        </FirebaseAuthProvider>
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
       </body>
     </html>

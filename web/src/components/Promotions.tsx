@@ -2,13 +2,13 @@
 
 import Link from 'next/link'
 import { Phone, Percent, Clock, Gem, Diamond, Sparkles, Eye } from 'lucide-react'
-import { useSupabaseProducts } from '@/hooks/useSupabaseProducts'
+import { useFirebaseProducts } from '@/hooks/useFirebaseProducts'
 import { formatPrice } from '@/lib/priceUtils'
 import { smartProductSort } from '@/lib/productRecommendation'
 import { useMemo } from 'react'
 
 export default function Promotions() {
-  const { products, loading, error } = useSupabaseProducts()
+  const { products, loading, error } = useFirebaseProducts()
   const filteredProducts = useMemo(() => {
     const onSale = products.filter((p: any) => p.on_sale || p.onSale)
     const inStock = onSale.filter((p: any) => typeof p.stock !== 'number' || p.stock > 0)
