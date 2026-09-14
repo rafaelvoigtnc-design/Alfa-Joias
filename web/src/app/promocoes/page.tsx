@@ -32,7 +32,7 @@ export default function Promocoes() {
   }, [products])
 
   const saleProducts = useMemo(() => {
-    return products.filter(p => p.on_sale || p.onSale)
+    return products.filter(p => p.on_sale)
   }, [products])
 
   const filteredProducts = useMemo(() => {
