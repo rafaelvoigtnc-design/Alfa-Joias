@@ -85,10 +85,10 @@ export default function Header() {
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className="flex items-center justify-center p-1.5 sm:p-2 text-gray-700 hover:text-gray-800"
                 >
-                  {user.user_metadata?.avatar_url ? (
-                    <img 
-                      src={user.user_metadata.avatar_url} 
-                      alt={user.user_metadata.full_name || user.email} 
+                  {user.photoURL ? (
+                    <img
+                      src={user.photoURL}
+                      alt={user.displayName || user.email}
                       className="h-5 w-5 sm:h-6 sm:w-6 rounded-full"
                     />
                   ) : (
@@ -181,16 +181,16 @@ export default function Header() {
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className="flex items-center space-x-2 p-1.5 text-gray-700 hover:text-gray-800 smooth-hover transition-all duration-300"
                   >
-                    {user.user_metadata?.avatar_url ? (
-                      <img 
-                        src={user.user_metadata.avatar_url} 
-                        alt={user.user_metadata.full_name || user.email} 
+                    {user.photoURL ? (
+                      <img
+                        src={user.photoURL}
+                        alt={user.displayName || user.email}
                         className="h-6 w-6 rounded-full"
                       />
                     ) : (
                       <User className="h-5 w-5" />
                     )}
-                    <span className="text-sm hidden xl:inline">{user.user_metadata?.full_name || user.email?.split('@')[0]}</span>
+                    <span className="text-sm hidden xl:inline">{user.displayName || user.email?.split('@')[0]}</span>
                   </button>
                   
                   {showUserMenu && (
