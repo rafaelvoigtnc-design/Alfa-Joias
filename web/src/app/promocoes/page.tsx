@@ -11,12 +11,12 @@ interface Product {
   name: string
   category: string
   brand: string
-  price: string
+  price: number | string
   image: string
   description: string
   on_sale?: boolean
-  original_price?: string
-  sale_price?: string
+  original_price?: number | string
+  sale_price?: number | string
   discount_percentage?: number
 }
 
@@ -151,8 +151,11 @@ export default function Promocoes() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredProducts.map((product) => {
               const CategoryIcon = getCategoryIcon(product.category)
-              const originalPrice = product.original_price || product.originalPrice
-              const discount = product.discount_percentage || product.discountPercentage
+              const originalPrice = product.original_price
+              const discount = product.discount_percentage
+              const priceToUse = product.on_sale && product.sale_price ? product.sale_price : product.price
+              const priceNumber = typeof priceToUse === 'number' ? priceToUse : parseFloat(String(priceToUse).replace(/[^\d.,]/g, '').replace(',', '.'))
+              const originalPriceNumber = originalPrice ? (typeof originalPrice === 'number' ? originalPrice : parseFloat(String(originalPrice).replace(/[^\d.,]/g, '').replace(',', '.'))) : null
               
               return (
                 <Link
@@ -180,11 +183,11 @@ export default function Promocoes() {
                       <div>
                         {originalPrice && (
                           <p className="text-sm text-gray-400 line-through">
-                            {formatPrice(originalPrice)}
+                            {formatPrice(String(originalPriceNumber || originalPrice))}
                           </p>
                         )}
                         <p className="text-lg font-bold text-red-600">
-                          {formatPrice(product.sale_price || product.salePrice || product.price)}
+                          {formatPrice(String(priceNumber))}
                         </p>
                       </div>
                       <Phone className="h-5 w-5 text-green-600" />

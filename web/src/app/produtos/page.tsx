@@ -12,12 +12,12 @@ interface Product {
   name: string
   category: string
   brand: string
-  price: string
+  price: number | string
   image: string
   description: string
   on_sale?: boolean
-  original_price?: string
-  sale_price?: string
+  original_price?: number | string
+  sale_price?: number | string
   discount_percentage?: number
   featured?: boolean
   stock?: number
@@ -77,15 +77,23 @@ export default function Products() {
     if (selectedPriceRange !== 'Todos') {
       const [min, max] = selectedPriceRange.split('-').map(Number)
       filtered = filtered.filter(p => {
-        const price = parseFloat(p.price.replace(/[^\d.,]/g, '').replace(',', '.'))
+        const price = typeof p.price === 'number' ? p.price : parseFloat(String(p.price).replace(/[^\d.,]/g, '').replace(',', '.'))
         return price >= min && price <= max
       })
     }
 
     if (sortBy === 'price-asc') {
-      filtered.sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
+      filtered.sort((a, b) => {
+        const priceA = typeof a.price === 'number' ? a.price : parseFloat(String(a.price).replace(/[^\d.,]/g, '').replace(',', '.'))
+        const priceB = typeof b.price === 'number' ? b.price : parseFloat(String(b.price).replace(/[^\d.,]/g, '').replace(',', '.'))
+        return priceA - priceB
+      })
     } else if (sortBy === 'price-desc') {
-      filtered.sort((a, b) => parseFloat(b.price) - parseFloat(a.price))
+      filtered.sort((a, b) => {
+        const priceA = typeof a.price === 'number' ? a.price : parseFloat(String(a.price).replace(/[^\d.,]/g, '').replace(',', '.'))
+        const priceB = typeof b.price === 'number' ? b.price : parseFloat(String(b.price).replace(/[^\d.,]/g, '').replace(',', '.'))
+        return priceB - priceA
+      })
     } else if (sortBy === 'name') {
       filtered.sort((a, b) => a.name.localeCompare(b.name))
     }
@@ -237,6 +245,8 @@ export default function Products() {
             {filteredProducts.map((product) => {
               const CategoryIcon = getCategoryIcon(product.category)
               const priceToUse = product.on_sale && product.sale_price ? product.sale_price : product.price
+              const priceNumber = typeof priceToUse === 'number' ? priceToUse : parseFloat(String(priceToUse).replace(/[^\d.,]/g, '').replace(',', '.'))
+              const originalPriceNumber = product.original_price ? (typeof product.original_price === 'number' ? product.original_price : parseFloat(String(product.original_price).replace(/[^\d.,]/g, '').replace(',', '.'))) : null
               
               return (
                 <Link
@@ -266,11 +276,11 @@ export default function Products() {
                       <div>
                         {product.on_sale && product.original_price && (
                           <p className="text-sm text-gray-400 line-through">
-                            {formatPrice(product.original_price)}
+                            {formatPrice(String(originalPriceNumber || product.original_price))}
                           </p>
                         )}
                         <p className="text-lg font-bold text-gray-900">
-                          {formatPrice(priceToUse)}
+                          {formatPrice(String(priceNumber))}
                         </p>
                       </div>
                       <Phone className="h-5 w-5 text-green-600" />

@@ -13,13 +13,13 @@ interface Product {
   name: string
   category: string
   brand: string
-  price: string
+  price: number | string
   image: string
   description: string
   additional_images?: string[]
   on_sale?: boolean
-  original_price?: string
-  sale_price?: string
+  original_price?: number | string
+  sale_price?: number | string
   discount_percentage?: number
   stock?: number
   gender?: string
@@ -50,8 +50,12 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (product) {
+      const productToAdd = {
+        ...product,
+        price: typeof product.price === 'number' ? product.price : parseFloat(String(product.price).replace(/[^\d.,]/g, '').replace(',', '.'))
+      }
       for (let i = 0; i < quantity; i++) {
-        addToCart(product)
+        addToCart(productToAdd)
       }
       router.push('/carrinho')
     }
@@ -97,6 +101,8 @@ export default function ProductDetail() {
   const CategoryIcon = getCategoryIcon(product.category)
   const images = [product.image, ...(product.additional_images || [])]
   const priceToUse = product.on_sale && product.sale_price ? product.sale_price : product.price
+  const priceNumber = typeof priceToUse === 'number' ? priceToUse : parseFloat(String(priceToUse).replace(/[^\d.,]/g, '').replace(',', '.'))
+  const originalPriceNumber = product.original_price ? (typeof product.original_price === 'number' ? product.original_price : parseFloat(String(product.original_price).replace(/[^\d.,]/g, '').replace(',', '.'))) : null
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -153,11 +159,11 @@ export default function ProductDetail() {
             <div className="mb-6">
               {product.on_sale && product.original_price && (
                 <p className="text-lg text-gray-400 line-through mb-1">
-                  {formatPrice(product.original_price)}
+                  {formatPrice(String(originalPriceNumber || product.original_price))}
                 </p>
               )}
               <p className="text-3xl font-bold text-gray-900">
-                {formatPrice(priceToUse)}
+                {formatPrice(String(priceNumber))}
               </p>
               {product.on_sale && product.discount_percentage && (
                 <p className="text-sm text-red-600 mt-1">
