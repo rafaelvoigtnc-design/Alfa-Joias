@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useFirebaseBanners } from '@/hooks/useFirebaseBanners'
 
+// Firebase migration - Banner carousel component
 export default function HeroCarousel() {
   const { banners, loading } = useFirebaseBanners()
   const [currentSlide, setCurrentSlide] = useState(0)
