@@ -7,7 +7,7 @@ interface Product {
   id: string
   category?: string
   brand?: string
-  price?: string
+  price?: string | number
   on_sale?: boolean
   featured?: boolean
   stock?: number
@@ -118,7 +118,9 @@ function calculateProductScore(product: Product, userPreferences?: {
     
     // Preferência por faixa de preço
     if (userPreferences.priceRange && product.price) {
-      const price = parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.'))
+      const price = typeof product.price === 'number'
+        ? product.price
+        : parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.'))
       if (price >= userPreferences.priceRange.min && price <= userPreferences.priceRange.max) {
         score += 25
       }
@@ -157,7 +159,9 @@ function getUserPreferences(): {
         brandCount[product.brand] = (brandCount[product.brand] || 0) + 1
       }
       if (product.price) {
-        const price = parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.'))
+        const price = typeof product.price === 'number'
+          ? product.price
+          : parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.'))
         if (!isNaN(price)) prices.push(price)
       }
     })
