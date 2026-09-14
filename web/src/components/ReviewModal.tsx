@@ -37,7 +37,7 @@ export default function ReviewModal({
 
     setSubmitting(true)
     try {
-      const result = await addReview({
+      await addReview({
         order_id: orderId,
         product_id: productId,
         rating,
@@ -46,23 +46,12 @@ export default function ReviewModal({
         customer_email: customerEmail
       })
 
-      if (result.error) {
-        console.error('❌ Erro ao enviar avaliação:', result.error)
-        alert(`Erro ao enviar avaliação: ${result.error instanceof Error ? result.error.message : 'Tente novamente.'}`)
-      } else {
-        console.log('✅ Avaliação enviada com sucesso:', result.data)
-        alert('Avaliação enviada com sucesso! Obrigado pelo seu feedback.')
-        onReviewSubmitted?.()
-        onClose()
-        
-        // Disparar evento customizado para atualizar páginas que mostram avaliações
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('review-added', { 
-            detail: { productId, review: result.data } 
-          }))
-        }
-      }
+      console.log('✅ Avaliação enviada com sucesso')
+      alert('Avaliação enviada com sucesso! Obrigado pelo seu feedback.')
+      onReviewSubmitted?.()
+      onClose()
     } catch (error) {
+      console.error('❌ Erro ao enviar avaliação:', error)
       alert('Erro ao enviar avaliação. Tente novamente.')
     } finally {
       setSubmitting(false)
