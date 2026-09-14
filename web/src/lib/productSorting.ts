@@ -12,7 +12,7 @@ export interface Product {
   name: string
   category: string
   brand: string
-  price: string
+  price: string | number
   image: string
   description?: string
   featured?: boolean
@@ -80,7 +80,9 @@ function calculateProductScore(product: Product, userPreferences?: {
       score += 12
     }
     if (userPreferences.priceRange) {
-      const price = parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.')) || 0
+      const price = typeof product.price === 'number' 
+        ? product.price 
+        : parseFloat(product.price.replace(/[^\d,]/g, '').replace(',', '.')) || 0
       if (price >= userPreferences.priceRange.min && price <= userPreferences.priceRange.max) {
         score += 10
       }
