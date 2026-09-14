@@ -7,7 +7,8 @@ import {
   Building, Briefcase, Palette, Paintbrush, Scissors, Wrench, Hammer, Gauge, Cog, User, Users, Smile,
   ThumbsUp, Bell, Mail, Phone, Settings
 } from 'lucide-react'
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect } from 'react'
+import { useFirebaseCategories } from '@/hooks/useFirebaseCategories'
 
 interface CategoryData {
   id: string
@@ -18,307 +19,98 @@ interface CategoryData {
   href: string
 }
 
-// CATEGORIAS BASE (para fallback se não houver no banco)
-// Ordem: Óculos, Relógios, Joias, Semi-Joias, Afins, Serviços
 const BASE_CATEGORIES = ['Óculos', 'Relógios', 'Joias', 'Semi-Joias', 'Afins', 'Serviços']
 
 export default function Categories() {
-  const [categories, setCategories] = useState<CategoryData[]>([])
-  const [loading, setLoading] = useState(true)
-  
-  // Refs para prevenir race conditions
-  const isFetchingRef = useRef(false)
-  const requestIdRef = useRef(0)
+  const { categories, loading } = useFirebaseCategories()
+  const [displayCategories, setDisplayCategories] = useState<CategoryData[]>([])
 
-  const getDefaultCategory = (name: string): CategoryData | null => {
-    const defaults: { [key: string]: CategoryData } = {
-      'Joias': {
-        id: '1',
-        name: 'Joias',
-        description: 'Anéis, colares, brincos e pulseiras em ouro e prata',
+  useEffect(() => {
+    if (categories.length > 0) {
+      const mapped = categories.map(cat => ({
+        id: cat.id,
+        name: cat.name,
+        description: cat.description || '',
+        image: cat.image || '',
+        iconName: cat.icon || 'gem',
+        href: `/produtos?category=${cat.name}`
+      }))
+      setDisplayCategories(mapped)
+    } else {
+      // Fallback para categorias estáticas
+      const fallback = BASE_CATEGORIES.map(name => ({
+        id: name,
+        name,
+        description: `Explore nossa coleção de ${name}`,
+        image: '',
         iconName: 'gem',
-        image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800&h=600&fit=crop',
-        href: '/produtos?categoria=Joias'
-      },
-      'Relógios': {
-        id: '2',
-        name: 'Relógios',
-        description: 'Relógios masculinos e femininos das melhores marcas',
-        iconName: 'clock',
-        image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=600&fit=crop',
-        href: '/produtos?categoria=Relógios'
-      },
-      'Óculos': {
-        id: '3',
-        name: 'Óculos',
-        description: 'Óculos de sol e grau com tecnologia avançada',
-        iconName: 'eye',
-        image: 'https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=800&h=600&fit=crop',
-        href: '/produtos?categoria=Óculos'
-      },
-      'Semi-Joias': {
-        id: '4',
-        name: 'Semi-Joias',
-        description: 'Bijuterias elegantes e acessórios modernos',
-        iconName: 'diamond',
-        image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&h=600&fit=crop',
-        href: '/produtos?categoria=Semi-Joias'
-      },
-      'Afins': {
-        id: '5',
-        name: 'Afins',
-        description: 'Produtos variados e categorias relacionadas',
-        iconName: 'package',
-        image: 'https://images.unsplash.com/photo-1485955900006-10f4d324d411?w=800&h=600&fit=crop',
-        href: '/produtos?categoria=Afins'
-      },
-      'Serviços': {
-        id: '6',
-        name: 'Serviços',
-        description: 'Manutenção, reparos e serviços especializados',
-        iconName: 'wrench',
-        image: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=600&fit=crop',
-        href: '/servicos'
-      }
+        href: `/produtos?category=${name}`
+      }))
+      setDisplayCategories(fallback)
     }
-    return defaults[name] || null
-  }
-
-  const loadCategories = async () => {
-    // Prevenir múltiplas chamadas simultâneas
-    if (isFetchingRef.current) {
-      console.log('⏸️ Já está buscando categorias, ignorando chamada duplicada...')
-      return
-    }
-    
-    // Incrementar ID da requisição para rastrear a mais recente (fora do try para estar acessível no catch)
-    const currentRequestId = ++requestIdRef.current
-    
-    try {
-      
-      isFetchingRef.current = true
-      setLoading(true)
-      const { supabase } = await import('@/lib/supabase')
-      
-      // Timeout reduzido para 3 segundos (mais rápido)
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Timeout ao carregar categorias')), 3000)
-      )
-      
-      // Usar sistema de retry automático
-      const { withAutoRetry } = await import('@/lib/autoRetry')
-      
-      const queryPromise = withAutoRetry(
-        async () => {
-          const result = await supabase
-            .from('categories')
-            .select('id, name, description, image, icon, created_at, updated_at')
-            .order('created_at', { ascending: true })
-            .limit(20) // Limitar para melhor performance
-          
-          if (result.error) {
-            throw result.error
-          }
-          
-          return result
-        },
-        {
-          maxRetries: 2, // Reduzido para 2 tentativas (mais rápido)
-          initialDelay: 500, // Começar com 500ms (mais rápido)
-          maxDelay: 2000, // Máximo de 2 segundos (mais rápido)
-          onRetry: (attempt) => {
-            console.log(`🔄 Tentando carregar categorias novamente (tentativa ${attempt}/2)...`)
-          }
-        }
-      )
-      
-      const result = await Promise.race([queryPromise, timeoutPromise]) as Awaited<typeof queryPromise>
-      const { data, error } = result
-      
-      // Verificar se ainda é a requisição mais recente
-      if (currentRequestId !== requestIdRef.current) {
-        console.log('⏹️ Resposta de requisição antiga de categorias ignorada')
-        return
-      }
-      
-      if (error) {
-        console.error('❌ Erro ao buscar categorias do Supabase:', error)
-        console.error('Detalhes do erro:', JSON.stringify(error, null, 2))
-        // Em caso de erro, retornar array vazio (não usar fallback)
-        if (currentRequestId === requestIdRef.current) {
-          setCategories([])
-          setLoading(false)
-        }
-        isFetchingRef.current = false
-        return
-      }
-      
-      if (data && data.length > 0) {
-        // PROCESSAR TODAS AS CATEGORIAS DO BANCO (incluindo Serviços)
-        const dbCategories = data
-          .map((cat: any) => ({
-            id: cat.id || '',
-            name: (cat.name || '').trim(),
-            description: cat.description || '',
-            image: cat.image || '',
-            iconName: cat.icon || 'gem',
-            href: cat.name?.toLowerCase().includes('serviço') || cat.name?.toLowerCase() === 'serviços'
-              ? '/servicos'
-              : `/produtos?categoria=${encodeURIComponent(cat.name || '')}`
-          }))
-          // Ordenar: Óculos, Relógios, Joias, Semi-Joias, Afins, Serviços
-          .sort((a, b) => {
-            const order = ['Óculos', 'Relógios', 'Joias', 'Semi-Joias', 'Afins', 'Serviços']
-            const indexA = order.indexOf(a.name)
-            const indexB = order.indexOf(b.name)
-            
-            // Se ambas estão na lista de ordem, usar a ordem definida
-            if (indexA !== -1 && indexB !== -1) {
-              return indexA - indexB
-            }
-            // Se apenas uma está na lista, ela vem primeiro
-            if (indexA !== -1) return -1
-            if (indexB !== -1) return 1
-            // Se nenhuma está na lista, ordem alfabética
-            return a.name.localeCompare(b.name)
-          })
-        
-        if (currentRequestId === requestIdRef.current) {
-          setCategories(dbCategories)
-          setLoading(false)
-        }
-        isFetchingRef.current = false
-        return
-      } else {
-        // Se banco está vazio, retornar array vazio (não usar fallback)
-        console.warn('⚠️ Banco de categorias está vazio')
-        if (currentRequestId === requestIdRef.current) {
-          setCategories([])
-          setLoading(false)
-        }
-        isFetchingRef.current = false
-        return
-      }
-    } catch (err) {
-      console.error('❌ Erro ao carregar categorias:', err)
-      // Em caso de erro, retornar array vazio (não usar fallback)
-      const latestRequestId = requestIdRef.current
-      if (currentRequestId === latestRequestId) {
-        setCategories([])
-        setLoading(false)
-      }
-      isFetchingRef.current = false
-      return
-    }
-  }
-
-  useEffect(() => {
-    loadCategories()
-    
-    // Escutar eventos de atualização de categorias do admin
-    const handleCategoryUpdate = () => {
-      loadCategories()
-    }
-    
-    window.addEventListener('category-updated', handleCategoryUpdate)
-    
-    return () => {
-      window.removeEventListener('category-updated', handleCategoryUpdate)
-    }
-  }, [])
-
-
-  const getIconComponent = (iconName: string) => {
-    // Mapear todos os ícones disponíveis
-    const iconMap: { [key: string]: any } = {
-      // Joias e Acessórios
-      'gem': Gem,
-      'diamond': Diamond,
-      'crown': Crown,
-      'sparkles': Sparkles,
-      'award': Award,
-      // Relógios e Óculos
-      'clock': Clock,
-      'watch': Watch,
-      'eye': Eye,
-      // Produtos e Embalagem
-      'package': Package,
-      'box': Box,
-      'gift': Gift,
-      'shopping-bag': ShoppingBag,
-      // Categorias Gerais
-      'tag': Tag,
-      'star': Star,
-      'heart': Heart,
-      'zap': Zap,
-      'flame': Flame,
-      'leaf': Leaf,
-      // Bebidas e Comida
-      'coffee': Coffee,
-      'beer': Beer,
-      'wine': Wine,
-      'pizza': Pizza,
-      'utensils': Utensils,
-      // Entretenimento
-      'music': Music,
-      'camera': Camera,
-      'gamepad2': Gamepad2,
-      'book': Book,
-      // Locais e Viagem
-      'home': Home,
-      'building': Building,
-      'car': Car,
-      'plane': Plane,
-      'briefcase': Briefcase,
-      // Ferramentas
-      'wrench': Wrench,
-      'hammer': Hammer,
-      'scissors': Scissors,
-      'gauge': Gauge,
-      'cog': Cog,
-      'paintbrush': Paintbrush,
-      'palette': Palette,
-      'settings': Settings,
-      // Pessoas e Comunicação
-      'user': User,
-      'users': Users,
-      'smile': Smile,
-      'thumbs-up': ThumbsUp,
-      'bell': Bell,
-      'mail': Mail,
-      'phone': Phone,
-    }
-    
-    return iconMap[iconName] || Gem // Fallback para Gem se ícone não encontrado
-  }
-
-  // Usar todas as categorias (incluindo Serviços)
-  const displayCategories = useMemo(() => {
-    return categories
   }, [categories])
-  
-  // Ref para atualizar grid dinamicamente
-  const gridRef = useRef<HTMLDivElement>(null)
-  
-  useEffect(() => {
-    if (gridRef.current && displayCategories.length > 0) {
-      // Atualizar CSS variable dinamicamente
-      gridRef.current.style.setProperty('--categories-count', displayCategories.length.toString())
+
+  const getCategoryIcon = (iconName: string) => {
+    const iconMap: { [key: string]: any } = {
+      gem: Gem,
+      clock: Clock,
+      eye: Eye,
+      diamond: Diamond,
+      package: Package,
+      watch: Watch,
+      'shopping-bag': ShoppingBag,
+      box: Box,
+      gift: Gift,
+      tag: Tag,
+      award: Award,
+      sparkles: Sparkles,
+      crown: Crown,
+      heart: Heart,
+      star: Star,
+      zap: Zap,
+      flame: Flame,
+      leaf: Leaf,
+      music: Music,
+      camera: Camera,
+      gamepad2: Gamepad2,
+      book: Book,
+      coffee: Coffee,
+      beer: Beer,
+      wine: Wine,
+      pizza: Pizza,
+      utensils: Utensils,
+      car: Car,
+      plane: Plane,
+      home: Home,
+      building: Building,
+      briefcase: Briefcase,
+      palette: Palette,
+      paintbrush: Paintbrush,
+      scissors: Scissors,
+      wrench: Wrench,
+      hammer: Hammer,
+      gauge: Gauge,
+      cog: Cog,
+      user: User,
+      users: Users,
+      smile: Smile,
+      'thumbs-up': ThumbsUp,
+      bell: Bell,
+      mail: Mail,
+      phone: Phone,
+      settings: Settings
     }
-  }, [displayCategories.length])
+    return iconMap[iconName] || Gem
+  }
 
   if (loading) {
     return (
-      <section className="py-20 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-light text-gray-900 mb-6 tracking-wide">
-              Nossas Especialidades
-            </h2>
-            <div className="w-20 h-0.5 bg-gray-800 mx-auto mb-8"></div>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed font-light">
-              Carregando categorias...
-            </p>
+      <section className="py-12 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="animate-pulse bg-gray-200 rounded-lg h-48"></div>
+            ))}
           </div>
         </div>
       </section>
@@ -326,66 +118,33 @@ export default function Categories() {
   }
 
   return (
-    <section className="py-8 md:py-16 lg:py-20 bg-white">
-      <div className="max-w-6xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-        <div className="text-center mb-8 md:mb-12 lg:mb-16">
-          <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-light text-gray-900 mb-2 sm:mb-3 md:mb-6 tracking-wide">
-            Nossas Especialidades
-          </h2>
-          <div className="w-12 sm:w-16 md:w-20 h-0.5 bg-gray-800 mx-auto mb-3 sm:mb-4 md:mb-8"></div>
-          <p className="text-xs sm:text-sm md:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto leading-relaxed font-light px-4">
-            Descubra nossa seleção cuidadosamente curada de produtos
-          </p>
-        </div>
-
-        <div 
-          ref={gridRef}
-          className="categories-grid max-w-7xl mx-auto"
-        >
+    <section className="py-12 bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Categorias</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {displayCategories.map((category) => {
-            const IconComponent = getIconComponent(category.iconName)
-            const href = category.href || '/produtos'
+            const Icon = getCategoryIcon(category.iconName)
             return (
               <Link
                 key={category.id}
-                href={href}
-                className="group block bg-white border border-gray-200 md:hover:border-gray-800 transition-all duration-300 overflow-hidden md:hover:shadow-lg md:hover:-translate-y-1 active:scale-[0.98] touch-manipulation w-full"
+                href={category.href}
+                className="group relative overflow-hidden rounded-lg shadow-sm hover:shadow-md transition-shadow"
               >
-                <div className="relative h-24 sm:h-28 md:h-32 lg:h-36 overflow-hidden flex items-center justify-center">
-                  {category.image ? (
-                    <img
-                      src={category.image}
-                      alt={category.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                      loading="lazy"
-                      onError={(e) => {
-                        const defaultCat = getDefaultCategory(category.name)
-                        if (defaultCat?.image) {
-                          e.currentTarget.src = defaultCat.image
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                      <span className="text-gray-500 text-xs">Sem imagem</span>
-                    </div>
-                  )}
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-300" />
-
-                  <div className="absolute top-2 right-2">
-                    <div className="bg-white/90 backdrop-blur-sm text-gray-800 p-1 sm:p-1.5 rounded-full shadow-sm group-hover:bg-gray-800 group-hover:text-white transition-all duration-300">
-                      <IconComponent className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </div>
+                {category.image ? (
+                  <img
+                    src={category.image}
+                    alt={category.name}
+                    className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                    <Icon className="h-16 w-16 text-gray-400" />
                   </div>
-                </div>
-
-                <div className="p-2 sm:p-2.5 md:p-3">
-                  <h3 className="text-xs sm:text-sm md:text-base font-medium text-gray-900 mb-1 group-hover:text-gray-800 transition-colors leading-tight">
-                    {category.name}
-                  </h3>
-                  <p className="text-gray-600 text-[10px] sm:text-xs md:text-sm lg:text-xs leading-tight line-clamp-2">
-                    {category.description}
-                  </p>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4">
+                  <h3 className="text-white font-semibold text-lg">{category.name}</h3>
+                  <p className="text-white/80 text-sm line-clamp-2">{category.description}</p>
                 </div>
               </Link>
             )
