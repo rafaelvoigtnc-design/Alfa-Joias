@@ -1,8 +1,13 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { supabase } from '@/lib/supabase'
-import { User, Session } from '@supabase/supabase-js'
+// Supabase imports temporarily disabled during Firebase migration
+// import { supabase } from '@/lib/supabase'
+// import { User, Session } from '@supabase/supabase-js'
+
+// Placeholder types during migration
+type User = any
+type Session = any
 
 interface CartItem {
   id: string
@@ -81,35 +86,24 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
   // Carregar carrinho do banco de dados
   const loadCartFromDatabase = async () => {
     if (!user?.id) return
-    
-    try {
-      console.log('🔄 Carregando carrinho do banco para usuário:', user.id)
-      
-      const { data, error } = await supabase
-        .from('user_carts')
-        .select('cart_items')
-        .eq('user_id', user.id)
-        .single()
 
-      if (!error && data?.cart_items) {
-        setCart(data.cart_items)
-        console.log('✅ Carrinho carregado do banco:', data.cart_items)
-      } else {
-        console.log('ℹ️ Nenhum carrinho encontrado no banco para este usuário')
-        // Se não tem carrinho no banco, tentar carregar do localStorage
-        const savedCart = localStorage.getItem('alfajoias-cart')
-        if (savedCart) {
-          try {
-            const cartData = JSON.parse(savedCart)
-            setCart(cartData)
-            console.log('✅ Carrinho carregado do localStorage como fallback:', cartData)
-          } catch (parseError) {
-            console.error('❌ Erro ao parsear carrinho do localStorage:', parseError)
-          }
+    // Temporarily disabled Supabase cart loading during Firebase migration
+    // Cart is now using localStorage
+    console.log('⚠️ Carrinho temporariamente usando localStorage durante migração para Firebase')
+
+    try {
+      const savedCart = localStorage.getItem('alfajoias-cart')
+      if (savedCart) {
+        try {
+          const cartData = JSON.parse(savedCart)
+          setCart(cartData)
+          console.log('✅ Carrinho carregado do localStorage:', cartData)
+        } catch (parseError) {
+          console.error('❌ Erro ao parsear carrinho do localStorage:', parseError)
         }
       }
     } catch (error) {
-      console.warn('❌ Erro ao carregar carrinho do banco:', error)
+      console.warn('❌ Erro ao carregar carrinho do localStorage:', error)
     }
   }
 
@@ -117,48 +111,10 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
   // Funções auxiliares (declaradas antes dos hooks)
   const ensureUserInDatabase = async (authUser: any) => {
     if (isCheckingUser) return // Evitar múltiplas verificações simultâneas
-    
+
     try {
       setIsCheckingUser(true)
-      console.log('🔄 Verificando usuário no banco...', authUser.id)
-      
-      // Verificar se usuário já existe (sem timeout)
-      const { data: existingUser, error: selectError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authUser.id)
-        .single()
-      
-      if (selectError && selectError.message !== 'PGRST116') {
-        console.error('❌ Erro ao verificar usuário:', selectError)
-        return
-      }
-      
-      if (!existingUser) {
-        console.log('🔄 Usuário não existe, criando...')
-        
-        // Extrair dados do usuário (funciona para Google e email/senha)
-        const userData = {
-          id: authUser.id,
-          email: authUser.email,
-          name: authUser.user_metadata?.name || 
-                authUser.user_metadata?.full_name || 
-                authUser.email?.split('@')[0] || '',
-          phone: authUser.user_metadata?.phone || '',
-          is_admin: false
-        }
-        
-        // Inserir sem timeout
-        const { error: insertError } = await supabase.from('users').insert([userData])
-        
-        if (insertError) {
-          console.error('❌ Erro ao criar usuário:', insertError)
-        } else {
-          console.log('✅ Usuário criado no banco')
-        }
-      } else {
-        console.log('✓ Usuário já existe no banco')
-      }
+      console.log('⚠️ Verificação de usuário no banco temporariamente desabilitada durante migração para Firebase')
     } catch (error) {
       console.error('Erro ao garantir usuário no banco:', error)
     } finally {
@@ -168,23 +124,9 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
 
   const checkAdminStatus = async (userId: string) => {
     try {
-      console.log('🔍 Verificando status de admin para:', userId)
+      console.log('⚠️ Verificação de admin status temporariamente desabilitada durante migração para Firebase')
       setAdminLoading(true)
-
-      // Verificar sem timeout
-      const { data, error } = await supabase
-        .from('users')
-        .select('is_admin')
-        .eq('id', userId)
-        .single()
-
-      if (error) {
-        console.warn('⚠️ Erro ao verificar admin status:', error)
-        setIsAdmin(false)
-      } else {
-        setIsAdmin(Boolean(data?.is_admin))
-        console.log('✅ Admin status:', data?.is_admin)
-      }
+      setIsAdmin(false) // Temporarily disable admin during migration
     } catch (error) {
       console.error('❌ Erro ao verificar admin status:', error)
       setIsAdmin(false)
@@ -195,44 +137,10 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Obter sessão inicial (não bloqueante - verificações em background)
-    const getSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession()
-        setSession(session)
-        setUser(session?.user ?? null)
-        
-        // Verificar admin status em background (não bloqueia carregamento)
-        if (session?.user) {
-          checkAdminStatus(session.user.id).catch(err => console.error('Erro ao verificar admin:', err))
-        }
-      } catch (error) {
-        console.error('Erro ao obter sessão:', error)
-      } finally {
-        setLoading(false) // Setar loading false imediatamente
-      }
-    }
-
-    getSession()
-
-    // Escutar mudanças na autenticação (não bloqueante - verificações em background)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-
-        // Verificar admin status em background quando usuário logar
-        if (session?.user) {
-          checkAdminStatus(session.user.id).catch(err => console.error('Erro ao verificar admin:', err))
-        } else {
-          setIsAdmin(false)
-          setAdminLoading(false)
-        }
-
-        setLoading(false) // Setar loading false imediatamente
-      }
-    )
-
-    return () => subscription.unsubscribe()
+    // Supabase auth temporarily disabled during Firebase migration
+    console.log('⚠️ Supabase auth temporariamente desabilitado durante migração para Firebase')
+    setLoading(false)
+    setAdminLoading(false)
   }, [])
 
   // Carregar carrinho do localStorage na inicialização
@@ -276,134 +184,23 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
 
   // Auth functions
   const signUp = async (email: string, password: string, userData?: any) => {
-    try {
-      console.log('🔄 Iniciando cadastro...', { email, userData })
-      
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: userData,
-          emailRedirectTo: `${window.location.origin}/auth/callback`
-        }
-      })
-      
-      if (error) {
-        console.error('❌ Erro no Supabase Auth:', error)
-        throw error
-      }
-      
-      console.log('✅ Usuário criado no Auth:', data.user?.id)
-      
-      // Garantir que o usuário seja inserido na tabela users (fallback se trigger falhar)
-      if (data.user) {
-        try {
-          console.log('🔄 Inserindo usuário na tabela users...')
-          
-          const { error: insertError } = await supabase
-            .from('users')
-            .upsert({
-              id: data.user.id,
-              email: data.user.email,
-              name: userData?.name || userData?.full_name || '',
-              phone: userData?.phone || '',
-              address_street: userData?.address_street || '',
-              address_number: userData?.address_number || '',
-              address_complement: userData?.address_complement || '',
-              address_neighborhood: userData?.address_neighborhood || '',
-              address_city: userData?.address_city || '',
-              address_state: userData?.address_state || '',
-              address_zipcode: userData?.address_zipcode || '',
-              is_admin: false
-            }, {
-              onConflict: 'id'
-            })
-          
-          if (insertError) {
-            console.error('❌ Erro ao inserir na tabela users:', insertError)
-          } else {
-            console.log('✅ Usuário inserido na tabela users')
-          }
-        } catch (insertError) {
-          console.warn('⚠️ Usuário criado no auth mas não inserido na tabela users:', insertError)
-        }
-      }
-      
-      return { data, error: null }
-    } catch (error: any) {
-      console.error('❌ Erro geral no cadastro:', error)
-      return { data: null, error }
-    }
+    console.log('⚠️ Supabase auth temporariamente desabilitado durante migração para Firebase')
+    throw new Error('Auth temporarily disabled during Firebase migration')
   }
 
   const signIn = async (email: string, password: string) => {
-    try {
-      console.log('🔄 Tentando fazer login...', email)
-      
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-      
-      if (error) {
-        console.error('❌ Erro no login:', error)
-        
-        // Se o erro for de email não confirmado, dar orientação clara
-        if (error.message.includes('Email not confirmed')) {
-          return { 
-            data: null, 
-            error: {
-              ...error,
-              message: 'Email não confirmado. Verifique sua caixa de entrada e spam, ou desabilite a confirmação de email no Supabase (Authentication > Providers > Email > desmarcar "Confirm email").'
-            }
-          }
-        }
-        
-        throw error
-      }
-      
-      console.log('✅ Login realizado com sucesso')
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error }
-    }
+    console.log('⚠️ Supabase auth temporariamente desabilitado durante migração para Firebase')
+    throw new Error('Auth temporarily disabled during Firebase migration')
   }
 
   const signInWithGoogle = async () => {
-    try {
-      // Importar função dinamicamente para evitar problemas de SSR
-      const { getSiteUrl } = await import('@/lib/getSiteUrl')
-      const siteUrl = getSiteUrl()
-      const redirectTo = `${siteUrl}/auth/callback`
-      
-      console.log('🔗 URL de redirecionamento Google:', redirectTo)
-      
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectTo,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
-        }
-      })
-      
-      if (error) throw error
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error }
-    }
+    console.log('⚠️ Supabase auth temporariamente desabilitado durante migração para Firebase')
+    throw new Error('Auth temporarily disabled during Firebase migration')
   }
 
   const signOut = async () => {
-    if (isLoggingOut) return // Evitar múltiplos logouts simultâneos
-    
-    try {
-      setIsLoggingOut(true)
-      console.log('🔄 Fazendo logout...')
-      
-      // Limpar estados primeiro para resposta mais rápida
+    console.log('⚠️ Supabase auth temporariamente desabilitado durante migração para Firebase')
+  }
       setUser(null)
       setSession(null)
       setIsAdmin(false)
@@ -419,9 +216,8 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
           }
         })
       }
-      
-      // Fazer logout do Supabase em background
-      supabase.auth.signOut().catch(console.error)
+
+      // Supabase signOut temporarily disabled during Firebase migration
       
       console.log('✅ Logout realizado com sucesso')
       
@@ -442,170 +238,18 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
   }
 
   const updateProfile = async (updates: any) => {
-    if (!user?.id) {
-      const error = new Error('Usuário não autenticado')
-      return { data: null, error }
-    }
-
-    try {
-      // Buscar colunas existentes para evitar erros de colunas ausentes
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      // Se não existir, continuar com conjunto básico de colunas permitidas
-      const allowedColumns = fetchError && !existingUser
-        ? ['id', 'email', 'name', 'phone', 'updated_at']
-        : Array.from(new Set([...(existingUser ? Object.keys(existingUser) : []), 'id', 'updated_at']))
-
-      // Filtrar apenas campos existentes na tabela
-      const filteredUpdates = Object.entries(updates || {})
-        .filter(([key]) => allowedColumns.includes(key))
-        .reduce((acc, [key, value]) => {
-          acc[key] = value
-          return acc
-        }, {} as Record<string, any>)
-
-      // Se nenhum campo válido, não tentar atualizar tabela (evita erro)
-      if (Object.keys(filteredUpdates).length === 0) {
-        return { data: existingUser || null, error: null }
-      }
-
-      filteredUpdates.id = user.id
-      filteredUpdates.email = existingUser?.email || user.email || filteredUpdates.email
-      filteredUpdates.updated_at = filteredUpdates.updated_at || new Date().toISOString()
-
-      const { data, error } = await supabase
-        .from('users')
-        .upsert(filteredUpdates, { onConflict: 'id' })
-        .select()
-        .single()
-
-      if (error) throw error
-      return { data, error: null }
-    } catch (error) {
-      console.error('❌ Erro ao atualizar perfil:', error)
-      return { data: null, error }
-    }
+    console.log('⚠️ Supabase profile update temporariamente desabilitado durante migração para Firebase')
+    return { data: null, error: new Error('Profile update temporarily disabled during Firebase migration') }
   }
 
   const resetPassword = async (email: string) => {
-    try {
-      // Importar função dinamicamente para evitar problemas de SSR
-      const { getSiteUrl } = await import('@/lib/getSiteUrl')
-      const siteUrl = getSiteUrl()
-      const redirectTo = `${siteUrl}/auth/reset-password`
-      
-      console.log('🔗 URL de redirecionamento reset password:', redirectTo)
-      
-      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectTo
-      })
-      
-      if (error) throw error
-      return { data, error: null }
-    } catch (error) {
-      return { data: null, error }
-    }
+    console.log('⚠️ Supabase password reset temporariamente desabilitado durante migração para Firebase')
+    return { data: null, error: new Error('Password reset temporarily disabled during Firebase migration') }
   }
 
   const updatePassword = async (newPassword: string) => {
-    try {
-      // Primeiro, verificar se há usuário logado no contexto
-      if (!user) {
-        console.error('❌ Nenhum usuário logado no contexto')
-        return { data: null, error: new Error('Você precisa estar logado para alterar a senha.') }
-      }
-      
-      console.log('🔄 Verificando e atualizando sessão antes de alterar senha...')
-      
-      // Sempre buscar a sessão mais recente do Supabase
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-      
-      if (sessionError) {
-        console.error('❌ Erro ao verificar sessão:', sessionError)
-        return { data: null, error: new Error('Erro ao verificar sessão. Faça login novamente.') }
-      }
-      
-      if (!sessionData.session) {
-        console.error('❌ Nenhuma sessão ativa encontrada')
-        return { data: null, error: new Error('Sessão expirada. Por favor, faça login novamente.') }
-      }
-      
-      // Atualizar a sessão no contexto
-      setSession(sessionData.session)
-      setUser(sessionData.session.user)
-      
-      console.log('✅ Sessão verificada, tentando atualizar senha...')
-      
-      // Tentar atualizar a sessão antes de mudar a senha (refresh)
-      try {
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession(sessionData.session)
-        if (!refreshError && refreshData.session) {
-          console.log('✅ Sessão atualizada (refresh)')
-          setSession(refreshData.session)
-          setUser(refreshData.user)
-        } else {
-          console.warn('⚠️ Não foi possível atualizar a sessão, continuando...')
-        }
-      } catch (refreshErr) {
-        console.warn('⚠️ Erro ao atualizar sessão, continuando...', refreshErr)
-      }
-      
-      // Verificar novamente a sessão antes de atualizar
-      const { data: finalSessionData } = await supabase.auth.getSession()
-      if (!finalSessionData.session) {
-        console.error('❌ Sessão perdida após refresh')
-        return { data: null, error: new Error('Sessão expirada. Por favor, faça login novamente.') }
-      }
-      
-      console.log('🔄 Atualizando senha no Supabase...')
-      
-      // Atualizar a senha - o Supabase usa a sessão atual automaticamente
-      const { data, error } = await supabase.auth.updateUser({
-        password: newPassword
-      })
-      
-      if (error) {
-        console.error('❌ Erro ao atualizar senha:', error)
-        
-        // Mensagens de erro mais amigáveis
-        let errorMessage = error.message || 'Erro ao atualizar senha'
-        
-        if (error.message?.includes('same password') || error.message?.includes('mesma senha')) {
-          errorMessage = 'A nova senha deve ser diferente da senha atual.'
-        } else if (error.message?.includes('weak password') || error.message?.includes('senha fraca')) {
-          errorMessage = 'A senha é muito fraca. Use uma senha mais forte (mínimo 6 caracteres).'
-        } else if (error.message?.includes('session') || error.message?.includes('Auth session missing')) {
-          errorMessage = 'Sessão expirada ou inválida. Por favor, faça logout e login novamente, depois tente alterar a senha.'
-        } else if (error.message?.includes('JWT') || error.message?.includes('token')) {
-          errorMessage = 'Token de autenticação inválido. Faça login novamente.'
-        }
-        
-        return { data: null, error: new Error(errorMessage) }
-      }
-      
-      console.log('✅ Senha atualizada com sucesso!')
-      
-      // Atualizar a sessão após mudança de senha
-      if ('session' in data && data.session && typeof data.session === 'object' && 'access_token' in data.session) {
-        setSession(data.session as Session)
-        if (data.user) {
-          setUser(data.user)
-        }
-      } else if ('user' in data && data.user) {
-        // Se não retornou sessão, atualizar apenas o usuário
-        setUser(data.user)
-      }
-      
-      return { data, error: null }
-    } catch (error: any) {
-      console.error('❌ Erro capturado ao atualizar senha:', error)
-      const errorMessage = error?.message || 'Erro desconhecido ao atualizar senha'
-      return { data: null, error: error instanceof Error ? error : new Error(errorMessage) }
-    }
+    console.log('⚠️ Supabase password update temporariamente desabilitado durante migração para Firebase')
+    return { data: null, error: new Error('Password update temporarily disabled during Firebase migration') }
   }
 
   // Cart functions
@@ -651,18 +295,7 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
 
   const clearCart = async () => {
     setCart([])
-    
-    // Limpar também do banco se usuário estiver logado
-    if (user?.id) {
-      try {
-        await supabase
-          .from('user_carts')
-          .delete()
-          .eq('user_id', user.id)
-      } catch (error) {
-        console.warn('Erro ao limpar carrinho do banco:', error)
-      }
-    }
+    // Cart database clearing temporarily disabled during Firebase migration
   }
 
   const value = {
