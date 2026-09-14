@@ -246,172 +246,19 @@ export function useSupabaseProducts() {
     }
   }
   
-
   const addProduct = async (product: Omit<Product, 'id' | 'created_at' | 'updated_at'>) => {
-    try {
-      console.log('💾 [useSupabaseProducts] Adicionando produto ao banco...', { name: product.name, category: product.category })
-      
-      // Preparar dados para inserção - remover campos que podem causar problemas
-      const productToInsert: any = {
-        name: product.name,
-        category: product.category,
-        brand: product.brand || '',
-        price: product.price,
-        image: product.image,
-        description: product.description || '',
-        featured: product.featured || false,
-        on_sale: product.on_sale || false,
-        stock: product.stock || 1,
-        gender: product.gender || '',
-        model: product.model || ''
-      }
-      
-      // Adicionar campos opcionais apenas se existirem e não forem vazios
-      if (product.original_price) productToInsert.original_price = product.original_price
-      if (product.discount_percentage) productToInsert.discount_percentage = product.discount_percentage
-      if (product.sale_price) productToInsert.sale_price = product.sale_price
-      if ((product as any).additional_images) productToInsert.additional_images = (product as any).additional_images
-      
-      console.log('📦 Dados que serão inseridos:', Object.keys(productToInsert))
-      
-      const { data, error } = await supabase
-        .from('products')
-        .insert([productToInsert])
-        .select()
-
-      if (error) {
-        console.error('❌ [useSupabaseProducts] Erro do Supabase:', error)
-        console.error('❌ Detalhes:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
-        throw error
-      }
-      
-      if (data && data[0]) {
-        console.log('✅ [useSupabaseProducts] Produto adicionado com sucesso:', data[0])
-        const newProduct = data[0]
-        
-        // Limpar cache para forçar atualização
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(CACHE_KEY)
-        }
-        
-        // Atualizar estado local imediatamente
-        setProducts(prev => {
-          const updated = [newProduct, ...prev]
-          // Atualizar cache também
-          setCachedProducts(updated)
-          return updated
-        })
-        
-        // Forçar refetch após um pequeno delay para garantir sincronização
-        setTimeout(() => {
-          fetchProducts(true).catch(err => {
-            console.warn('⚠️ Erro ao refetch após adicionar produto:', err)
-          })
-        }, 500)
-        
-        return newProduct
-      } else {
-        console.error('❌ [useSupabaseProducts] Nenhum dado retornado do Supabase')
-        throw new Error('Nenhum dado retornado ao adicionar produto')
-      }
-    } catch (err: any) {
-      console.error('❌ [useSupabaseProducts] Erro ao adicionar produto:', err)
-      const errorMessage = err?.message || err?.details || 'Erro ao adicionar produto'
-      setError(errorMessage)
-      throw new Error(`Erro ao adicionar produto: ${errorMessage}`)
-    }
+    console.log('⚠️ Supabase products temporariamente desabilitado durante migração para Firebase')
+    throw new Error('Supabase está sendo migrado para Firebase. Função temporariamente desabilitada.')
   }
 
   const updateProduct = async (id: string, updates: Partial<Product>) => {
-    try {
-      console.log('💾 [useSupabaseProducts] Atualizando produto no banco...', { id, updates: { name: updates.name, category: updates.category } })
-      
-      // Preparar dados para atualização - garantir que campos essenciais existam
-      const updatesToApply: any = {
-        updated_at: new Date().toISOString()
-      }
-      
-      // Adicionar apenas campos que foram fornecidos e não são vazios
-      if (updates.name !== undefined) updatesToApply.name = updates.name
-      if (updates.category !== undefined) updatesToApply.category = updates.category
-      if (updates.brand !== undefined) updatesToApply.brand = updates.brand || ''
-      if (updates.price !== undefined) updatesToApply.price = updates.price
-      if (updates.image !== undefined) updatesToApply.image = updates.image
-      if (updates.description !== undefined) updatesToApply.description = updates.description || ''
-      if (updates.featured !== undefined) updatesToApply.featured = updates.featured
-      if (updates.on_sale !== undefined) updatesToApply.on_sale = updates.on_sale
-      if (updates.stock !== undefined) updatesToApply.stock = updates.stock
-      if (updates.gender !== undefined) updatesToApply.gender = updates.gender || ''
-      if (updates.model !== undefined) updatesToApply.model = updates.model || ''
-      if (updates.original_price !== undefined) updatesToApply.original_price = updates.original_price || ''
-      if (updates.discount_percentage !== undefined) updatesToApply.discount_percentage = updates.discount_percentage || 0
-      if (updates.sale_price !== undefined) updatesToApply.sale_price = updates.sale_price || ''
-      if ((updates as any).additional_images !== undefined) updatesToApply.additional_images = (updates as any).additional_images || []
-      
-      console.log('📦 Campos que serão atualizados:', Object.keys(updatesToApply))
-      
-      const { data, error } = await supabase
-        .from('products')
-        .update(updatesToApply)
-        .eq('id', id)
-        .select()
-
-      if (error) {
-        console.error('❌ [useSupabaseProducts] Erro do Supabase:', error)
-        console.error('❌ Detalhes:', { message: error.message, code: error.code, details: error.details, hint: error.hint })
-        throw error
-      }
-      
-      if (data && data[0]) {
-        console.log('✅ [useSupabaseProducts] Produto atualizado com sucesso:', data[0])
-        const updatedProduct = data[0]
-        
-        // Limpar cache para forçar atualização
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem(CACHE_KEY)
-        }
-        
-        // Atualizar estado local imediatamente
-        setProducts(prev => {
-          const updated = prev.map(p => p.id === id ? updatedProduct : p)
-          // Atualizar cache também
-          setCachedProducts(updated)
-          return updated
-        })
-        
-        // Forçar refetch após um pequeno delay para garantir sincronização
-        setTimeout(() => {
-          fetchProducts(true).catch(err => {
-            console.warn('⚠️ Erro ao refetch após atualizar produto:', err)
-          })
-        }, 500)
-        
-        return updatedProduct
-      } else {
-        console.error('❌ [useSupabaseProducts] Nenhum dado retornado do Supabase')
-        throw new Error('Nenhum dado retornado ao atualizar produto')
-      }
-    } catch (err: any) {
-      console.error('❌ [useSupabaseProducts] Erro ao atualizar produto:', err)
-      const errorMessage = err?.message || err?.details || 'Erro ao atualizar produto'
-      setError(errorMessage)
-      throw new Error(`Erro ao atualizar produto: ${errorMessage}`)
-    }
+    console.log('⚠️ Supabase products temporariamente desabilitado durante migração para Firebase')
+    throw new Error('Supabase está sendo migrado para Firebase. Função temporariamente desabilitada.')
   }
 
   const deleteProduct = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id)
-
-      if (error) throw error
-      setProducts(prev => prev.filter(p => p.id !== id))
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao deletar produto')
-      throw err
-    }
+    console.log('⚠️ Supabase products temporariamente desabilitado durante migração para Firebase')
+    throw new Error('Supabase está sendo migrado para Firebase. Função temporariamente desabilitada.')
   }
 
   const getFeaturedProducts = () => {
@@ -448,7 +295,3 @@ export function useSupabaseProducts() {
     refetch
   }
 }
-
-
-
-
