@@ -200,40 +200,27 @@ export function UnifiedAuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     console.log('⚠️ Supabase auth temporariamente desabilitado durante migração para Firebase')
-  }
-      setUser(null)
-      setSession(null)
-      setIsAdmin(false)
-      setCart([])
-      
-      // Limpar localStorage imediatamente
-      if (typeof window !== 'undefined') {
-        // Limpar todas as chaves relacionadas ao Supabase
-        const keys = Object.keys(localStorage)
-        keys.forEach(key => {
-          if (key.startsWith('sb-') || key.includes('supabase') || key.includes('alfajoias')) {
-            localStorage.removeItem(key)
-          }
-        })
-      }
+    setUser(null)
+    setSession(null)
+    setIsAdmin(false)
+    setCart([])
 
-      // Supabase signOut temporarily disabled during Firebase migration
-      
-      console.log('✅ Logout realizado com sucesso')
-      
-      // Redirecionar sem recarregar a página
-      if (typeof window !== 'undefined') {
-        window.location.replace('/')
-      }
-    } catch (error) {
-      console.error('❌ Erro ao fazer logout:', error)
-      // Mesmo com erro, limpar estados locais
-      setUser(null)
-      setSession(null)
-      setIsAdmin(false)
-      setCart([])
-    } finally {
-      setIsLoggingOut(false)
+    // Limpar localStorage imediatamente
+    if (typeof window !== 'undefined') {
+      // Limpar todas as chaves relacionadas ao Supabase
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase') || key.includes('alfajoias')) {
+          localStorage.removeItem(key)
+        }
+      })
+    }
+
+    console.log('✅ Logout realizado com sucesso')
+
+    // Redirecionar sem recarregar a página
+    if (typeof window !== 'undefined') {
+      window.location.replace('/')
     }
   }
 
