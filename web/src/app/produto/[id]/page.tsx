@@ -52,7 +52,9 @@ export default function ProductDetail() {
     if (product) {
       const productToAdd = {
         ...product,
-        price: typeof product.price === 'number' ? product.price : parseFloat(String(product.price).replace(/[^\d.,]/g, '').replace(',', '.'))
+        price: typeof product.price === 'number' ? product.price : parseFloat(String(product.price).replace(/[^\d.,]/g, '').replace(',', '.')),
+        original_price: product.original_price ? (typeof product.original_price === 'number' ? product.original_price : parseFloat(String(product.original_price).replace(/[^\d.,]/g, '').replace(',', '.'))) : undefined,
+        sale_price: product.sale_price ? (typeof product.sale_price === 'number' ? product.sale_price : parseFloat(String(product.sale_price).replace(/[^\d.,]/g, '').replace(',', '.'))) : undefined
       }
       for (let i = 0; i < quantity; i++) {
         addToCart(productToAdd)
