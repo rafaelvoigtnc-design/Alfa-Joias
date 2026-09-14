@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase, Product } from '@/lib/supabase'
+// Supabase import removed during Firebase migration
+// import { supabase, Product } from '@/lib/supabase'
+
+// Placeholder Product type
+interface Product {
+  id: string
+  name: string
+  [key: string]: any
+}
 
 // Cache local para fallback - aumentado para carregamento instantâneo
 const CACHE_KEY = 'alfajoias-products-cache'

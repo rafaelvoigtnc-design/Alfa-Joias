@@ -1,32 +1,26 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { 
-  Eye, Settings, Plus, Edit, Trash2, Save, X, Image, Percent, Star, Package, Truck, CheckCircle, Clock, DollarSign, Shield, Lock, Search, Filter,
-  Gem, Diamond, Watch, ShoppingBag, Box, Gift, Tag, Award, Sparkles, Crown, Heart, Star as StarIcon, Zap, Flame, Leaf,
-  Music, Camera, Gamepad2, Book, Coffee, Beer, Wine, Pizza, Utensils, Car, Plane, Home, Building, Briefcase,
-  Palette, Paintbrush, Scissors, Wrench, Hammer, Gauge, Cog, User, Users, Smile, ThumbsUp, Bell, Mail, Phone, Battery,
-  RotateCcw, RefreshCw, FileCheck, ClipboardCheck, Calendar, Timer, FastForward, 
-  Stethoscope, Activity, TrendingUp, Target, Layers, FileText, CreditCard, Key, Unlock, Lock as LockIcon,
-  Glasses, Clipboard
-} from 'lucide-react'
-import { useUnifiedAuth } from '@/contexts/UnifiedAuthContext'
-import ImageUpload from '@/components/ImageUpload'
-import CategoryImageEditor from '@/components/CategoryImageEditor'
-import ImageEditor from '@/components/ImageEditor'
-import BannerImageEditor from '@/components/BannerImageEditor'
-import BrandSelector from '@/components/BrandSelector'
-import { useOrders } from '@/hooks/useOrders'
-import { useSupabaseServices } from '@/hooks/useSupabaseServices'
-import { useSupabaseProducts } from '@/hooks/useSupabaseProducts'
-import { useBrands } from '@/hooks/useBrands'
-import { useBanners } from '@/hooks/useBanners'
-import { useSupabaseCategories } from '@/hooks/useSupabaseCategories'
-import { supabase } from '@/lib/supabase'
-import WhatsAppNotification from '@/components/WhatsAppNotification'
-import { formatPrice } from '@/lib/priceUtils'
-import { clearCacheAndReload } from '@/lib/clearCache'
+import { useEffect } from 'react'
+
+export default function Admin() {
+  const router = useRouter()
+
+  useEffect(() => {
+    // Admin page temporarily disabled during Firebase migration
+    router.push('/')
+  }, [router])
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">Área administrativa temporariamente desabilitada</h1>
+        <p className="text-gray-600 mb-6">Página de admin está sendo migrada para Firebase.</p>
+        <p className="text-gray-500">Redirecionando para a página inicial...</p>
+      </div>
+    </div>
+  )
+}
 
 interface Product {
   id: string

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '@/lib/supabase'
+// Supabase import removed during Firebase migration
 
 interface Service {
   id: string
