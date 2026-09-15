@@ -167,7 +167,7 @@ export default function Admin() {
   useEffect(() => {
     if (!authLoading && !adminLoading) {
       if (!user) {
-        router.push('/login')
+        router.push('/admin/login')
       } else if (!isAdmin) {
         router.push('/conta')
       }
