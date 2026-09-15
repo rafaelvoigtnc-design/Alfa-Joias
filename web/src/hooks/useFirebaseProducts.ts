@@ -177,6 +177,30 @@ export function useFirebaseProducts() {
     }
   }
 
+  const refetch = async () => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true)
+        const productsRef = collection(db, 'products')
+        const snapshot = await getDocs(productsRef)
+        
+        const productsData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Product[]
+        
+        setProducts(productsData)
+        setError(null)
+      } catch (err) {
+        console.error('Erro ao carregar produtos:', err)
+        setError('Erro ao carregar produtos')
+      } finally {
+        setLoading(false)
+      }
+    }
+    await fetchProducts()
+  }
+
   return {
     products,
     loading,
@@ -187,6 +211,7 @@ export function useFirebaseProducts() {
     getPromotionalProducts,
     createProduct,
     updateProduct,
-    deleteProduct
+    deleteProduct,
+    refetch
   }
 }

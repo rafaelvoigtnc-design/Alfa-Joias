@@ -108,6 +108,31 @@ export function useFirebaseBanners() {
     }
   }
 
+  const refetch = async () => {
+    const fetchBanners = async () => {
+      try {
+        setLoading(true)
+        const bannersRef = collection(db, 'banners')
+        const q = query(bannersRef, where('active', '==', true))
+        const snapshot = await getDocs(q)
+        
+        const bannersData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Banner[]
+        
+        setBanners(bannersData)
+        setError(null)
+      } catch (err) {
+        console.error('Erro ao carregar banners:', err)
+        setError('Erro ao carregar banners')
+      } finally {
+        setLoading(false)
+      }
+    }
+    await fetchBanners()
+  }
+
   return {
     banners,
     loading,
@@ -115,6 +140,7 @@ export function useFirebaseBanners() {
     getBannerById,
     createBanner,
     updateBanner,
-    deleteBanner
+    deleteBanner,
+    refetch
   }
 }

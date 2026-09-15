@@ -105,6 +105,30 @@ export function useFirebaseCategories() {
     }
   }
 
+  const refetch = async () => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true)
+        const categoriesRef = collection(db, 'categories')
+        const snapshot = await getDocs(categoriesRef)
+        
+        const categoriesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Category[]
+        
+        setCategories(categoriesData)
+        setError(null)
+      } catch (err) {
+        console.error('Erro ao carregar categorias:', err)
+        setError('Erro ao carregar categorias')
+      } finally {
+        setLoading(false)
+      }
+    }
+    await fetchCategories()
+  }
+
   return {
     categories,
     loading,
@@ -112,6 +136,7 @@ export function useFirebaseCategories() {
     getCategoryById,
     createCategory,
     updateCategory,
-    deleteCategory
+    deleteCategory,
+    refetch
   }
 }
